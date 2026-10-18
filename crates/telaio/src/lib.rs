@@ -21,5 +21,11 @@ pub mod metrics;
 pub mod palette;
 pub mod theme;
 
+/// telaio's version, from its `Cargo.toml`, for an app's About screen.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// telaio's repository URL, from its `Cargo.toml`.
+pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+
 pub use palette::{Palette, PaletteExt, Palettes, ShadowLayer, Tokens, Tone};
 pub use theme::{Fonts, ThemeChoice, ThemeFamily, apply, install};

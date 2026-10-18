@@ -6639,7 +6639,7 @@ dependencies = [
 
 [[package]]
 name = "telaio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gpui-kit",
  "pretty_assertions",
@@ -6649,7 +6649,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-gallery"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gpui-kit",
  "rust-i18n",

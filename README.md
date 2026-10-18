@@ -44,7 +44,7 @@ Depend on a tag, never on a branch or a path:
 
 ```toml
 [workspace.dependencies]
-telaio = { git = "https://github.com/tanisperez/telaio", tag = "v0.1.0" }
+telaio = { git = "https://github.com/tanisperez/telaio", tag = "v0.1.1" }
 ```
 
 At startup, after `gpui_kit::init` and before opening a window:
@@ -75,7 +75,8 @@ release telaio and bump the tag in the app.
 
 ## Releasing
 
-1. Update `version` in `[workspace.package]` of `Cargo.toml` and run `make format lint test`.
+1. Update `version` in `[workspace.package]` of `Cargo.toml` (it is `telaio::VERSION`, which the
+   apps show in their About screen) and run `make format lint test`.
 2. Commit, tag `vX.Y.Z` and push the tag. CI runs fmt, clippy, the tests and the duplicate gpui
    check on it.
 3. Each app bumps its `tag = "vX.Y.Z"` when it chooses.
