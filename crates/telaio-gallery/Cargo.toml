@@ -1,0 +1,20 @@
+[package]
+name = "telaio-gallery"
+description = "Every telaio component in every state, under every sample palette"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[[bin]]
+name = "telaio-gallery"
+path = "src/main.rs"
+
+[dependencies]
+gpui-kit = { workspace = true }
+rust-i18n = { workspace = true }
+telaio = { path = "../telaio" }
+
+[lints]
+workspace = true
