@@ -28,6 +28,41 @@ for frame, chassis or loom.
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
 treemap).
 
+## telaio-update
+
+`telaio-update` is the in-app updater every app shares (no `gpui`, plain blocking logic). It reads
+`latest.json` from `https://github.com/<owner>/<repo>/releases/latest/download/`, compares the
+version with `semver`, downloads the asset and verifies its SHA-256, trusting the OS certificate
+store. On macOS it unpacks the `.app.tar.gz` next to the bundle and swaps it after the app quits;
+on Windows it runs the Inno Setup installer silently. A Windows copy without `unins000.exe` next
+to the exe is portable and only gets a link to the release page. Everything app specific is an
+`UpdaterConfig`, and the `flow` module has the decisions an app would otherwise copy (the build
+gate, `UpdateState`, `check_and_download`, `start_install`).
+
+```toml
+[workspace.dependencies]
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
+```
+
+```rust
+use telaio_update::{Platform, UpdaterConfig, flow};
+
+const UPDATER: UpdaterConfig = UpdaterConfig {
+    owner: "tanisperez",
+    repo: "postino",
+    app_name: "Postino",
+    url_env: "POSTINO_UPDATE_URL", // overrides the manifest URL, to test between pre-releases
+    version: env!("CARGO_PKG_VERSION"),
+};
+
+// The feature exists only in builds made with POSTINO_UPDATER=github.
+if flow::updater_enabled(option_env!("POSTINO_UPDATER")) {
+    // On a background executor, 10 s after startup (`flow::STARTUP_DELAY`):
+    let platform = Platform::current().expect("checked by updater_enabled");
+    let outcome = flow::check_and_download(&UPDATER, platform, false); // false: not portable
+}
+```
+
 ## Gallery
 
 ```sh

@@ -25,6 +25,9 @@ were the most developed; when reconciling another app's copy, keep the best vers
 - Performance (from Postino): an idle window does no work. No timers, polling or animations that
   notify while nothing changes, and nothing in a render path that costs in proportion to the
   data size.
+- `telaio-update` never depends on `gpui` or on any UI crate, and keeps no app constant: names,
+  URLs and environment variables come from `UpdaterConfig`. Its tests never touch the internet
+  (a local `tiny_http` server).
 - Every component change shows up in `telaio-gallery`, in every state.
 - A change to the public API is a breaking change for three apps: keep it small, and say so in
   the release notes.
