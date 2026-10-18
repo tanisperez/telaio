@@ -6,10 +6,10 @@
 [![gpui-kit](https://img.shields.io/badge/gpui--kit-0.7.0-blue)](https://crates.io/crates/gpui-kit/0.7.0)
 [![Rust](https://img.shields.io/badge/rust-stable%20%C2%B7%20edition%202024-orange)](rust-toolchain.toml)
 
-A rapid application development kit for native desktop apps in Rust, on top of
-[`gpui-kit`](https://crates.io/crates/gpui-kit), built to be used together with AI coding agents.
-A new app gets a design system, standard components, an application shell and an in-app updater
-that already work, and writes only its own domain. *Telaio* is Italian for frame, chassis or loom.
+telaio (Italian word for a frame, a chassis or a loom) is a rapid application development kit
+for native desktop apps in Rust, on top of [`gpui-kit`](https://crates.io/crates/gpui-kit), built
+to be used together with AI coding agents. A new app gets a design system, standard components,
+an application shell and an in-app updater that already work, and writes only its own domain.
 
 It powers [Postino](https://github.com/tanisperez/postino) (an HTTP client), Vano (a disk
 analyzer) and Nastro (a music player), which share one look and one way of being built.
