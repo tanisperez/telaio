@@ -17,7 +17,7 @@ use crate::metrics::INPUT_PADDING_X;
 const FIELD_LINE_HEIGHT: f32 = 22.0;
 /// Height of a [`text_field`] box: the line plus 6 px of breathing room on each side. Controls
 /// that sit next to a field, such as a button, use it too so both line up.
-pub(crate) const FIELD_HEIGHT: f32 = 36.0;
+pub const FIELD_HEIGHT: f32 = 36.0;
 
 /// Builds the field for `state`, with the app's edit menu. The height is set on a wrapper: the
 /// `Input` itself ignores a fixed height in a dialog's content.

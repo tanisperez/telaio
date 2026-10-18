@@ -31,6 +31,13 @@ make gallery
 Opens every component in every state, with a switcher for the theme mode, the sample palettes
 (Postino and Vano's three accents), the language and the font size.
 
+Optional environment variables set the startup state, for scripted screenshots (each is ignored
+when unset or invalid):
+
+- `TELAIO_THEME=system|light|dark`
+- `TELAIO_PALETTE=postino|indigo|graphite|electric`
+- `TELAIO_LANG=en|es|gl|it`
+
 ## Using it from an app
 
 Depend on a tag, never on a branch or a path:

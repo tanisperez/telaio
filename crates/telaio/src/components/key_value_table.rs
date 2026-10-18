@@ -335,23 +335,20 @@ fn header_cell(
         .into_any_element()
 }
 
-/// Renders one key or value cell, `flex_grow`-sized by `grow`. A text cell is colored and
-/// struck through when disabled; an element cell (a live `Input`)
-/// keeps its own styling and is only dimmed when disabled, since it cannot be recolored or
-/// struck through generically.
+/// Renders one key or value cell, `flex_grow`-sized by `grow` with a zero basis, like the
+/// headers: that keeps the 1 : 1.4 split whatever the content's own width, which a longer key
+/// text or a row of variable chips (not shrinkable, unlike an `Input`) would otherwise skew. A
+/// text cell is colored and struck through when disabled; an element cell (a live `Input`) keeps
+/// its own styling and is only dimmed when disabled, since it cannot be recolored or struck
+/// through generically.
 fn key_value_cell(cell: Cell, grow: f32, text_color: Hsla, enabled: bool) -> Div {
+    let cell_box = div().flex_grow(grow).flex_basis(px(0.0)).min_w_0();
     match cell {
-        Cell::Text(text) => div()
-            .flex_grow(grow)
+        Cell::Text(text) => cell_box
             .text_color(text_color)
             .when(!enabled, |cell| cell.line_through())
             .child(text),
-        // A zero basis keeps the 1 : 1.4 split whatever the element's own width, which a row of
-        // variable chips (not shrinkable, unlike an `Input`) would otherwise skew.
-        Cell::Element(element) => div()
-            .flex_grow(grow)
-            .flex_basis(px(0.0))
-            .min_w_0()
+        Cell::Element(element) => cell_box
             .when(!enabled, |cell| cell.opacity(0.5))
             .child(element),
     }
