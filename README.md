@@ -6,31 +6,103 @@
 [![gpui-kit](https://img.shields.io/badge/gpui--kit-0.7.0-blue)](https://crates.io/crates/gpui-kit/0.7.0)
 [![Rust](https://img.shields.io/badge/rust-stable%20%C2%B7%20edition%202024-orange)](rust-toolchain.toml)
 
-The design system and standard components shared by [Postino](https://github.com/tanisperez/postino),
-Vano and Nastro, on top of [`gpui-kit`](https://crates.io/crates/gpui-kit). *Telaio* is Italian
-for frame, chassis or loom.
+A rapid application development kit for native desktop apps in Rust, on top of
+[`gpui-kit`](https://crates.io/crates/gpui-kit), built to be used together with AI coding agents.
+A new app gets a design system, standard components, an application shell and an in-app updater
+that already work, and writes only its own domain. *Telaio* is Italian for frame, chassis or loom.
+
+It powers [Postino](https://github.com/tanisperez/postino) (an HTTP client), Vano (a disk
+analyzer) and Nastro (a music player), which share one look and one way of being built.
+
+| Crate | What it gives an app |
+| --- | --- |
+| [`telaio-ui`](#telaio-ui) | The design system (palette tokens, theme, metrics, Geist fonts) and the standard components |
+| [`telaio-app`](#telaio-app) | The application shell: logging, command line pieces, languages, numbers, paths, window bootstrap, About header |
+| [`telaio-update`](#telaio-update) | The in-app updater for macOS and Windows, from GitHub releases |
+| `telaio-gallery` | Not a dependency: every component in every state, under every sample palette ([Gallery](#gallery)) |
+
+All of them are released together, with one version and one tag. Each crate is independent: an
+app takes only what it needs, and `telaio-update` has no `gpui` at all.
+
+**How an app is built with it**, from idea to release, is written down for AI agents (and people)
+in the shared rules that every app's `AGENTS.md` imports (`~/.claude/rust/RULES.md` in the author's
+dotfiles): design first in Claude Design on top of telaio's design system, then the same stack,
+layout, configuration, translations, logging, releases, packaging and CI in every app, with
+Postino as the reference implementation.
+
+## telaio-ui
 
 - **Palette**: `Tokens` is the list of color values of one theme mode, which each app passes as
   data (`Tokens::DEFAULT_LIGHT` and `Tokens::DEFAULT_DARK` are Postino's). `Palette` holds them
-  parsed, plus the derived values (`hover`, `pressed`, `list_active`, `accent_hover`, ...).
-  Components read it with `cx.palette()`.
+  parsed, plus the derived values (`hover`, `pressed`, `list_active`, `accent_hover`, ...) and
+  `Tone`. Components read it with `cx.palette()`.
 - **Theme**: `ThemeFamily` builds the gpui-kit theme JSON from the tokens and the fonts;
   `telaio_ui::install` loads it at startup and `telaio_ui::apply` swaps it live.
+  `ThemeChoice::apply` sets the mode.
 - **Metrics**: control heights, the radius scale and component sizes (`telaio_ui::metrics`).
 - **Fonts**: Geist and Geist Mono, bundled (SIL Open Font License 1.1).
-- **Components**: buttons, `IconButton`, modals, `SegmentedControl`, select triggers,
-  `StatusBadge`, `ThemeCard`, `HoverInput`, `InlineMessage`, `Card`, `SectionLabel`,
-  `UnderlineTabs`, `text_field`, `KeyValueTable`, the switch halo and the text field edit menu.
+- **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
+  `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`, `modal_body`,
+  `modal_footer`, `open_confirm_dialog`), `SegmentedControl`, `select_trigger`, `StatusBadge`,
+  `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `InlineMessage`, `Card`,
+  `SectionLabel`, `UnderlineTabs`, `KeyValueTable` and `switch_halo`.
 - **Strings**: the components' own labels (Close, Cancel, Light, ...) are in
   `crates/telaio-ui/locales/telaio.yml`, in English, Spanish, Galician and Italian. They follow the
   locale the app sets with `rust_i18n::set_locale`.
+- `telaio_ui::VERSION` and `telaio_ui::REPOSITORY`, for the app's About screen.
 
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
-treemap).
+treemap), and so do domain colors, as an extension trait on `Palette`.
+
+At startup, after `gpui_kit::init` and before opening a window:
+
+```rust
+let family = telaio_ui::ThemeFamily::new("Postino"); // or .tokens(light, dark), .fonts(...)
+telaio_ui::install(cx, &family);
+```
+
+and in the window, `telaio_ui::ThemeChoice::System.apply(Some(window), cx)`. After a settings
+change, `telaio_ui::apply(cx, &family)` followed by the same `ThemeChoice::apply`.
+
+## telaio-app
+
+The application shell every app shares, as small independent pieces (nothing in it owns `main`).
+Everything takes an `AppIdentity`, a `const` with the display name, the lowercase name used in
+folders and file names, the app id, the version, the environment variable prefix and the
+repository URL.
+
+- `logging`: the file logger behind `log` (per OS folder, 5 MB rotation, 10 files, a panic hook),
+  `LogLevel`, the `<PREFIX>_LOG` override, and third party crates capped at Warn. The app's crates
+  (target prefix = the identity's lowercase name), `gpui*` and `telaio*` log at the full level.
+- `cli`: the `<App> X.Y.Z` version line, the help header and footer, the exit codes and the
+  Windows console attach. Parsing stays in each app, which adds its own commands.
+- `language`: `Language` (en, es, gl, it), `LanguageChoice` (auto or one of them), OS language
+  detection with `sys-locale`, `resolve` and `apply`. The app's translations stay in the app.
+- `number`: integers and decimals written with ICU's separators for the active language.
+- `paths`: `config_dir`, the OS config folder of the app.
+- `window`: `application` (with `AllAssets`), `init`, `options` (client decorations on Linux, the
+  app id, a size capped to the display) and `follow_system_appearance`.
+- `about`: `header`, the top of an About pane (logo, name, version, platform, telaio version,
+  release notes and GitHub buttons).
+
+```rust
+const IDENTITY: telaio_app::AppIdentity = telaio_app::AppIdentity {
+    name: "Postino",
+    slug: "postino",
+    app_id: "codes.tanis.postino",
+    version: env!("CARGO_PKG_VERSION"),
+    env_prefix: "POSTINO",
+    repository: "https://github.com/tanisperez/postino",
+};
+
+let env_level = std::env::var(telaio_app::logging::env_var(&IDENTITY)).ok();
+let level = telaio_app::logging::startup_level(settings.log_level, env_level.as_deref());
+telaio_app::logging::init(&IDENTITY, level.to_filter());
+```
 
 ## telaio-update
 
-`telaio-update` is the in-app updater every app shares (no `gpui`, plain blocking logic). It reads
+The in-app updater (no `gpui`, plain blocking logic, run it on a background executor). It reads
 `latest.json` from `https://github.com/<owner>/<repo>/releases/latest/download/`, compares the
 version with `semver`, downloads the asset and verifies its SHA-256, trusting the OS certificate
 store. On macOS it unpacks the `.app.tar.gz` next to the bundle and swaps it after the app quits;
@@ -38,11 +110,6 @@ on Windows it runs the Inno Setup installer silently. A Windows copy without `un
 to the exe is portable and only gets a link to the release page. Everything app specific is an
 `UpdaterConfig`, and the `flow` module has the decisions an app would otherwise copy (the build
 gate, `UpdateState`, `check_and_download`, `start_install`).
-
-```toml
-[workspace.dependencies]
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
-```
 
 ```rust
 use telaio_update::{Platform, UpdaterConfig, flow};
@@ -63,41 +130,6 @@ if flow::updater_enabled(option_env!("POSTINO_UPDATER")) {
 }
 ```
 
-## telaio-app
-
-`telaio-app` is the application shell every app shares, as small independent pieces (nothing in it
-owns `main`). Everything takes an `AppIdentity`, a `const` with the display name, the lowercase
-name used in folders and file names, the app id, the version, the environment variable prefix and
-the repository URL.
-
-- `logging`: the file logger behind `log` (per OS folder, 5 MB rotation, 10 files, a panic hook),
-  `LogLevel`, the `<PREFIX>_LOG` override, and third party crates capped at Warn. The app's crates
-  (target prefix = the identity's lowercase name), `gpui*` and `telaio*` log at the full level.
-- `cli`: the `<App> X.Y.Z` version line, the help header and footer, the exit codes and the
-  Windows console attach. Parsing stays in each app.
-- `language`: `Language` (en, es, gl, it), `LanguageChoice` (auto or one of them), OS language
-  detection with `sys-locale`, `resolve` and `apply`. The app's translations stay in the app.
-- `number`: integers and decimals written with ICU's separators for the active language.
-- `paths`: `config_dir`, the OS config folder of the app.
-- `window`: `application` (with `AllAssets`), `init`, `options` (client decorations on Linux, the
-  app id, a size capped to the display) and `follow_system_appearance`.
-- `about`: `header`, the top of an About pane (logo, name, version, platform, telaio version,
-  release notes and GitHub buttons).
-
-```rust
-const IDENTITY: telaio_app::AppIdentity = telaio_app::AppIdentity {
-    name: "Postino",
-    slug: "postino",
-    app_id: "codes.tanis.postino",
-    version: env!("CARGO_PKG_VERSION"),
-    env_prefix: "POSTINO",
-    repository: "https://github.com/tanisperez/postino",
-};
-
-let level = telaio_app::logging::startup_level(settings.log_level, std::env::var("POSTINO_LOG").ok().as_deref());
-telaio_app::logging::init(&IDENTITY, level.to_filter());
-```
-
 ## Gallery
 
 ```sh
@@ -116,25 +148,19 @@ when unset or invalid):
 
 ## Using it from an app
 
-Depend on a tag, never on a branch or a path:
+Depend on a tag, never on a branch or a path. Cargo takes several packages from one git
+repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
 telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
 ```
 
-At startup, after `gpui_kit::init` and before opening a window:
-
-```rust
-let family = telaio_ui::ThemeFamily::new("Postino"); // or .tokens(light, dark), .fonts(...)
-telaio_ui::install(cx, &family);
-```
-
-and in the window, `telaio_ui::ThemeChoice::System.apply(Some(window), cx)`. After a settings change,
-`telaio_ui::apply(cx, &family)` followed by the same `ThemeChoice::apply`.
-
-telaio pins `gpui-kit` to the exact version the apps use. In every app,
-`cargo tree -d --depth 0 | grep gpui` must stay empty.
+telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
+version requirements as the apps. In every app, `cargo tree -d --depth 0 | grep gpui` must stay
+empty.
 
 ## Changing telaio and an app together
 
@@ -144,6 +170,8 @@ each iteration needs no tag:
 ```toml
 [patch."https://github.com/tanisperez/telaio"]
 telaio-ui = { path = "../telaio/crates/telaio-ui" }
+telaio-app = { path = "../telaio/crates/telaio-app" }
+telaio-update = { path = "../telaio/crates/telaio-update" }
 ```
 
 Never commit that section: it breaks CI and every other checkout. When the change is ready,
@@ -151,11 +179,16 @@ release telaio and bump the tag in the app.
 
 ## Releasing
 
-1. Update `version` in `[workspace.package]` of `Cargo.toml` (it is `telaio_ui::VERSION`, which the
-   apps show in their About screen) and run `make format lint test`.
+The work of a version is tracked by its GitHub milestone (`gh issue list --milestone X.Y.Z`).
+
+1. Every issue of the milestone closed; update `version` in `[workspace.package]` of `Cargo.toml`
+   (it is `telaio_ui::VERSION`, which the apps show in their About screen) and run
+   `make format lint test`.
 2. Commit, tag `vX.Y.Z` and push the tag. CI runs fmt, clippy, the tests and the duplicate gpui
    check on it.
-3. Each app bumps its `tag = "vX.Y.Z"` when it chooses.
+3. Create the GitHub release with English notes: what changes, which milestone issues went in,
+   and every breaking change of the public API.
+4. Each app bumps its `tag = "vX.Y.Z"` when it chooses.
 
 Upgrading `gpui-kit` is always a new telaio release, and every app upgrades both together.
 

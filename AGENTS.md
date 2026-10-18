@@ -4,10 +4,20 @@ Guidance for AI agents working on telaio. See `README.md` for what it is and how
 
 ## Project
 
-telaio is the design system shared by Postino, Vano and Nastro (desktop apps in Rust on
-`gpui-kit`): the palette tokens, the gpui-kit theme builder, metrics, fonts and the app
-independent components. It was extracted from Postino in Postino issue #139, whose components
-were the most developed; when reconciling another app's copy, keep the best version of each.
+telaio is the rapid application development kit shared by Postino, Vano and Nastro (desktop
+apps in Rust on `gpui-kit`), a workspace of crates released together with one version and one
+tag:
+
+- `telaio-ui`: the palette tokens, the gpui-kit theme builder, metrics, fonts and the app
+  independent components.
+- `telaio-app`: the application shell (logging, command line pieces, languages, numbers, paths,
+  window bootstrap, About header).
+- `telaio-update`: the in-app updater, no gpui.
+- `telaio-gallery`: the components gallery binary, not published.
+
+It was extracted from Postino (Postino issue #139 and telaio milestone 0.2.0), whose code was the
+most developed; when reconciling another app's copy, keep the best version of each. The rules for
+building an app with telaio are in `~/.claude/rust/RULES.md` (the author's dotfiles).
 
 ## Rules
 

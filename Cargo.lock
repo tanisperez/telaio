@@ -6823,7 +6823,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-app"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "dirs 7.0.0",
@@ -6842,7 +6842,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-gallery"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "gpui-kit",
  "rust-i18n",
@@ -6851,7 +6851,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-ui"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "gpui-kit",
  "pretty_assertions",
@@ -6861,7 +6861,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-update"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "dirs 7.0.0",
  "log",
