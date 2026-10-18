@@ -1,5 +1,5 @@
 [package]
-name = "telaio"
+name = "telaio-ui"
 description = "Design system and standard components shared by Postino, Vano and Nastro"
 version.workspace = true
 edition.workspace = true

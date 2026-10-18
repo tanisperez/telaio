@@ -17,7 +17,7 @@ mod sections;
 use gpui_kit::component::theme::Theme;
 use gpui_kit::component::{Root, TitleBar};
 use gpui_kit::*;
-use telaio::ThemeChoice;
+use telaio_ui::ThemeChoice;
 
 use gallery::{Gallery, Language};
 use samples::SamplePalette;
@@ -58,7 +58,7 @@ fn main() {
     app.run(move |cx| {
         cx.set_app_identity(APP_ID, APP_NAME);
         gpui_kit::init(cx);
-        telaio::install(cx, &gallery::family(sample, 13.0));
+        telaio_ui::install(cx, &gallery::family(sample, 13.0));
 
         let mut options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds {

@@ -14,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 gpui-kit = { workspace = true }
 rust-i18n = { workspace = true }
-telaio = { path = "../telaio" }
+telaio-ui = { path = "../telaio-ui" }
 
 [lints]
 workspace = true

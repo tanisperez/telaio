@@ -11,16 +11,16 @@ use gpui_kit::component::switch::Switch;
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use telaio::components::modal::ConfirmDialog;
-use telaio::components::{
+use telaio_ui::components::modal::ConfirmDialog;
+use telaio_ui::components::{
     Card, DangerButton, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind,
     KeyValueRow, KeyValueTable, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel,
     SegmentedItem, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem, UnderlineTabs,
     edit_menu, framed_dialog, modal_body, modal_footer, modal_header, open_confirm_dialog,
     select_label_row, select_trigger, switch_halo, text_field,
 };
-use telaio::metrics::MODAL_WIDTH_DEFAULT;
-use telaio::{PaletteExt, ThemeChoice, Tone};
+use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
+use telaio_ui::{PaletteExt, ThemeChoice, Tone};
 
 use crate::gallery::{DemoRow, Gallery, segmented};
 
@@ -188,7 +188,7 @@ impl Gallery {
             &self.hover_input,
             Input::new(&self.hover_input)
                 .context_menu(edit_menu(&self.hover_input, cx))
-                .h(px(telaio::metrics::CONTROL_HEIGHT)),
+                .h(px(telaio_ui::metrics::CONTROL_HEIGHT)),
         );
         v_flex()
             .gap_3()
@@ -641,7 +641,7 @@ fn on_off(value: bool) -> &'static str {
 }
 
 /// A small caption under a section's demo.
-fn label(text: &'static str, palette: &telaio::Palette) -> impl IntoElement {
+fn label(text: &'static str, palette: &telaio_ui::Palette) -> impl IntoElement {
     div()
         .text_size(px(11.0))
         .text_color(palette.fg_subtle)

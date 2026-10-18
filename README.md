@@ -15,14 +15,14 @@ for frame, chassis or loom.
   parsed, plus the derived values (`hover`, `pressed`, `list_active`, `accent_hover`, ...).
   Components read it with `cx.palette()`.
 - **Theme**: `ThemeFamily` builds the gpui-kit theme JSON from the tokens and the fonts;
-  `telaio::install` loads it at startup and `telaio::apply` swaps it live.
-- **Metrics**: control heights, the radius scale and component sizes (`telaio::metrics`).
+  `telaio_ui::install` loads it at startup and `telaio_ui::apply` swaps it live.
+- **Metrics**: control heights, the radius scale and component sizes (`telaio_ui::metrics`).
 - **Fonts**: Geist and Geist Mono, bundled (SIL Open Font License 1.1).
 - **Components**: buttons, `IconButton`, modals, `SegmentedControl`, select triggers,
   `StatusBadge`, `ThemeCard`, `HoverInput`, `InlineMessage`, `Card`, `SectionLabel`,
   `UnderlineTabs`, `text_field`, `KeyValueTable`, the switch halo and the text field edit menu.
 - **Strings**: the components' own labels (Close, Cancel, Light, ...) are in
-  `crates/telaio/locales/telaio.yml`, in English, Spanish, Galician and Italian. They follow the
+  `crates/telaio-ui/locales/telaio.yml`, in English, Spanish, Galician and Italian. They follow the
   locale the app sets with `rust_i18n::set_locale`.
 
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
@@ -50,18 +50,18 @@ Depend on a tag, never on a branch or a path:
 
 ```toml
 [workspace.dependencies]
-telaio = { git = "https://github.com/tanisperez/telaio", tag = "v0.1.1" }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.2.0" }
 ```
 
 At startup, after `gpui_kit::init` and before opening a window:
 
 ```rust
-let family = telaio::ThemeFamily::new("Postino"); // or .tokens(light, dark), .fonts(...)
-telaio::install(cx, &family);
+let family = telaio_ui::ThemeFamily::new("Postino"); // or .tokens(light, dark), .fonts(...)
+telaio_ui::install(cx, &family);
 ```
 
-and in the window, `telaio::ThemeChoice::System.apply(Some(window), cx)`. After a settings change,
-`telaio::apply(cx, &family)` followed by the same `ThemeChoice::apply`.
+and in the window, `telaio_ui::ThemeChoice::System.apply(Some(window), cx)`. After a settings change,
+`telaio_ui::apply(cx, &family)` followed by the same `ThemeChoice::apply`.
 
 telaio pins `gpui-kit` to the exact version the apps use. In every app,
 `cargo tree -d --depth 0 | grep gpui` must stay empty.
@@ -73,7 +73,7 @@ each iteration needs no tag:
 
 ```toml
 [patch."https://github.com/tanisperez/telaio"]
-telaio = { path = "../telaio/crates/telaio" }
+telaio-ui = { path = "../telaio/crates/telaio-ui" }
 ```
 
 Never commit that section: it breaks CI and every other checkout. When the change is ready,
@@ -81,7 +81,7 @@ release telaio and bump the tag in the app.
 
 ## Releasing
 
-1. Update `version` in `[workspace.package]` of `Cargo.toml` (it is `telaio::VERSION`, which the
+1. Update `version` in `[workspace.package]` of `Cargo.toml` (it is `telaio_ui::VERSION`, which the
    apps show in their About screen) and run `make format lint test`.
 2. Commit, tag `vX.Y.Z` and push the tag. CI runs fmt, clippy, the tests and the duplicate gpui
    check on it.

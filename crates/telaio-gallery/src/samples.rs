@@ -5,7 +5,7 @@
 //! `danger_subtle`, `info_subtle` or syntax tokens, so those come from
 //! [`Tokens::DEFAULT_LIGHT`] and [`Tokens::DEFAULT_DARK`].
 
-use telaio::{ShadowLayer, Tokens};
+use telaio_ui::{ShadowLayer, Tokens};
 
 /// The neutrals and the accent of one Vano accent in one mode.
 struct Base {

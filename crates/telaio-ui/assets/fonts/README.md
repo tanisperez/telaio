@@ -1,7 +1,7 @@
 # Bundled fonts
 
 Geist and Geist Mono, from the official Vercel `geist-font` GitHub release, embedded in the
-binary with `include_bytes!` and registered by `telaio::fonts::register` (`src/fonts.rs`).
+binary with `include_bytes!` and registered by `telaio_ui::fonts::register` (`src/fonts.rs`).
 
 - Source: <https://github.com/vercel/geist-font>
 - Release used: `v1.7.2`

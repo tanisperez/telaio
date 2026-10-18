@@ -20,7 +20,7 @@ were the most developed; when reconciling another app's copy, keep the best vers
 - Palettes are data: a new token goes into `Tokens`, both defaults, the theme JSON when gpui-kit
   reads it, and the gallery's sample palettes.
 - Strings: never read an app's locale. Labels are passed in, or come from
-  `crates/telaio/locales/telaio.yml` (keys `telaio.*`, with `en`, `es`, `gl` and `it` together).
+  `crates/telaio-ui/locales/telaio.yml` (keys `telaio.*`, with `en`, `es`, `gl` and `it` together).
   Tests never call `rust_i18n::set_locale`; use `t!("key", locale = "es")`.
 - Performance (from Postino): an idle window does no work. No timers, polling or animations that
   notify while nothing changes, and nothing in a render path that costs in proportion to the

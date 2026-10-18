@@ -9,11 +9,11 @@ use gpui_kit::component::menu::{DropdownMenu as _, PopupMenuItem};
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use telaio::components::{
+use telaio_ui::components::{
     SectionLabel, SegmentedControl, SegmentedItem, select_label_row, select_trigger,
 };
-use telaio::components::{SortColumn, SortOrder};
-use telaio::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
+use telaio_ui::components::{SortColumn, SortOrder};
+use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::SamplePalette;
 
@@ -217,7 +217,7 @@ impl Gallery {
     /// Rebuilds the theme family from the current sample palette and font size, installs it and
     /// applies the current mode again so the window repaints.
     fn rebuild_theme(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        telaio::apply(cx, &family(self.sample, self.font_size));
+        telaio_ui::apply(cx, &family(self.sample, self.font_size));
         self.choice.apply(Some(window), cx);
         cx.notify();
     }

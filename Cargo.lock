@@ -6638,22 +6638,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "telaio"
+name = "telaio-gallery"
+version = "0.1.1"
+dependencies = [
+ "gpui-kit",
+ "rust-i18n",
+ "telaio-ui",
+]
+
+[[package]]
+name = "telaio-ui"
 version = "0.1.1"
 dependencies = [
  "gpui-kit",
  "pretty_assertions",
  "rust-i18n",
  "serde_json",
-]
-
-[[package]]
-name = "telaio-gallery"
-version = "0.1.1"
-dependencies = [
- "gpui-kit",
- "rust-i18n",
- "telaio",
 ]
 
 [[package]]
