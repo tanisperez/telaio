@@ -28,6 +28,13 @@ were the most developed; when reconciling another app's copy, keep the best vers
 - `telaio-update` never depends on `gpui` or on any UI crate, and keeps no app constant: names,
   URLs and environment variables come from `UpdaterConfig`. Its tests never touch the internet
   (a local `tiny_http` server).
+- `telaio-app` keeps no app constant either: names, ids, paths and environment variables come from
+  `AppIdentity`. It never reads an app's locale or settings; the app's own translation tables and
+  settings structs stay in the app. Its strings are in `crates/telaio-app/locales/telaio_app.yml`
+  (keys `telaio_app.*`, `en`, `es`, `gl` and `it` together). Behavior that moved from Postino
+  (log format and paths, language detection, number formatting) must not change.
+- `unsafe_code` is `deny` for the workspace, not `forbid`, only for the one Windows
+  `AttachConsole` call in `telaio_app::cli`. Do not add other `#[allow(unsafe_code)]`.
 - Every component change shows up in `telaio-gallery`, in every state.
 - A change to the public API is a breaking change for three apps: keep it small, and say so in
   the release notes.

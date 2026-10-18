@@ -63,6 +63,41 @@ if flow::updater_enabled(option_env!("POSTINO_UPDATER")) {
 }
 ```
 
+## telaio-app
+
+`telaio-app` is the application shell every app shares, as small independent pieces (nothing in it
+owns `main`). Everything takes an `AppIdentity`, a `const` with the display name, the lowercase
+name used in folders and file names, the app id, the version, the environment variable prefix and
+the repository URL.
+
+- `logging`: the file logger behind `log` (per OS folder, 5 MB rotation, 10 files, a panic hook),
+  `LogLevel`, the `<PREFIX>_LOG` override, and third party crates capped at Warn. The app's crates
+  (target prefix = the identity's lowercase name), `gpui*` and `telaio*` log at the full level.
+- `cli`: the `<App> X.Y.Z` version line, the help header and footer, the exit codes and the
+  Windows console attach. Parsing stays in each app.
+- `language`: `Language` (en, es, gl, it), `LanguageChoice` (auto or one of them), OS language
+  detection with `sys-locale`, `resolve` and `apply`. The app's translations stay in the app.
+- `number`: integers and decimals written with ICU's separators for the active language.
+- `paths`: `config_dir`, the OS config folder of the app.
+- `window`: `application` (with `AllAssets`), `init`, `options` (client decorations on Linux, the
+  app id, a size capped to the display) and `follow_system_appearance`.
+- `about`: `header`, the top of an About pane (logo, name, version, platform, telaio version,
+  release notes and GitHub buttons).
+
+```rust
+const IDENTITY: telaio_app::AppIdentity = telaio_app::AppIdentity {
+    name: "Postino",
+    slug: "postino",
+    app_id: "codes.tanis.postino",
+    version: env!("CARGO_PKG_VERSION"),
+    env_prefix: "POSTINO",
+    repository: "https://github.com/tanisperez/postino",
+};
+
+let level = telaio_app::logging::startup_level(settings.log_level, std::env::var("POSTINO_LOG").ok().as_deref());
+telaio_app::logging::init(&IDENTITY, level.to_filter());
+```
+
 ## Gallery
 
 ```sh

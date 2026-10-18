@@ -29,6 +29,11 @@ sha2 = "0.11"
 dirs = "7"
 tempfile = "3"
 tiny_http = "0.12"
+# The application shell (telaio-app). The same requirements as Postino, so apps get no duplicates.
+sys-locale = "0.3"
+icu_decimal = { version = "2.3", features = ["alloc"] }
+icu_locale_core = "2.3"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 
 [workspace.lints.clippy]
 all = "warn"
@@ -36,4 +41,6 @@ unwrap_used = "warn"
 expect_used = "warn"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# `deny`, not `forbid`, so a single function may opt out with `#[allow(unsafe_code)]`: the Windows
+# `AttachConsole` call of `telaio_app::cli::attach_parent_console`.
+unsafe_code = "deny"
