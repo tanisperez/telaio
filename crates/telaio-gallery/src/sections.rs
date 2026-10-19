@@ -14,10 +14,11 @@ use gpui_kit::*;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
     Card, DangerButton, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind,
-    KeyValueRow, KeyValueTable, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel,
-    SegmentedItem, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem, UnderlineTabs,
-    edit_menu, framed_dialog, modal_body, modal_footer, modal_header, open_confirm_dialog,
-    select_label_row, select_trigger, switch_halo, text_field,
+    KeyValueRow, KeyValueTable, MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton,
+    SectionLabel, SegmentedItem, Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge,
+    ThemeCard, UnderlineTabItem, UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer,
+    modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row,
+    select_trigger, switch_halo, text_field,
 };
 use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
@@ -538,6 +539,13 @@ impl Gallery {
             .child(
                 GhostButton::new("open-alert", "Alert (no Cancel)").on_click(confirm(false, false)),
             )
+            .child(
+                IconButton::new("open-shortcuts", gpui_kit::assets::IconName::Keyboard)
+                    .tooltip(open_tooltip())
+                    .on_click(|_, window, cx| {
+                        open_shortcuts_dialog(sample_shortcuts(), window, cx)
+                    }),
+            )
     }
 
     /// Opens a `framed_dialog` as described by `spec`.
@@ -646,4 +654,27 @@ fn label(text: &'static str, palette: &telaio_ui::Palette) -> impl IntoElement {
         .text_size(px(11.0))
         .text_color(palette.fg_subtle)
         .child(text)
+}
+
+/// The cheat sheet's demo: two groups, one long enough to scroll on a short window.
+fn sample_shortcuts() -> Vec<ShortcutGroup> {
+    vec![
+        ShortcutGroup {
+            title: "General".into(),
+            shortcuts: vec![
+                Shortcut::new("Command palette", &[MODIFIER_KEY, "K"]),
+                Shortcut::new("Settings", &[MODIFIER_KEY, ","]),
+                Shortcut::open_sheet(),
+            ],
+        },
+        ShortcutGroup {
+            title: "Navigation".into(),
+            shortcuts: vec![
+                Shortcut::new("Go back", &["Alt", "\u{2190}"]),
+                Shortcut::new("Go forward", &["Alt", "\u{2192}"]),
+                Shortcut::new("Up one level", &["Backspace"]),
+                Shortcut::new("Close the panel", &["Esc"]),
+            ],
+        },
+    ]
 }

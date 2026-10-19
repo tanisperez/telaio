@@ -66,3 +66,18 @@ _version: 2
   es: "Oscuro"
   gl: "Escuro"
   it: "Scuro"
+"telaio.shortcuts.title":
+  en: "Keyboard shortcuts"
+  es: "Atajos de teclado"
+  gl: "Atallos de teclado"
+  it: "Scorciatoie da tastiera"
+"telaio.shortcuts.open":
+  en: "Show keyboard shortcuts"
+  es: "Mostrar los atajos de teclado"
+  gl: "Amosar os atallos de teclado"
+  it: "Mostra le scorciatoie da tastiera"
+"telaio.shortcuts.tooltip":
+  en: "Keyboard shortcuts (%{keys})"
+  es: "Atajos de teclado (%{keys})"
+  gl: "Atallos de teclado (%{keys})"
+  it: "Scorciatoie da tastiera (%{keys})"

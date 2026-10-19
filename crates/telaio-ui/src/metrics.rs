@@ -52,3 +52,10 @@ pub const KEY_VALUE_SIDE_COL_WIDTH: f32 = 30.0;
 pub const KEY_VALUE_ROW_HEIGHT: f32 = 34.0;
 /// Space between the key and the value field of a `KeyValueTable` row, half on each side.
 pub const KEY_VALUE_CELL_GAP: f32 = 4.0;
+
+/// Width of the keyboard shortcuts cheat sheet.
+pub const SHORTCUTS_WIDTH: f32 = 520.0;
+/// Height of the cheat sheet on a tall enough window.
+pub const SHORTCUTS_HEIGHT: f32 = 620.0;
+/// Height, and least width, of a key chip in the cheat sheet.
+pub const SHORTCUTS_KEY_SIZE: f32 = 22.0;
