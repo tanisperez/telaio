@@ -46,7 +46,7 @@ Postino as the reference implementation.
   `modal_footer`, `open_confirm_dialog`), `SegmentedControl`, `select_trigger`, `StatusBadge`,
   `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `SectionLabel`, `UnderlineTabs`, `DocumentTabs`, `KeyValueTable`,
-  `DataTable`, `EmptyState`, `TreeRow`, `switch_halo` and the keyboard shortcuts cheat sheet (`open_shortcuts_dialog`, with the app's own `ShortcutGroup` list).
+  `DataTable`, `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`, `radio_halo`, `labelled_checkbox`, `labelled_radio` and the keyboard shortcuts cheat sheet (`open_shortcuts_dialog`, with the app's own `ShortcutGroup` list).
 - **Strings**: the components' own labels (Close, Cancel, Light, ...) are in
   `crates/telaio-ui/locales/telaio.yml`, in English, Spanish, Galician and Italian. They follow the
   locale the app sets with `rust_i18n::set_locale`.

@@ -19,11 +19,11 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use rust_i18n::t;
 
+use super::control_halo::checkbox_halo;
 use super::icon_button::IconButton;
 use crate::PaletteExt;
 use crate::metrics::{
-    CHECKBOX_HALO_PADDING, KEY_VALUE_CELL_GAP, KEY_VALUE_ROW_HEIGHT, KEY_VALUE_SIDE_COL_WIDTH,
-    RADIUS_MD, RADIUS_SM,
+    KEY_VALUE_CELL_GAP, KEY_VALUE_ROW_HEIGHT, KEY_VALUE_SIDE_COL_WIDTH, RADIUS_MD,
 };
 
 /// A column of a [`KeyValueTable`] that its rows can be sorted by.
@@ -216,23 +216,16 @@ impl RenderOnce for KeyValueTable {
             } else {
                 palette.fg_subtle
             };
-            // One step above the usual `hover` and `pressed`, which barely show on an area this
-            // small.
-            let (hover, pressed) = (palette.pressed, palette.border_strong);
-
             let checkbox_cell = div().flex_none().w(side_col).flex().justify_center().child(
-                // A halo around the box on hover and while pressed. gpui-component's checkbox
-                // takes its box colors from the theme, so the box itself cannot change.
-                Checkbox::new(("kv-enabled", index))
-                    .p(px(CHECKBOX_HALO_PADDING))
-                    .rounded(px(RADIUS_SM))
-                    .cursor_pointer()
-                    .hover(move |style| style.bg(hover))
-                    .active(move |style| style.bg(pressed))
-                    .checked(enabled)
-                    .when_some(toggle_handler, |checkbox, handler| {
-                        checkbox.on_click(move |checked, window, cx| handler(*checked, window, cx))
-                    }),
+                // A halo around the box on hover and while pressed.
+                checkbox_halo(
+                    Checkbox::new(("kv-enabled", index)).checked(enabled),
+                    false,
+                    &palette,
+                )
+                .when_some(toggle_handler, |checkbox, handler| {
+                    checkbox.on_click(move |checked, window, cx| handler(*checked, window, cx))
+                }),
             );
             // Half the gap on each side of the split, so the key and the value fields never touch.
             let half_gap = px(KEY_VALUE_CELL_GAP / 2.0);

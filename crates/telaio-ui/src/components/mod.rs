@@ -6,6 +6,7 @@
 
 pub mod buttons;
 pub mod card;
+pub mod control_halo;
 pub mod data_table;
 pub mod document_tabs;
 pub mod edit_menu;
@@ -29,6 +30,9 @@ pub mod underline_tabs;
 
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
 pub use card::Card;
+pub use control_halo::{
+    LabelledControl, checkbox_halo, labelled_checkbox, labelled_radio, radio_halo,
+};
 pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
 pub use document_tabs::{DocumentTab, DocumentTabs};
 pub use edit_menu::edit_menu;
