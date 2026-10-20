@@ -306,13 +306,11 @@ impl Gallery {
                 "Fits: select, close, drag to reorder, middle click closes. \
                  The first two tabs have a prefix.",
             ))
-            .child(self.document_tabs_demo(
-                cx,
-                "gallery-doc-tabs-few",
-                &self.few_tabs,
-                |this| &mut this.few_tabs,
-                true,
-            ))
+            .child(
+                self.document_tabs_demo(cx, "gallery-doc-tabs-few", &self.few_tabs, |this| {
+                    &mut this.few_tabs
+                }),
+            )
             .child(caption(
                 "Overflows (560 px wide): wheel, arrows and the tab list; \
                  adding or selecting a tab scrolls it into view.",
@@ -322,19 +320,16 @@ impl Gallery {
                 "gallery-doc-tabs-many",
                 &self.many_tabs,
                 |this| &mut this.many_tabs,
-                false,
             )))
     }
 
-    /// One document tabs demo with its "toggle dirty" button. `state` is what `field` picks,
-    /// and `prefixed` gives the first two tabs a prefix.
+    /// One document tabs demo with its "toggle dirty" button. `state` is what `field` picks.
     fn document_tabs_demo(
         &self,
         cx: &mut Context<Self>,
         id: &'static str,
         state: &DemoTabs,
         field: fn(&mut Self) -> &mut DemoTabs,
-        prefixed: bool,
     ) -> impl IntoElement {
         let palette = cx.palette();
         let bar = state
@@ -354,7 +349,7 @@ impl Gallery {
                         field(this).close(index);
                         cx.notify();
                     }));
-                if prefixed && index < 2 {
+                if tab.prefixed {
                     let color = palette.success;
                     item = item.prefix(move || {
                         div()

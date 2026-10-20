@@ -133,6 +133,8 @@ pub fn visible_nodes(nodes: &[DemoNode]) -> Vec<usize> {
 pub struct DemoTab {
     pub name: String,
     pub dirty: bool,
+    /// Whether it shows a prefix, which follows the tab when it is reordered.
+    pub prefixed: bool,
 }
 
 /// The tabs of one document tabs demo.
@@ -145,13 +147,15 @@ pub struct DemoTabs {
 }
 
 impl DemoTabs {
-    /// `count` clean tabs named `Request 1` and so on, the first one selected.
-    pub fn new(count: usize) -> Self {
+    /// `count` clean tabs named `Request 1` and so on, the first one selected, the first
+    /// `prefixed` of them with a prefix.
+    pub fn new(count: usize, prefixed: usize) -> Self {
         Self {
             tabs: (1..=count)
                 .map(|number| DemoTab {
                     name: format!("Request {number}"),
                     dirty: false,
+                    prefixed: number <= prefixed,
                 })
                 .collect(),
             selected: 0,
@@ -164,6 +168,7 @@ impl DemoTabs {
         self.tabs.push(DemoTab {
             name: format!("Request {}", self.next),
             dirty: false,
+            prefixed: false,
         });
         self.next += 1;
         self.selected = self.tabs.len() - 1;
@@ -302,8 +307,8 @@ impl Gallery {
             font_size: 13.0,
             last_action: "none yet".into(),
             underline_tab: 2,
-            few_tabs: DemoTabs::new(3),
-            many_tabs: DemoTabs::new(20),
+            few_tabs: DemoTabs::new(3, 2),
+            many_tabs: DemoTabs::new(20, 0),
             segment: 0,
             select_pick: 0,
             checkbox: true,
