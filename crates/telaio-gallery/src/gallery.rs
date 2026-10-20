@@ -101,6 +101,12 @@ pub struct Gallery {
     pub(crate) sort: Option<(SortColumn, SortOrder)>,
     pub(crate) text_input: Entity<InputState>,
     pub(crate) hover_input: Entity<InputState>,
+    /// Whether the data table demo is set in the monospace font.
+    pub(crate) table_mono: bool,
+    /// Whether the data table demo shows its header row.
+    pub(crate) table_header: bool,
+    /// How many request rows the data table demo shows.
+    pub(crate) table_rows: usize,
     /// Tracks the main column's scroll position, for its scrollbar.
     pub(crate) scroll_handle: ScrollHandle,
 }
@@ -167,6 +173,9 @@ impl Gallery {
             sort: None,
             text_input,
             hover_input,
+            table_mono: true,
+            table_header: true,
+            table_rows: 3,
             scroll_handle: ScrollHandle::new(),
         }
     }
@@ -393,6 +402,7 @@ impl Render for Gallery {
             .child(section("Inline messages", self.render_inline_messages(cx)))
             .child(section("Controls", self.render_controls(cx)))
             .child(section("Key-value table", self.render_key_value_table(cx)))
+            .child(section("Data table", self.render_data_table(cx)))
             .child(section("Theme cards", self.render_theme_cards(cx)))
             .child(section("Card", self.render_card()))
             .child(section("Modals", self.render_modals(cx)));

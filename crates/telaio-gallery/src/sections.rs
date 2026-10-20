@@ -13,12 +13,12 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
-    Card, DangerButton, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind,
-    KeyValueRow, KeyValueTable, MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton,
-    SectionLabel, SegmentedItem, Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge,
-    ThemeCard, UnderlineTabItem, UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer,
-    modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row,
-    select_trigger, switch_halo, text_field,
+    Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, GhostButton, HoverInput,
+    IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable, MODIFIER_KEY,
+    ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem, Shortcut,
+    ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem, UnderlineTabs,
+    edit_menu, framed_dialog, modal_body, modal_footer, modal_header, open_confirm_dialog,
+    open_shortcuts_dialog, open_tooltip, select_label_row, select_trigger, switch_halo, text_field,
 };
 use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
@@ -501,6 +501,108 @@ impl Gallery {
                     this.set_choice(choice, window, cx);
                 }))
             }))
+    }
+
+    /// Data table: the font and header toggles, an "Add row" button, a colored cell, an element
+    /// cell, a missing cell, and a narrow copy that scrolls sideways.
+    pub(crate) fn render_data_table(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        const NAMES: [&str; 5] = [
+            "GET /users",
+            "POST /login",
+            "GET /orders",
+            "PUT /items/7",
+            "GET /health",
+        ];
+        let table = |id: &'static str| {
+            let mut table = DataTable::new(id)
+                .header(self.table_header)
+                .mono(self.table_mono)
+                .column(DataColumn::new("Request"))
+                .column(DataColumn::numeric("Count"))
+                .column(DataColumn::numeric("p95"))
+                .column(DataColumn::numeric("Errors"))
+                .column(DataColumn::new("Note").width(90.0).align(DataAlign::Right));
+            for index in 0..self.table_rows {
+                let errors = (index * 7) % 5;
+                let errors_cell = DataCell::text(format!("{errors}.0%"));
+                let errors_cell = if errors > 2 {
+                    errors_cell.color(palette.warning)
+                } else {
+                    errors_cell
+                };
+                let name = DataCell::element(
+                    h_flex()
+                        .items_center()
+                        .gap_2()
+                        .child(StatusBadge::new("OK").tone(Tone::Success))
+                        .child(div().min_w_0().truncate().child(NAMES[index % NAMES.len()])),
+                );
+                let mut cells = vec![
+                    if index == 0 {
+                        name
+                    } else {
+                        DataCell::text(NAMES[index % NAMES.len()])
+                    },
+                    DataCell::text(format!("{}", 1200 + index * 345)),
+                    DataCell::text(format!("{} ms", 40 + index * 13)),
+                    errors_cell,
+                ];
+                // The last row leaves its final cell out, shown as an empty one.
+                if index + 1 != self.table_rows || self.table_rows == 1 {
+                    cells.push(DataCell::text("note").color(palette.fg_muted));
+                }
+                table = table.row(cells);
+            }
+            table
+        };
+        let toggle = |label: &'static str, on: bool, f: fn(&mut Self) -> &mut bool| {
+            SegmentedItem::new(label)
+                .selected(on)
+                .on_click(Self::act(cx, move |this, _, cx| {
+                    let value = f(this);
+                    *value = !*value;
+                    let value = *value;
+                    this.record(format!("Data table {label}: {}", on_off(value)), cx);
+                }))
+        };
+        v_flex()
+            .gap_3()
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_2()
+                    .items_center()
+                    .child(segmented(
+                        "table-mono",
+                        [toggle("Mono", self.table_mono, |this| &mut this.table_mono)],
+                    ))
+                    .child(segmented(
+                        "table-header",
+                        [toggle("Header", self.table_header, |this| {
+                            &mut this.table_header
+                        })],
+                    ))
+                    .child(
+                        SecondaryButton::new("table-add-row", "Add row").on_click(Self::click(
+                            cx,
+                            |this, _, cx| {
+                                this.table_rows = (this.table_rows + 1).min(NAMES.len());
+                                this.record(format!("Data table rows: {}", this.table_rows), cx);
+                            },
+                        )),
+                    )
+                    .child(
+                        SecondaryButton::new("table-remove-row", "Remove row").on_click(
+                            Self::click(cx, |this, _, cx| {
+                                this.table_rows = this.table_rows.saturating_sub(1);
+                                this.record(format!("Data table rows: {}", this.table_rows), cx);
+                            }),
+                        ),
+                    ),
+            )
+            .child(table("gallery-data-table"))
+            .child(div().w(px(300.0)).child(table("gallery-data-table-narrow")))
     }
 
     /// Card: a container with a couple of children.

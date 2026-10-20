@@ -6,6 +6,7 @@
 
 pub mod buttons;
 pub mod card;
+pub mod data_table;
 pub mod edit_menu;
 pub mod hover_input;
 pub mod icon_button;
@@ -25,6 +26,7 @@ pub mod underline_tabs;
 
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
 pub use card::Card;
+pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
 pub use edit_menu::edit_menu;
 pub use hover_input::HoverInput;
 pub use icon_button::IconButton;

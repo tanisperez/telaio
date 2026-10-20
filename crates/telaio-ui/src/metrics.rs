@@ -59,3 +59,14 @@ pub const SHORTCUTS_WIDTH: f32 = 520.0;
 pub const SHORTCUTS_HEIGHT: f32 = 620.0;
 /// Height, and least width, of a key chip in the cheat sheet.
 pub const SHORTCUTS_KEY_SIZE: f32 = 22.0;
+
+/// Height of a `DataTable` row, header included.
+pub const DATA_TABLE_ROW_HEIGHT: f32 = 34.0;
+/// Horizontal padding of a `DataTable` row.
+pub const DATA_TABLE_PADDING_X: f32 = 16.0;
+/// Space between the cells of a `DataTable` row.
+pub const DATA_TABLE_COL_GAP: f32 = 10.0;
+/// Width of a numeric `DataTable` column, wide enough for "1,234 ms" in the mono font.
+pub const DATA_TABLE_NUMERIC_COL_WIDTH: f32 = 64.0;
+/// Least width of a flexible `DataTable` column before the table scrolls sideways.
+pub const DATA_TABLE_FLEX_MIN_WIDTH: f32 = 60.0;
