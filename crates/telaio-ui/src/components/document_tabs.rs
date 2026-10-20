@@ -526,6 +526,12 @@ impl RenderOnce for DocumentTabs {
                     handler(dragged.index, usize::MAX, window, cx)
                 })
             })
+            // gpui hands a wheel event to every scrolled element under the pointer. Once the
+            // tabs have scrolled it (their listener is inner, so it runs first), stop it here so
+            // a scrolled page around the strip does not move as well.
+            .when(flags.show_controls, |bar| {
+                bar.on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+            })
             .child(
                 h_flex()
                     .id("doc-tabs-scroll")
@@ -536,7 +542,18 @@ impl RenderOnce for DocumentTabs {
                     .track_scroll(&handle)
                     .children(tabs),
             )
-            .children(self.suffix)
+            // While the tabs overflow, the last visible tab is cut and its own border is gone, so
+            // the suffix draws one to stay apart from it.
+            .children(self.suffix.map(|suffix| {
+                h_flex()
+                    .flex_none()
+                    .h_full()
+                    .items_center()
+                    .when(flags.show_controls, |this| {
+                        this.border_l_1().border_color(palette.border)
+                    })
+                    .child(suffix)
+            }))
             .child(div().flex_1())
             .children(controls)
             .child(check)
