@@ -17,6 +17,11 @@ pub const DOCUMENT_TABS_HEIGHT: f32 = 36.0;
 /// with their gaps and padding). Fixed, so the strip can tell whether the tabs overflow with and
 /// without them.
 pub const DOCUMENT_TABS_CONTROLS_WIDTH: f32 = 88.0;
+/// Extra space between a document tab's label and its close button, which sits that much closer
+/// to the tab's right edge.
+pub const DOCUMENT_TAB_CLOSE_SHIFT: f32 = 4.0;
+/// Horizontal padding around the document tabs' suffix, so it does not touch the last tab.
+pub const DOCUMENT_TABS_SUFFIX_PADDING: f32 = 6.0;
 
 /// Radius for chips and checkboxes, the smallest step of the radius scale.
 pub const RADIUS_XS: f32 = 4.0;

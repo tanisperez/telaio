@@ -35,7 +35,10 @@ use gpui_kit::*;
 
 use super::IconButton;
 use crate::PaletteExt;
-use crate::metrics::{DOCUMENT_TABS_CONTROLS_WIDTH, DOCUMENT_TABS_HEIGHT, RADIUS_SM};
+use crate::metrics::{
+    DOCUMENT_TAB_CLOSE_SHIFT, DOCUMENT_TABS_CONTROLS_WIDTH, DOCUMENT_TABS_HEIGHT,
+    DOCUMENT_TABS_SUFFIX_PADDING, RADIUS_SM,
+};
 
 /// One open tab.
 pub struct DocumentTab {
@@ -336,7 +339,8 @@ impl RenderOnce for DocumentTabs {
                 .h_full()
                 .items_center()
                 .gap(px(6.0))
-                .px_3()
+                .pl_3()
+                .pr(px(12.0 - DOCUMENT_TAB_CLOSE_SHIFT))
                 .border_r_1()
                 .border_color(palette.border)
                 .cursor_pointer()
@@ -403,6 +407,7 @@ impl RenderOnce for DocumentTabs {
             let mut end = div()
                 .id(("doc-tab-end", index))
                 .relative()
+                .ml(px(DOCUMENT_TAB_CLOSE_SHIFT))
                 .size(px(14.0))
                 .flex()
                 .items_center()
@@ -549,6 +554,7 @@ impl RenderOnce for DocumentTabs {
                     .flex_none()
                     .h_full()
                     .items_center()
+                    .px(px(DOCUMENT_TABS_SUFFIX_PADDING))
                     .when(flags.show_controls, |this| {
                         this.border_l_1().border_color(palette.border)
                     })
