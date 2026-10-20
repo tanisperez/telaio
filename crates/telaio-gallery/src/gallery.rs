@@ -17,8 +17,8 @@ use telaio_ui::components::{SortColumn, SortOrder};
 use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::SamplePalette;
-use crate::tabs::Tab;
 use crate::settings_demo::SettingsDemo;
+use crate::tabs::Tab;
 
 /// The widest the content grows, in pixels.
 const CONTENT_MAX_WIDTH: f32 = 820.0;
