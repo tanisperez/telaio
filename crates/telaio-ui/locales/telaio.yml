@@ -81,3 +81,18 @@ _version: 2
   es: "Atajos de teclado (%{keys})"
   gl: "Atallos de teclado (%{keys})"
   it: "Scorciatoie da tastiera (%{keys})"
+"telaio.tabs.previous":
+  en: "Scroll tabs left"
+  es: "Desplazar las pestañas a la izquierda"
+  gl: "Desprazar as lapelas á esquerda"
+  it: "Scorri le schede a sinistra"
+"telaio.tabs.next":
+  en: "Scroll tabs right"
+  es: "Desplazar las pestañas a la derecha"
+  gl: "Desprazar as lapelas á dereita"
+  it: "Scorri le schede a destra"
+"telaio.tabs.list":
+  en: "All tabs"
+  es: "Todas las pestañas"
+  gl: "Todas as lapelas"
+  it: "Tutte le schede"

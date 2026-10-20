@@ -11,6 +11,12 @@ pub const MENU_ROW_HEIGHT: f32 = 28.0;
 pub const SEGMENTED_CONTROL_INNER_HEIGHT: f32 = 22.0;
 /// Height of an `UnderlineTabs` strip.
 pub const UNDERLINE_TABS_HEIGHT: f32 = 32.0;
+/// Height of a `DocumentTabs` strip.
+pub const DOCUMENT_TABS_HEIGHT: f32 = 36.0;
+/// Width of the overflow controls of a `DocumentTabs` strip (the two arrows and the list button
+/// with their gaps and padding). Fixed, so the strip can tell whether the tabs overflow with and
+/// without them.
+pub const DOCUMENT_TABS_CONTROLS_WIDTH: f32 = 88.0;
 
 /// Radius for chips and checkboxes, the smallest step of the radius scale.
 pub const RADIUS_XS: f32 = 4.0;

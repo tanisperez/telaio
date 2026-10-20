@@ -78,8 +78,11 @@ impl IconButton {
     }
 }
 
-impl RenderOnce for IconButton {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+impl IconButton {
+    /// The underlying [`Button`], for callers that attach a gpui-kit trait to it, such as a
+    /// dropdown menu (the button is not an element of its own, so the trait cannot go on
+    /// `IconButton`).
+    pub(crate) fn into_button(self, cx: &App) -> Button {
         let palette = cx.palette();
         let size = if self.large {
             gpui_kit::component::Size::Size(px(ICON_BUTTON_LG))
@@ -103,5 +106,11 @@ impl RenderOnce for IconButton {
             button = button.on_click(move |event, window, cx| handler(event, window, cx));
         }
         button
+    }
+}
+
+impl RenderOnce for IconButton {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        self.into_button(cx)
     }
 }

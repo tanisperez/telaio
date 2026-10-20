@@ -7,6 +7,7 @@
 pub mod buttons;
 pub mod card;
 pub mod data_table;
+pub mod document_tabs;
 pub mod edit_menu;
 pub mod empty_state;
 pub mod hover_input;
@@ -29,6 +30,7 @@ pub mod underline_tabs;
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
 pub use card::Card;
 pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
+pub use document_tabs::{DocumentTab, DocumentTabs};
 pub use edit_menu::edit_menu;
 pub use empty_state::EmptyState;
 pub use hover_input::HoverInput;
