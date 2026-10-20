@@ -30,10 +30,34 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::PaletteExt;
-use crate::metrics::{CONTROL_HEIGHT, RADIUS_MD};
+use crate::metrics::{
+    BUTTON_GLOW_BLUR, BUTTON_GLOW_OFFSET_Y, BUTTON_GLOW_OPACITY, CONTROL_HEIGHT, RADIUS_MD,
+};
 
 /// Opacity applied to a disabled button (45%).
 pub(crate) const DISABLED_OPACITY: f32 = 0.45;
+
+/// Wraps a solid `button` in the glow it gets on hover: a soft shadow of `color` that spills a
+/// little past its edges, for the primary and danger kinds only, so the main action of a view
+/// stands out without every button glowing. The wrapper carries the hover style because gpui-kit's
+/// `Button` already sets its own. It paints outside the button's bounds, so an ancestor that clips
+/// (`overflow_hidden`) cuts it.
+fn with_hover_glow(button: Button, color: Hsla, disabled: bool, full_width: bool) -> Div {
+    let glow = BoxShadow::new(
+        px(0.0),
+        px(BUTTON_GLOW_OFFSET_Y),
+        color.opacity(BUTTON_GLOW_OPACITY),
+    )
+    .blur_radius(px(BUTTON_GLOW_BLUR));
+    div()
+        .flex_none()
+        .rounded(px(RADIUS_MD))
+        .when(full_width, |this| this.w_full())
+        .when(!disabled, |this| {
+            this.hover(move |style| style.shadow(vec![glow]))
+        })
+        .child(button)
+}
 
 /// Builder state shared by the four button kinds in this file. Not public: each kind exposes its
 /// own constructor and forwards its builder methods to this.
@@ -163,7 +187,17 @@ impl PrimaryButton {
 
 impl RenderOnce for PrimaryButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        self.spec.render(cx, |button| button.primary())
+        let (color, disabled, full_width) = (
+            cx.palette().accent,
+            self.spec.disabled,
+            self.spec.full_width,
+        );
+        with_hover_glow(
+            self.spec.render(cx, |button| button.primary()),
+            color,
+            disabled,
+            full_width,
+        )
     }
 }
 
@@ -358,6 +392,16 @@ impl DangerButton {
 
 impl RenderOnce for DangerButton {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        self.spec.render(cx, |button| button.danger())
+        let (color, disabled, full_width) = (
+            cx.palette().danger,
+            self.spec.disabled,
+            self.spec.full_width,
+        );
+        with_hover_glow(
+            self.spec.render(cx, |button| button.danger()),
+            color,
+            disabled,
+            full_width,
+        )
     }
 }

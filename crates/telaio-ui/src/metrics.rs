@@ -119,3 +119,10 @@ pub const EDITABLE_TABLE_LINE_HEIGHT: f32 = 22.0;
 pub const EDITABLE_TABLE_TEXT_SIZE: f32 = 12.5;
 /// Text size of the header labels and of the notes of an `EditableTable`.
 pub const EDITABLE_TABLE_SMALL_TEXT_SIZE: f32 = 11.0;
+
+/// Blur radius of the glow under a hovered primary or danger button.
+pub const BUTTON_GLOW_BLUR: f32 = 10.0;
+/// Vertical offset of that glow, so it reads as light falling a little below the button.
+pub const BUTTON_GLOW_OFFSET_Y: f32 = 2.0;
+/// Opacity of the button's own color in that glow.
+pub const BUTTON_GLOW_OPACITY: f32 = 0.35;
