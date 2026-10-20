@@ -70,3 +70,11 @@ pub const DATA_TABLE_COL_GAP: f32 = 10.0;
 pub const DATA_TABLE_NUMERIC_COL_WIDTH: f32 = 64.0;
 /// Least width of a flexible `DataTable` column before the table scrolls sideways.
 pub const DATA_TABLE_FLEX_MIN_WIDTH: f32 = 60.0;
+
+/// Side length of the icon of an `EmptyState`.
+pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;
+/// Vertical padding of a compact `EmptyState`, which sits in the flow of a page instead of
+/// filling its container.
+pub const EMPTY_STATE_COMPACT_PADDING: f32 = 40.0;
+/// Widest an `EmptyState` explanation grows before it wraps.
+pub const EMPTY_STATE_DESCRIPTION_MAX_WIDTH: f32 = 360.0;

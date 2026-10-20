@@ -8,6 +8,7 @@ pub mod buttons;
 pub mod card;
 pub mod data_table;
 pub mod edit_menu;
+pub mod empty_state;
 pub mod hover_input;
 pub mod icon_button;
 pub mod inline_message;
@@ -28,6 +29,7 @@ pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, Se
 pub use card::Card;
 pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
 pub use edit_menu::edit_menu;
+pub use empty_state::EmptyState;
 pub use hover_input::HoverInput;
 pub use icon_button::IconButton;
 pub use inline_message::{InlineMessage, InlineMessageKind};

@@ -403,6 +403,7 @@ impl Render for Gallery {
             .child(section("Controls", self.render_controls(cx)))
             .child(section("Key-value table", self.render_key_value_table(cx)))
             .child(section("Data table", self.render_data_table(cx)))
+            .child(section("Empty state", self.render_empty_state(cx)))
             .child(section("Theme cards", self.render_theme_cards(cx)))
             .child(section("Card", self.render_card()))
             .child(section("Modals", self.render_modals(cx)));

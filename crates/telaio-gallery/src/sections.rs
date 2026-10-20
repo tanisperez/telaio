@@ -13,14 +13,15 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
-    Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, GhostButton, HoverInput,
-    IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable, MODIFIER_KEY,
-    ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem, Shortcut,
-    ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem, UnderlineTabs,
-    edit_menu, framed_dialog, modal_body, modal_footer, modal_header, open_confirm_dialog,
-    open_shortcuts_dialog, open_tooltip, select_label_row, select_trigger, switch_halo, text_field,
+    Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, EmptyState, GhostButton,
+    HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable,
+    MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem,
+    Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem,
+    UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer, modal_header,
+    open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row, select_trigger,
+    switch_halo, text_field,
 };
-use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
+use telaio_ui::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_LG};
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
 
 use crate::gallery::{DemoRow, Gallery, segmented};
@@ -603,6 +604,54 @@ impl Gallery {
             )
             .child(table("gallery-data-table"))
             .child(div().w(px(300.0)).child(table("gallery-data-table-narrow")))
+    }
+
+    /// Empty state: the bare title, an icon, the full set with a hint and a working action, and
+    /// the compact one that sits in the flow of a page.
+    pub(crate) fn render_empty_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let frame = |state: EmptyState| {
+            div()
+                .flex_1()
+                .min_w(px(220.0))
+                .h(px(250.0))
+                .border_1()
+                .border_color(palette.border)
+                .rounded(px(RADIUS_LG))
+                .bg(palette.raised)
+                .child(state)
+        };
+        v_flex()
+            .gap_3()
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_3()
+                    .child(frame(EmptyState::new("Nothing sent yet")))
+                    .child(frame(
+                        EmptyState::new("No requests")
+                            .icon(gpui_kit::assets::IconName::Inbox)
+                            .description("Requests you create show up here."),
+                    ))
+                    .child(frame(
+                        EmptyState::new("Response will appear here")
+                            .icon(gpui_kit::assets::IconName::SendHorizontal)
+                            .description("Send the request to see its status, body and headers.")
+                            .hint(format!("{MODIFIER_KEY} \u{21b5}"))
+                            .action(
+                                PrimaryButton::new("empty-state-action", "Send")
+                                    .on_click(Self::click_record(cx, "Empty state: Send clicked")),
+                            ),
+                    )),
+            )
+            .child(
+                div()
+                    .border_1()
+                    .border_color(palette.border)
+                    .rounded(px(RADIUS_LG))
+                    .bg(palette.raised)
+                    .child(EmptyState::new("Compact, in the flow of a page").compact(true)),
+            )
     }
 
     /// Card: a container with a couple of children.
