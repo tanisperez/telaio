@@ -238,7 +238,10 @@ impl RenderOnce for DataTable {
                 .font_weight(FontWeight::MEDIUM)
         });
 
-        let body = rows.into_iter().map(|cells| {
+        // The card's border closes the last row: a border of its own would poke out past the
+        // rounded corners, since `overflow_hidden` clips to a plain rectangle.
+        let last = rows.len().saturating_sub(1);
+        let body = rows.into_iter().enumerate().map(|(index, cells)| {
             let mut cells: Vec<Option<AnyElement>> = cells
                 .into_iter()
                 .map(|cell| {
@@ -257,7 +260,7 @@ impl RenderOnce for DataTable {
                 .collect();
             cells.resize_with(columns.len(), || None);
             line(&columns, cells, BODY_TEXT_SIZE)
-                .border_b_1()
+                .when(index < last, |row| row.border_b_1())
                 .border_color(palette.border)
         });
 
@@ -270,10 +273,13 @@ impl RenderOnce for DataTable {
             .when(mono, |this| this.font_family(MONO_FAMILY))
             .child(
                 div()
-                    .id(id)
+                    .id(id.clone())
                     .w_full()
                     .restrict_scroll_to_axis()
                     .overflow_x_scrollbar()
+                    // Keyed by the table's id: by default the scroll state is keyed by this call
+                    // site, so every table would share one scroll position.
+                    .id(id)
                     .child(
                         v_flex()
                             .min_w(px(table_min_width))
