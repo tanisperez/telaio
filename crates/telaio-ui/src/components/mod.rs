@@ -57,7 +57,7 @@ pub use shortcuts::{
 };
 pub use status_badge::StatusBadge;
 pub use switch_halo::switch_halo;
-pub use text_field::text_field;
+pub use text_field::{input_line_height, text_field};
 pub use theme_card::ThemeCard;
 pub use tree_row::TreeRow;
 pub use underline_tabs::{UnderlineTabItem, UnderlineTabs};

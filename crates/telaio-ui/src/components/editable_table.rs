@@ -16,7 +16,7 @@
 //! a scale of 1.2 (26.4 device pixels) gets a box of 26 or 27 device pixels depending on where
 //! the row happens to sit. That was the text jumping up and down. The table avoids it by
 //! giving its inputs a line height that is a whole number of device pixels (see
-//! [`input_line_height`]), where rounding cannot change the size, and by making the input
+//! [`input_line_height`](super::text_field::input_line_height)), where rounding cannot change the size, and by making the input
 //! exactly that tall, so nothing is centered by a fractional amount or shrunk by a flex parent.
 //! A single line row has a fixed height, so a cell's height never depends on focus, on the text
 //! or on its placeholder.
@@ -27,18 +27,13 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::edit_menu::edit_menu;
+use super::text_field::input_line_height;
 use crate::PaletteExt;
 use crate::metrics::{
     EDITABLE_TABLE_HEADER_HEIGHT, EDITABLE_TABLE_INPUT_PADDING_X, EDITABLE_TABLE_LINE_HEIGHT,
     EDITABLE_TABLE_PADDING_X, EDITABLE_TABLE_ROW_HEIGHT, EDITABLE_TABLE_SMALL_TEXT_SIZE,
     EDITABLE_TABLE_TEXT_SIZE, RADIUS_MD,
 };
-
-/// How many pixels either side of the nominal line height [`input_line_height`] looks at.
-const LINE_HEIGHT_SEARCH: u32 = 6;
-
-/// How much of a device pixel a line height may be off a whole number and still count as one.
-const WHOLE_PIXEL_TOLERANCE: f32 = 1e-3;
 
 /// How wide a column is.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -209,34 +204,6 @@ impl EditableTable {
     }
 }
 
-/// The line height of the table's inputs on a window of `scale_factor`: `nominal` logical pixels,
-/// or the nearest whole number of logical pixels that is also a whole number of device pixels.
-///
-/// gpui rounds the edges of every box to device pixels, so a box whose size is not a whole
-/// number of device pixels comes out one device pixel taller or shorter depending on its
-/// position, and an input whose box is shorter than its line scrolls its text (see the module
-/// documentation). On a whole device size the rounding keeps the size whatever the position.
-/// With no such height within [`LINE_HEIGHT_SEARCH`] pixels (an odd scale factor) it falls back
-/// to the nearest one that rounds up, which is right for most positions.
-pub fn input_line_height(nominal: f32, scale_factor: f32) -> f32 {
-    let candidates = (0..=LINE_HEIGHT_SEARCH)
-        .flat_map(|step| [nominal + step as f32, nominal - step as f32])
-        .filter(|line| *line > 0.0);
-    let whole = |line: f32| {
-        let device = line * scale_factor;
-        (device - device.round()).abs() < WHOLE_PIXEL_TOLERANCE
-    };
-    let rounds_up = |line: f32| {
-        let device = line * scale_factor;
-        device.round() >= device
-    };
-    candidates
-        .clone()
-        .find(|&line| whole(line))
-        .or_else(|| candidates.clone().find(|&line| rounds_up(line)))
-        .unwrap_or(nominal)
-}
-
 impl RenderOnce for EditableTable {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let palette = cx.palette();
@@ -284,33 +251,27 @@ impl RenderOnce for EditableTable {
                 .when(tall, |line| line.min_h(row_height))
                 .when(!tall, |line| line.h(row_height))
                 .when_some(row.background, |line, background| line.bg(background))
-                .when(!last, |line| {
-                    line.border_b_1().border_color(palette.border)
+                .when(!last, |line| line.border_b_1().border_color(palette.border));
+            let mut cells = row.cells.into_iter();
+            for width in widths.iter().copied() {
+                // A missing trailing cell still takes its column, so the others stay aligned.
+                line = line.child(match cells.next() {
+                    Some(cell) => render_cell(cell, width, line_height, &mono_font, &palette, cx),
+                    None => sized(div(), width),
                 });
-            for (cell, width) in row.cells.into_iter().zip(widths.iter().copied()) {
-                line = line.child(render_cell(
-                    cell,
-                    width,
-                    line_height,
-                    &mono_font,
-                    &palette,
-                    cx,
-                ));
             }
             table = table.child(line);
         }
 
-        if total == 0 {
-            if let Some(message) = self.empty {
-                table = table.child(
-                    div()
-                        .px(px(EDITABLE_TABLE_PADDING_X))
-                        .py(px(14.0))
-                        .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
-                        .text_color(palette.fg_subtle)
-                        .child(message),
-                );
-            }
+        if let Some(message) = self.empty.filter(|_| total == 0) {
+            table = table.child(
+                div()
+                    .px(px(EDITABLE_TABLE_PADDING_X))
+                    .py(px(14.0))
+                    .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
+                    .text_color(palette.fg_subtle)
+                    .child(message),
+            );
         }
         table
     }
@@ -334,6 +295,7 @@ fn render_cell(
     cx: &mut App,
 ) -> Div {
     let is_input = matches!(cell.content, Content::Input(_));
+    let is_text = matches!(cell.content, Content::Text(_));
     let default_padding = if is_input {
         EDITABLE_TABLE_INPUT_PADDING_X
     } else {
@@ -350,6 +312,7 @@ fn render_cell(
                 Input::new(&state)
                     .context_menu(edit_menu(&state, cx))
                     .py_0()
+                    .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
                     .h(line_height)
                     .line_height(line_height)
                     .appearance(false)
@@ -380,9 +343,14 @@ fn render_cell(
     } else {
         cell.padding_x.unwrap_or(default_padding)
     }));
-    if cell.centered {
-        column = column.items_center();
-    }
+    // Inputs and texts fill the column, anything else keeps its own width.
+    column = if cell.centered {
+        column.items_center()
+    } else if is_input || is_text {
+        column
+    } else {
+        column.items_start()
+    };
     if has_note {
         // Vertical room for the note, and the gap between it and the content.
         column = if is_input {
@@ -392,44 +360,4 @@ fn render_cell(
         };
     }
     column.child(content).children(note)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{WHOLE_PIXEL_TOLERANCE, input_line_height};
-
-    fn device(line: f32, scale: f32) -> f32 {
-        line * scale
-    }
-
-    #[test]
-    fn a_whole_scale_keeps_the_nominal_line_height() {
-        for scale in [1.0, 2.0, 3.0] {
-            assert_eq!(input_line_height(22.0, scale), 22.0);
-        }
-        assert_eq!(input_line_height(22.0, 1.5), 22.0);
-    }
-
-    #[test]
-    fn a_fractional_scale_gets_a_whole_device_height() {
-        for scale in [1.1, 1.2, 1.25, 1.75, 2.25] {
-            let line = input_line_height(22.0, scale);
-            let device = device(line, scale);
-            assert!(
-                (device - device.round()).abs() < WHOLE_PIXEL_TOLERANCE,
-                "{line} at {scale} is {device} device pixels"
-            );
-            assert!((line - 22.0).abs() <= 6.0 && line.fract() == 0.0);
-        }
-        assert_eq!(input_line_height(22.0, 1.2), 20.0);
-        assert_eq!(input_line_height(22.0, 1.25), 24.0);
-    }
-
-    #[test]
-    fn an_awkward_scale_still_gets_a_height_that_rounds_up() {
-        let scale = 1.37;
-        let line = input_line_height(22.0, scale);
-        let device = device(line, scale);
-        assert!(device.round() >= device, "{line} at {scale} is {device}");
-    }
 }

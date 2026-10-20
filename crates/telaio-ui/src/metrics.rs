@@ -113,7 +113,7 @@ pub const EDITABLE_TABLE_PADDING_X: f32 = 12.0;
 pub const EDITABLE_TABLE_INPUT_PADDING_X: f32 = 4.0;
 /// Nominal line height of an `EditableTable` input, which is also the height of its selection
 /// highlight. The real one is the whole device pixel size closest to it (see
-/// `editable_table::input_line_height`).
+/// `text_field::input_line_height`).
 pub const EDITABLE_TABLE_LINE_HEIGHT: f32 = 22.0;
 /// Text size of the body of an `EditableTable`, inputs included.
 pub const EDITABLE_TABLE_TEXT_SIZE: f32 = 12.5;
