@@ -128,6 +128,89 @@ pub fn visible_nodes(nodes: &[DemoNode]) -> Vec<usize> {
     visible
 }
 
+/// One tab of a document tabs demo.
+#[derive(Debug, Clone)]
+pub struct DemoTab {
+    pub name: String,
+    pub dirty: bool,
+}
+
+/// The tabs of one document tabs demo.
+#[derive(Debug, Clone)]
+pub struct DemoTabs {
+    pub tabs: Vec<DemoTab>,
+    pub selected: usize,
+    /// The number the next added tab gets in its name.
+    pub next: usize,
+}
+
+impl DemoTabs {
+    /// `count` clean tabs named `Request 1` and so on, the first one selected.
+    pub fn new(count: usize) -> Self {
+        Self {
+            tabs: (1..=count)
+                .map(|number| DemoTab {
+                    name: format!("Request {number}"),
+                    dirty: false,
+                })
+                .collect(),
+            selected: 0,
+            next: count + 1,
+        }
+    }
+
+    /// Appends a tab and selects it.
+    pub fn add(&mut self) {
+        self.tabs.push(DemoTab {
+            name: format!("Request {}", self.next),
+            dirty: false,
+        });
+        self.next += 1;
+        self.selected = self.tabs.len() - 1;
+    }
+
+    /// Removes the tab at `index`, keeping the same tab selected when it can.
+    pub fn close(&mut self, index: usize) {
+        if index >= self.tabs.len() {
+            return;
+        }
+        self.tabs.remove(index);
+        if index < self.selected {
+            self.selected -= 1;
+        }
+        self.selected = self.selected.min(self.tabs.len().saturating_sub(1));
+    }
+
+    /// Moves the tab at `from` to `to` (`usize::MAX` for the end), following it if selected.
+    pub fn reorder(&mut self, from: usize, to: usize) {
+        if from >= self.tabs.len() {
+            return;
+        }
+        let to = to.min(self.tabs.len() - 1);
+        let selected_tab = self.selected;
+        let tab = self.tabs.remove(from);
+        self.tabs.insert(to, tab);
+        self.selected = if selected_tab == from {
+            to
+        } else {
+            let mut order: Vec<usize> = (0..self.tabs.len()).collect();
+            let moved = order.remove(from);
+            order.insert(to, moved);
+            order
+                .iter()
+                .position(|original| *original == selected_tab)
+                .unwrap_or(0)
+        };
+    }
+
+    /// Flips the dirty mark of the selected tab.
+    pub fn toggle_dirty(&mut self) {
+        if let Some(tab) = self.tabs.get_mut(self.selected) {
+            tab.dirty = !tab.dirty;
+        }
+    }
+}
+
 /// The state of the whole gallery.
 pub struct Gallery {
     pub(crate) focus_handle: FocusHandle,
@@ -137,6 +220,8 @@ pub struct Gallery {
     pub(crate) font_size: f32,
     pub(crate) last_action: SharedString,
     pub(crate) underline_tab: usize,
+    pub(crate) few_tabs: DemoTabs,
+    pub(crate) many_tabs: DemoTabs,
     pub(crate) segment: usize,
     pub(crate) select_pick: usize,
     pub(crate) checkbox: bool,
@@ -217,6 +302,8 @@ impl Gallery {
             font_size: 13.0,
             last_action: "none yet".into(),
             underline_tab: 2,
+            few_tabs: DemoTabs::new(3),
+            many_tabs: DemoTabs::new(20),
             segment: 0,
             select_pick: 0,
             checkbox: true,
@@ -457,6 +544,7 @@ impl Render for Gallery {
             .child(section("Select trigger", self.render_select(cx)))
             .child(section("Segmented control", self.render_segmented(cx)))
             .child(section("Underline tabs", self.render_underline_tabs(cx)))
+            .child(section("Document tabs", self.render_document_tabs(cx)))
             .child(section("Status badges", self.render_status_badges(cx)))
             .child(section("Inline messages", self.render_inline_messages(cx)))
             .child(section("Controls", self.render_controls(cx)))

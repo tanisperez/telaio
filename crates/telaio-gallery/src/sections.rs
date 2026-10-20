@@ -13,10 +13,10 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
-    Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, EmptyState, GhostButton,
-    HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable,
-    MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem,
-    Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow,
+    Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, DocumentTab, DocumentTabs,
+    EmptyState, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow,
+    KeyValueTable, MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel,
+    SegmentedItem, Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow,
     UnderlineTabItem, UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer,
     modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row,
     select_trigger, switch_halo, text_field,
@@ -24,7 +24,7 @@ use telaio_ui::components::{
 use telaio_ui::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_LG};
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
 
-use crate::gallery::{DemoRow, Gallery, segmented, visible_nodes};
+use crate::gallery::{DemoRow, DemoTabs, Gallery, segmented, visible_nodes};
 
 /// The picks of the select trigger demo.
 const SELECT_PICKS: [&str; 3] = ["staging", "production", "local"];
@@ -289,6 +289,109 @@ impl Gallery {
                 .text_color(palette.fg_subtle)
                 .child("suffix"),
         )
+    }
+
+    /// Document tabs: a few tabs that fit, and twenty in a fixed width strip that overflows.
+    pub(crate) fn render_document_tabs(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let caption = |text: &'static str| {
+            div()
+                .text_size(px(12.0))
+                .text_color(palette.fg_muted)
+                .child(text)
+        };
+        v_flex()
+            .gap_3()
+            .child(caption(
+                "Fits: select, close, drag to reorder, middle click closes. \
+                 The first two tabs have a prefix.",
+            ))
+            .child(self.document_tabs_demo(
+                cx,
+                "gallery-doc-tabs-few",
+                &self.few_tabs,
+                |this| &mut this.few_tabs,
+                true,
+            ))
+            .child(caption(
+                "Overflows (560 px wide): wheel, arrows and the tab list; \
+                 adding or selecting a tab scrolls it into view.",
+            ))
+            .child(div().w(px(560.0)).child(self.document_tabs_demo(
+                cx,
+                "gallery-doc-tabs-many",
+                &self.many_tabs,
+                |this| &mut this.many_tabs,
+                false,
+            )))
+    }
+
+    /// One document tabs demo with its "toggle dirty" button. `state` is what `field` picks,
+    /// and `prefixed` gives the first two tabs a prefix.
+    fn document_tabs_demo(
+        &self,
+        cx: &mut Context<Self>,
+        id: &'static str,
+        state: &DemoTabs,
+        field: fn(&mut Self) -> &mut DemoTabs,
+        prefixed: bool,
+    ) -> impl IntoElement {
+        let palette = cx.palette();
+        let bar = state
+            .tabs
+            .iter()
+            .enumerate()
+            .fold(DocumentTabs::new(id), |bar, (index, tab)| {
+                let mut item = DocumentTab::new(tab.name.clone())
+                    .selected(state.selected == index)
+                    .dirty(tab.dirty)
+                    .tooltip(format!("workspace/{}", tab.name))
+                    .on_click(Self::act(cx, move |this, _, cx| {
+                        field(this).selected = index;
+                        cx.notify();
+                    }))
+                    .on_close(Self::act(cx, move |this, _, cx| {
+                        field(this).close(index);
+                        cx.notify();
+                    }));
+                if prefixed && index < 2 {
+                    let color = palette.success;
+                    item = item.prefix(move || {
+                        div()
+                            .text_size(px(10.0))
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(color)
+                            .child("GET")
+                    });
+                }
+                bar.item(item)
+            });
+        let bar = bar
+            .on_reorder({
+                let weak = cx.weak_entity();
+                move |from, to, _, cx| {
+                    let _ = weak.update(cx, |this, cx| {
+                        field(this).reorder(from, to);
+                        cx.notify();
+                    });
+                }
+            })
+            .suffix(
+                IconButton::new((id, 0usize), IconName::Plus)
+                    .tooltip("New tab")
+                    .on_click(Self::click(cx, move |this, _, cx| {
+                        field(this).add();
+                        cx.notify();
+                    })),
+            );
+        v_flex().gap_2().child(bar).child(h_flex().child(
+            SecondaryButton::new((id, 1usize), "Toggle dirty on the selected tab").on_click(
+                Self::click(cx, move |this, _, cx| {
+                    field(this).toggle_dirty();
+                    cx.notify();
+                }),
+            ),
+        ))
     }
 
     /// Status badges: every tone, busy (behind a checkbox, see `Gallery::badges_busy`), and
