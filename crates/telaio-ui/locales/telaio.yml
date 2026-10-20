@@ -96,3 +96,13 @@ _version: 2
   es: "Todas las pestañas"
   gl: "Todas as lapelas"
   it: "Tutte le schede"
+"telaio.select.search":
+  en: "Search"
+  es: "Buscar"
+  gl: "Buscar"
+  it: "Cerca"
+"telaio.select.no_results":
+  en: "No results"
+  es: "Sin resultados"
+  gl: "Sen resultados"
+  it: "Nessun risultato"

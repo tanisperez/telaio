@@ -134,3 +134,13 @@ pub const PROGRESS_BAR_HEIGHT: f32 = 6.0;
 pub const STEPPER_READOUT_WIDTH: f32 = 64.0;
 /// Gap between a `NumberStepper`'s buttons and its readout.
 pub const STEPPER_GAP: f32 = 8.0;
+
+/// Width of a `SearchableSelect` box.
+pub const SELECT_WIDTH: f32 = 220.0;
+/// Rows a searchable select always lists, filtered or not, so its list keeps one height.
+pub const SELECT_SEARCH_ROWS: usize = 12;
+/// Maximum height of a select's list, which scrolls beyond it. Just above [`SELECT_SEARCH_ROWS`]
+/// rows (20 px each, plus the list's padding), so a padded list never scrolls.
+pub const SELECT_MENU_MAX_HEIGHT: f32 = 252.0;
+/// Text size of a select's label when it is set in the monospace family, as in the editors.
+pub const SELECT_MONO_TEXT_SIZE: f32 = 12.5;

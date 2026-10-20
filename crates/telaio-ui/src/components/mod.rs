@@ -20,6 +20,7 @@ pub mod modal;
 pub mod number_stepper;
 pub mod progress_bar;
 pub mod scrollbar;
+pub mod searchable_select;
 pub mod section_label;
 pub mod segmented_control;
 pub mod select_trigger;
@@ -52,6 +53,10 @@ pub use modal::{
 pub use number_stepper::NumberStepper;
 pub use progress_bar::ProgressBar;
 pub use scrollbar::ScrollbarOverlay;
+pub use searchable_select::{
+    PaddedOptions, SearchableSelect, SelectHandle, SelectOption, on_pick, pick, select_state,
+    set_options,
+};
 pub use section_label::SectionLabel;
 pub use segmented_control::{SegmentedControl, SegmentedItem};
 pub use select_trigger::{select_label_row, select_trigger};
