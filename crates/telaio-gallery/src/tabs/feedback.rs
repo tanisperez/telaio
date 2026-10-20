@@ -1,4 +1,4 @@
-//! The "Feedback" tab: status badges, inline messages and the empty state.
+//! The "Feedback" tab: status badges, inline messages, the empty state and the progress bar.
 
 use gpui_kit::component::checkbox::Checkbox;
 
@@ -9,12 +9,13 @@ use telaio_ui::PaletteExt as _;
 
 use telaio_ui::Tone;
 use telaio_ui::components::{
-    EmptyState, InlineMessage, InlineMessageKind, MODIFIER_KEY, PrimaryButton, StatusBadge,
+    EmptyState, InlineMessage, InlineMessageKind, MODIFIER_KEY, PrimaryButton, ProgressBar,
+    SegmentedItem, StatusBadge,
 };
 use telaio_ui::metrics::RADIUS_LG;
 
-use super::on_off;
-use crate::gallery::{Gallery, section};
+use super::{label, on_off};
+use crate::gallery::{Gallery, section, segmented};
 
 impl Gallery {
     /// The sections of the tab, in order.
@@ -24,6 +25,7 @@ impl Gallery {
             .gap_6()
             .child(section("Status badges", self.render_status_badges(cx)))
             .child(section("Inline messages", self.render_inline_messages(cx)))
+            .child(section("Progress bar", self.render_progress_bars(cx)))
             .child(section("Empty state", self.render_empty_state(cx)))
     }
 
@@ -136,6 +138,101 @@ impl Gallery {
                     .rounded(px(RADIUS_LG))
                     .bg(palette.raised)
                     .child(EmptyState::new("Compact, in the flow of a page").compact(true)),
+            )
+    }
+
+    /// Progress bars: the value picked below in the accent, fixed values in every tone, a custom
+    /// color, and one with a minimum width in a row too narrow for it.
+    pub(crate) fn render_progress_bars(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let value = self.progress;
+        let row = |name: &'static str, bar: ProgressBar, readout: String| {
+            h_flex()
+                .items_center()
+                .gap_3()
+                .child(
+                    div()
+                        .flex_none()
+                        .w(px(80.0))
+                        .text_size(px(12.0))
+                        .text_color(palette.fg_muted)
+                        .child(name),
+                )
+                .child(bar)
+                .child(
+                    div()
+                        .flex_none()
+                        .w(px(40.0))
+                        .text_size(px(12.0))
+                        .text_color(palette.fg_muted)
+                        .text_right()
+                        .child(readout),
+                )
+        };
+        let percent = |value: f32| format!("{:.0}%", value * 100.0);
+        let picker = segmented(
+            "gallery-progress-value",
+            [0.0, 0.25, 0.5, 0.75, 1.0, 1.5].map(|pick: f32| {
+                SegmentedItem::new(if pick > 1.0 {
+                    "150% (clamped)".to_string()
+                } else {
+                    percent(pick)
+                })
+                .selected(self.progress == pick)
+                .on_click(Self::act(cx, move |this, _, cx| {
+                    this.progress = pick;
+                    this.record(format!("Progress {}", percent(pick)), cx);
+                }))
+            }),
+        );
+        v_flex()
+            .gap_3()
+            .child(h_flex().child(picker))
+            .child(row(
+                "Accent",
+                ProgressBar::new(value),
+                percent(value.min(1.0)),
+            ))
+            .child(row(
+                "Success",
+                ProgressBar::new(1.0).tone(Tone::Success),
+                percent(1.0),
+            ))
+            .child(row(
+                "Warning",
+                ProgressBar::new(0.6).tone(Tone::Warning),
+                percent(0.6),
+            ))
+            .child(row(
+                "Danger",
+                ProgressBar::new(0.3).tone(Tone::Danger),
+                percent(0.3),
+            ))
+            .child(row(
+                "Custom",
+                ProgressBar::new(0.45).color(palette.info),
+                percent(0.45),
+            ))
+            .child(row("Empty", ProgressBar::new(0.0), percent(0.0)))
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(label("min_width(160) in a 200 px row", &palette))
+                    .child(
+                        h_flex()
+                            .w(px(200.0))
+                            .flex_wrap()
+                            .items_center()
+                            .gap_x_3()
+                            .child(ProgressBar::new(value).min_width(160.0))
+                            .child(
+                                div()
+                                    .flex_none()
+                                    .text_size(px(12.0))
+                                    .text_color(palette.fg_muted)
+                                    .child("00:12 / 00:30"),
+                            ),
+                    ),
             )
     }
 }

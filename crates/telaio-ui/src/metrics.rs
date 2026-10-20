@@ -126,3 +126,6 @@ pub const BUTTON_GLOW_BLUR: f32 = 10.0;
 pub const BUTTON_GLOW_OFFSET_Y: f32 = 2.0;
 /// Opacity of the button's own color in that glow.
 pub const BUTTON_GLOW_OPACITY: f32 = 0.35;
+
+/// Height of a `ProgressBar`'s track.
+pub const PROGRESS_BAR_HEIGHT: f32 = 6.0;

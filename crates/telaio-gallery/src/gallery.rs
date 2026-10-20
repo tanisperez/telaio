@@ -249,6 +249,8 @@ pub struct Gallery {
     /// Whether the busy status badges show their spinner. Off by default: a spinner animates on
     /// every frame, and an idle gallery must do no work.
     pub(crate) badges_busy: bool,
+    /// The value of the progress bar demo, 0 to 1 (or above, to show the clamping).
+    pub(crate) progress: f32,
     pub(crate) rows: Vec<DemoRow>,
     pub(crate) next_row: usize,
     /// The rows of the editable table demo.
@@ -337,6 +339,7 @@ impl Gallery {
             switch_on: true,
             switch_off: false,
             badges_busy: false,
+            progress: 0.5,
             rows: rows.to_vec(),
             next_row: 1,
             env_rows: Vec::new(),
