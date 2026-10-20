@@ -651,8 +651,7 @@ impl Render for Gallery {
                     .flex_none()
                     .px_4()
                     .bg(palette.surface)
-                    .border_b_1()
-                    .border_color(palette.border)
+                    // `UnderlineTabs` draws its own bottom border.
                     .child(tabs),
             )
             // Outside the scrolling area, so it stays visible on every tab.
@@ -661,6 +660,8 @@ impl Render for Gallery {
                     .flex_none()
                     .px_6()
                     .pt_4()
+                    // Keeps the scrolled content from touching the line.
+                    .pb_2()
                     .bg(palette.bg)
                     .text_size(px(12.0))
                     .text_color(palette.fg_muted)
