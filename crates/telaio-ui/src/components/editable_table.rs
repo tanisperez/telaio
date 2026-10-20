@@ -277,6 +277,11 @@ impl RenderOnce for EditableTable {
     }
 }
 
+/// Horizontal padding inside an input cell's `Input`: with the cell's own
+/// [`EDITABLE_TABLE_INPUT_PADDING_X`] it adds up to [`EDITABLE_TABLE_PADDING_X`], the inset of
+/// every other cell and of the header.
+const INPUT_TEXT_INSET: f32 = EDITABLE_TABLE_PADDING_X - EDITABLE_TABLE_INPUT_PADDING_X;
+
 /// `cell` sized for its column.
 fn sized(cell: Div, width: Width) -> Div {
     match width {
@@ -311,6 +316,9 @@ fn render_cell(
                 // Exactly one line tall, see the module documentation.
                 Input::new(&state)
                     .context_menu(edit_menu(&state, cx))
+                    // Its own padding is pinned (the default is 10 px) so its text starts where a
+                    // text cell's, a note's and the header's do.
+                    .px(px(INPUT_TEXT_INSET))
                     .py_0()
                     .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
                     .h(line_height)
@@ -331,7 +339,7 @@ fn render_cell(
     let note = cell.note.map(|note| {
         div()
             // Under an input the note lines up with the input's own padding.
-            .when(is_input, |note| note.px(px(8.0)))
+            .when(is_input, |note| note.px(px(INPUT_TEXT_INSET)))
             .text_size(px(EDITABLE_TABLE_SMALL_TEXT_SIZE))
             .text_color(palette.fg_subtle)
             .child(note)
