@@ -140,7 +140,8 @@ make gallery
 ```
 
 Opens every component in every state, with a switcher for the theme mode, the sample palettes
-(Postino and Vano's three accents), the language and the font size.
+(Postino and Vano's three accents), the language and the font size. The components are grouped in tabs (Actions, Inputs, Navigation,
+Data, Feedback, Surfaces), each one scrolling on its own.
 
 Optional environment variables set the startup state, for scripted screenshots (each is ignored
 when unset or invalid):
@@ -148,6 +149,7 @@ when unset or invalid):
 - `TELAIO_THEME=system|light|dark`
 - `TELAIO_PALETTE=postino|indigo|graphite|electric`
 - `TELAIO_LANG=en|es|gl|it`
+- `TELAIO_TAB=actions|inputs|navigation|data|feedback|surfaces`
 
 ## Using it from an app
 

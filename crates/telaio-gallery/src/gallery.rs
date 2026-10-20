@@ -1,5 +1,5 @@
-//! The gallery view: its state, the toolbar and the theme plumbing. The sections themselves are
-//! in `sections.rs`.
+//! The gallery view: its state, the toolbar and the theme plumbing. The tabs and their sections
+//! are in `tabs/`.
 //!
 //! Nothing here runs on a timer: every `cx.notify()` answers a click, a keystroke or a focus
 //! change, so an idle window does no work.
@@ -10,13 +10,14 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::{
-    ScrollbarOverlay, SectionLabel, SegmentedControl, SegmentedItem, select_label_row,
-    select_trigger,
+    ScrollbarOverlay, SectionLabel, SegmentedControl, SegmentedItem, UnderlineTabItem,
+    UnderlineTabs, select_label_row, select_trigger,
 };
 use telaio_ui::components::{SortColumn, SortOrder};
 use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::SamplePalette;
+use crate::tabs::Tab;
 
 /// The widest the content grows, in pixels.
 const CONTENT_MAX_WIDTH: f32 = 820.0;
@@ -268,17 +269,21 @@ pub struct Gallery {
     pub(crate) tree: Vec<DemoNode>,
     /// The selected node of the tree row demo.
     pub(crate) tree_selected: Option<usize>,
-    /// Tracks the main column's scroll position, for its scrollbar.
-    pub(crate) scroll_handle: ScrollHandle,
+    /// The open tab.
+    pub(crate) tab: Tab,
+    /// One scroll position per tab, indexed by [`Tab::index`], so each tab keeps its own when
+    /// the user comes back to it. Each also feeds that tab's scrollbar.
+    pub(crate) scroll_handles: [ScrollHandle; Tab::ALL.len()],
 }
 
 impl Gallery {
-    /// The gallery with the startup choices `choice`, `sample` and `language`, already applied by
-    /// the caller.
+    /// The gallery with the startup choices `choice`, `sample`, `language` and `tab`, already applied
+    /// by the caller.
     pub fn new(
         choice: ThemeChoice,
         sample: SamplePalette,
         language: Language,
+        tab: Tab,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -345,7 +350,8 @@ impl Gallery {
             menu_checked: true,
             tree: demo_tree(),
             tree_selected: Some(1),
-            scroll_handle: ScrollHandle::new(),
+            tab,
+            scroll_handles: std::array::from_fn(|_| ScrollHandle::new()),
         };
         gallery.new_env_row(
             "base_url",
@@ -394,6 +400,12 @@ impl Gallery {
             local,
             note,
         });
+    }
+
+    /// Opens `tab`. Each tab keeps its own scroll position.
+    fn set_tab(&mut self, tab: Tab, cx: &mut Context<Self>) {
+        self.tab = tab;
+        cx.notify();
     }
 
     /// Records what the user just did, shown in the "Last action" line.
@@ -598,35 +610,21 @@ impl Render for Gallery {
         let palette = cx.palette();
         let background = cx.theme().background;
 
-        let sections = v_flex()
+        let tab = self.tab;
+        let tabs = Tab::ALL
+            .into_iter()
+            .fold(UnderlineTabs::new("gallery-tabs"), |tabs, other| {
+                tabs.item(
+                    UnderlineTabItem::new(other.label())
+                        .selected(other == tab)
+                        .on_click(Self::act(cx, move |this, _, cx| this.set_tab(other, cx))),
+                )
+            });
+        let content = v_flex()
             .w_full()
             .max_w(px(CONTENT_MAX_WIDTH))
-            .gap_6()
-            .child(
-                div()
-                    .text_size(px(12.0))
-                    .text_color(palette.fg_muted)
-                    .child(format!("Last action: {}", self.last_action)),
-            )
-            .child(section("Buttons", self.render_buttons(cx)))
-            .child(section("Icon buttons", self.render_icon_buttons(cx)))
-            .child(section("Inputs", self.render_inputs(cx)))
-            .child(section("Select trigger", self.render_select(cx)))
-            .child(section("Segmented control", self.render_segmented(cx)))
-            .child(section("Underline tabs", self.render_underline_tabs(cx)))
-            .child(section("Document tabs", self.render_document_tabs(cx)))
-            .child(section("Status badges", self.render_status_badges(cx)))
-            .child(section("Inline messages", self.render_inline_messages(cx)))
-            .child(section("Controls", self.render_controls(cx)))
-            .child(section("Key-value table", self.render_key_value_table(cx)))
-            .child(section("Editable table", self.render_editable_table(cx)))
-            .child(section("Data table", self.render_data_table(cx)))
-            .child(section("Empty state", self.render_empty_state(cx)))
-            .child(section("Tree row", self.render_tree_rows(cx)))
-            .child(section("Menus", self.render_menus(cx)))
-            .child(section("Theme cards", self.render_theme_cards(cx)))
-            .child(section("Card", self.render_card()))
-            .child(section("Modals", self.render_modals(cx)));
+            .child(self.render_tab(tab, cx));
+        let scroll_handle = &self.scroll_handles[tab.index()];
 
         v_flex()
             .size_full()
@@ -642,20 +640,40 @@ impl Render for Gallery {
             .child(self.render_toolbar(cx))
             .child(
                 div()
+                    .flex_none()
+                    .px_4()
+                    .bg(palette.surface)
+                    .border_b_1()
+                    .border_color(palette.border)
+                    .child(tabs),
+            )
+            // Outside the scrolling area, so it stays visible on every tab.
+            .child(
+                div()
+                    .flex_none()
+                    .px_6()
+                    .pt_4()
+                    .bg(palette.bg)
+                    .text_size(px(12.0))
+                    .text_color(palette.fg_muted)
+                    .child(format!("Last action: {}", self.last_action)),
+            )
+            .child(
+                div()
                     .flex_1()
                     .min_h_0()
                     .relative()
                     .bg(palette.bg)
                     .child(
                         div()
-                            .id("gallery-scroll")
+                            .id(("gallery-scroll", tab.index()))
                             .size_full()
                             .overflow_y_scroll()
-                            .track_scroll(&self.scroll_handle)
+                            .track_scroll(scroll_handle)
                             .p_6()
-                            .child(sections),
+                            .child(content),
                     )
-                    .child(ScrollbarOverlay::new(&self.scroll_handle)),
+                    .child(ScrollbarOverlay::new(scroll_handle)),
             )
             // The modal backdrop, see `Palette::scrim`. The theme's own dialog overlay is
             // transparent on purpose. It only paints, so clicks still reach the dialog's backdrop.

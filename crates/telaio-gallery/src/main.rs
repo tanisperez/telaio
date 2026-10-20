@@ -9,10 +9,11 @@
 //! - `TELAIO_THEME=system|light|dark`
 //! - `TELAIO_PALETTE=postino|indigo|graphite|electric`
 //! - `TELAIO_LANG=en|es|gl|it`
+//! - `TELAIO_TAB=actions|inputs|navigation|data|feedback|surfaces`
 
 mod gallery;
 mod samples;
-mod sections;
+mod tabs;
 
 use gpui_kit::component::theme::Theme;
 use gpui_kit::component::{Root, TitleBar};
@@ -21,6 +22,7 @@ use telaio_ui::ThemeChoice;
 
 use gallery::{Gallery, Language};
 use samples::SamplePalette;
+use tabs::Tab;
 
 /// The application id: Wayland `app_id` and X11 `WM_CLASS`.
 const APP_ID: &str = "codes.tanis.telaio-gallery";
@@ -51,6 +53,7 @@ fn main() {
     let sample =
         env_choice("TELAIO_PALETTE", SamplePalette::parse).unwrap_or(SamplePalette::Postino);
     let language = env_choice("TELAIO_LANG", Language::parse).unwrap_or(Language::En);
+    let tab = env_choice("TELAIO_TAB", Tab::parse).unwrap_or(Tab::Actions);
     rust_i18n::set_locale(language.code());
 
     // Without `AllAssets` every `Icon` renders as empty space.
@@ -78,7 +81,7 @@ fn main() {
         cx.spawn(async move |cx| {
             let opened = cx.open_window(options, move |window, cx| {
                 choice.apply(Some(window), cx);
-                let view = cx.new(|cx| Gallery::new(choice, sample, language, window, cx));
+                let view = cx.new(|cx| Gallery::new(choice, sample, language, tab, window, cx));
 
                 // "System" must keep following the OS, whichever mode the gallery started in,
                 // so the observer is always attached and checks the current mode.
