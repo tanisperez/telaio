@@ -10,6 +10,7 @@ pub mod control_halo;
 pub mod data_table;
 pub mod document_tabs;
 pub mod edit_menu;
+pub mod editable_table;
 pub mod empty_state;
 pub mod hover_input;
 pub mod icon_button;
@@ -36,6 +37,7 @@ pub use control_halo::{
 pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
 pub use document_tabs::{DocumentTab, DocumentTabs};
 pub use edit_menu::edit_menu;
+pub use editable_table::{EditableCell, EditableColumn, EditableRow, EditableTable};
 pub use empty_state::EmptyState;
 pub use hover_input::HoverInput;
 pub use icon_button::IconButton;

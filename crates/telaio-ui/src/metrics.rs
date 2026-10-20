@@ -101,3 +101,21 @@ pub const TREE_ROW_INDENT: f32 = 16.0;
 pub const TREE_ROW_PADDING_LEFT: f32 = 8.0;
 /// Extra space after a `TreeRow`'s leading element, on top of the row's 4 px gap.
 pub const TREE_ROW_LEADING_GAP: f32 = 2.0;
+
+/// Height of the header row of an `EditableTable`.
+pub const EDITABLE_TABLE_HEADER_HEIGHT: f32 = 30.0;
+/// Height of an `EditableTable` row (a row with a note under a cell grows past it).
+pub const EDITABLE_TABLE_ROW_HEIGHT: f32 = 34.0;
+/// Horizontal padding of an `EditableTable` header label and of its read only and element cells.
+pub const EDITABLE_TABLE_PADDING_X: f32 = 12.0;
+/// Horizontal padding of an `EditableTable` input cell, 8 px less than the read only cells: the
+/// input has padding of its own.
+pub const EDITABLE_TABLE_INPUT_PADDING_X: f32 = 4.0;
+/// Nominal line height of an `EditableTable` input, which is also the height of its selection
+/// highlight. The real one is the whole device pixel size closest to it (see
+/// `editable_table::input_line_height`).
+pub const EDITABLE_TABLE_LINE_HEIGHT: f32 = 22.0;
+/// Text size of the body of an `EditableTable`, inputs included.
+pub const EDITABLE_TABLE_TEXT_SIZE: f32 = 12.5;
+/// Text size of the header labels and of the notes of an `EditableTable`.
+pub const EDITABLE_TABLE_SMALL_TEXT_SIZE: f32 = 11.0;
