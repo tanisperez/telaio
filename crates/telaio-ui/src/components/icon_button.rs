@@ -11,6 +11,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::NeutralButtonExt;
+use super::buttons::DISABLED_OPACITY;
 use crate::PaletteExt;
 use crate::metrics::ICON_BUTTON_LG;
 
@@ -95,7 +96,9 @@ impl IconButton {
             .with_size(size)
             .icon(self.icon)
             .text_color(palette.fg_muted)
-            .disabled(self.disabled);
+            .disabled(self.disabled)
+            // The fixed text color hides the theme's disabled look, so dim it like the buttons.
+            .when(self.disabled, |button| button.opacity(DISABLED_OPACITY));
         if let Some(size) = self.box_size {
             button = button.size(px(size));
         }

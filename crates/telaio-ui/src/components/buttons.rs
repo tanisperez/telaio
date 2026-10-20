@@ -33,7 +33,7 @@ use crate::PaletteExt;
 use crate::metrics::{CONTROL_HEIGHT, RADIUS_MD};
 
 /// Opacity applied to a disabled button (45%).
-const DISABLED_OPACITY: f32 = 0.45;
+pub(crate) const DISABLED_OPACITY: f32 = 0.45;
 
 /// Builder state shared by the four button kinds in this file. Not public: each kind exposes its
 /// own constructor and forwards its builder methods to this.
