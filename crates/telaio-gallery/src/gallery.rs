@@ -10,7 +10,8 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::{
-    SectionLabel, SegmentedControl, SegmentedItem, select_label_row, select_trigger,
+    ScrollbarOverlay, SectionLabel, SegmentedControl, SegmentedItem, select_label_row,
+    select_trigger,
 };
 use telaio_ui::components::{SortColumn, SortOrder};
 use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
@@ -100,6 +101,8 @@ pub struct Gallery {
     pub(crate) sort: Option<(SortColumn, SortOrder)>,
     pub(crate) text_input: Entity<InputState>,
     pub(crate) hover_input: Entity<InputState>,
+    /// Tracks the main column's scroll position, for its scrollbar.
+    pub(crate) scroll_handle: ScrollHandle,
 }
 
 impl Gallery {
@@ -164,6 +167,7 @@ impl Gallery {
             sort: None,
             text_input,
             hover_input,
+            scroll_handle: ScrollHandle::new(),
         }
     }
 
@@ -407,13 +411,20 @@ impl Render for Gallery {
             .child(self.render_toolbar(cx))
             .child(
                 div()
-                    .id("gallery-scroll")
                     .flex_1()
                     .min_h_0()
-                    .overflow_y_scroll()
+                    .relative()
                     .bg(palette.bg)
-                    .p_6()
-                    .child(sections),
+                    .child(
+                        div()
+                            .id("gallery-scroll")
+                            .size_full()
+                            .overflow_y_scroll()
+                            .track_scroll(&self.scroll_handle)
+                            .p_6()
+                            .child(sections),
+                    )
+                    .child(ScrollbarOverlay::new(&self.scroll_handle)),
             )
             // The modal backdrop, see `Palette::scrim`. The theme's own dialog overlay is
             // transparent on purpose. It only paints, so clicks still reach the dialog's backdrop.

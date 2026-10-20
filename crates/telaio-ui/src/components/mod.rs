@@ -12,6 +12,7 @@ pub mod icon_button;
 pub mod inline_message;
 pub mod key_value_table;
 pub mod modal;
+pub mod scrollbar;
 pub mod section_label;
 pub mod segmented_control;
 pub mod select_trigger;
@@ -33,6 +34,7 @@ pub use modal::{
     ConfirmDialog, MODAL_INNER_RADIUS, ModalPlacement, framed_dialog, modal_body, modal_footer,
     modal_header, open_confirm_dialog,
 };
+pub use scrollbar::ScrollbarOverlay;
 pub use section_label::SectionLabel;
 pub use segmented_control::{SegmentedControl, SegmentedItem};
 pub use select_trigger::{select_label_row, select_trigger};
