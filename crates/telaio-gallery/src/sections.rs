@@ -14,13 +14,13 @@ use gpui_kit::*;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
     Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, DocumentTab, DocumentTabs,
-    EmptyState, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow,
-    KeyValueTable, MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel,
-    SegmentedItem, Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow,
-    UnderlineTabItem, UnderlineTabs, checkbox_halo, edit_menu, framed_dialog, labelled_checkbox,
-    labelled_radio, modal_body, modal_footer, modal_header, open_confirm_dialog,
-    open_shortcuts_dialog, open_tooltip, radio_halo, select_label_row, select_trigger, switch_halo,
-    text_field,
+    EditableCell, EditableColumn, EditableRow, EditableTable, EmptyState, GhostButton, HoverInput,
+    IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable, MODIFIER_KEY,
+    ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem, Shortcut,
+    ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow, UnderlineTabItem,
+    UnderlineTabs, checkbox_halo, edit_menu, framed_dialog, labelled_checkbox, labelled_radio,
+    modal_body, modal_footer, modal_header, open_confirm_dialog, open_shortcuts_dialog,
+    open_tooltip, radio_halo, select_label_row, select_trigger, switch_halo, text_field,
 };
 use telaio_ui::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_LG};
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
@@ -667,6 +667,112 @@ impl Gallery {
                     this.set_choice(choice, window, cx);
                 }))
             }))
+    }
+
+    /// Editable table: real inputs (click a cell and type), a placeholder, a note, a chip that
+    /// flips the row between two files, a delete button that removes the row, a read only row,
+    /// "Add row", and the empty message once every row is deleted.
+    pub(crate) fn render_editable_table(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let chip = |id: usize, local: bool| {
+            let (icon, label, bg, fg) = if local {
+                (
+                    gpui_kit::assets::IconName::Lock,
+                    "staging.local.env",
+                    palette.warning_subtle,
+                    palette.warning,
+                )
+            } else {
+                (
+                    gpui_kit::assets::IconName::File,
+                    "staging.env",
+                    palette.raised,
+                    palette.fg_muted,
+                )
+            };
+            h_flex()
+                .id(("gallery-env-chip", id))
+                .h(px(20.0))
+                .px(px(7.0))
+                .gap(px(5.0))
+                .rounded(px(5.0))
+                .bg(bg)
+                .text_color(fg)
+                .text_size(px(11.0))
+                .cursor_pointer()
+                .child(Icon::new(icon).with_size(px(10.0)))
+                .child(label)
+                .on_click(Self::click(cx, move |this, _, cx| {
+                    if let Some(row) = this.env_rows.iter_mut().find(|row| row.id == id) {
+                        row.local = !row.local;
+                    }
+                    this.record("Flipped the stored in chip", cx);
+                }))
+        };
+        let columns = [
+            EditableColumn::fixed("Name", 200.0),
+            EditableColumn::flex("Value"),
+            EditableColumn::fixed("Stored in", 190.0),
+            EditableColumn::fixed("", 30.0),
+        ];
+        let mut table = EditableTable::new(columns).empty_message("No variables yet.");
+        for row in &self.env_rows {
+            let id = row.id;
+            let mut value = EditableCell::input(&row.value);
+            if let Some(note) = row.note {
+                value = value.note(note);
+            }
+            table = table.row(EditableRow::new([
+                EditableCell::input(&row.name).color(palette.accent_text),
+                value,
+                EditableCell::element(chip(id, row.local)),
+                EditableCell::element(
+                    IconButton::new(
+                        ("gallery-env-remove", id),
+                        gpui_kit::assets::IconName::Trash,
+                    )
+                    .tooltip("Remove")
+                    .on_click(Self::click(cx, move |this, _, cx| {
+                        this.env_rows.retain(|row| row.id != id);
+                        this.record(format!("Removed row {id}"), cx);
+                    })),
+                )
+                .centered(),
+            ]));
+        }
+        // A read only row, shown with the rows only while there is something to edit.
+        if !self.env_rows.is_empty() {
+            table = table.row(
+                EditableRow::new([
+                    EditableCell::text("session_id").color(palette.accent_text),
+                    EditableCell::text("a1b2c3d4e5f6").note("Set by a script during this session"),
+                    EditableCell::element(
+                        h_flex()
+                            .h(px(20.0))
+                            .px(px(7.0))
+                            .gap(px(5.0))
+                            .rounded(px(5.0))
+                            .bg(palette.accent_subtle)
+                            .text_color(palette.accent_text)
+                            .text_size(px(11.0))
+                            .child(Icon::new(gpui_kit::assets::IconName::Zap).with_size(px(10.0)))
+                            .child("session"),
+                    ),
+                ])
+                .background(palette.accent_subtle.opacity(0.5)),
+            );
+        }
+        v_flex().gap_3().child(table).child(
+            h_flex().gap_2().child(
+                SecondaryButton::new("gallery-env-add", "Add row")
+                    .icon(IconName::Plus)
+                    .on_click(Self::click(cx, |this, window, cx| {
+                        let n = this.env_next;
+                        this.new_env_row(&format!("var{n}"), "", false, None, window, cx);
+                        this.record(format!("Added row {n}"), cx);
+                    })),
+            ),
+        )
     }
 
     /// Data table: the font and header toggles, an "Add row" button, a colored cell, an element

@@ -78,6 +78,17 @@ pub struct DemoRow {
     pub enabled: bool,
 }
 
+/// One row of the editable table demo: two real inputs and what the "stored in" chip shows.
+pub struct DemoEnvRow {
+    pub id: usize,
+    pub name: Entity<InputState>,
+    pub value: Entity<InputState>,
+    /// Whether the variable is stored in the local file (the chip's second state).
+    pub local: bool,
+    /// A note line under the value cell.
+    pub note: Option<&'static str>,
+}
+
 /// One node of the tree row demo, in pre-order: a folder is followed by its children, one level
 /// deeper.
 #[derive(Debug, Clone)]
@@ -239,6 +250,9 @@ pub struct Gallery {
     pub(crate) badges_busy: bool,
     pub(crate) rows: Vec<DemoRow>,
     pub(crate) next_row: usize,
+    /// The rows of the editable table demo.
+    pub(crate) env_rows: Vec<DemoEnvRow>,
+    pub(crate) env_next: usize,
     pub(crate) sort: Option<(SortColumn, SortOrder)>,
     pub(crate) text_input: Entity<InputState>,
     pub(crate) hover_input: Entity<InputState>,
@@ -300,7 +314,7 @@ impl Gallery {
             value: value.to_string(),
             enabled,
         });
-        Self {
+        let mut gallery = Self {
             focus_handle,
             choice,
             sample,
@@ -320,6 +334,8 @@ impl Gallery {
             badges_busy: false,
             rows: rows.to_vec(),
             next_row: 1,
+            env_rows: Vec::new(),
+            env_next: 1,
             sort: None,
             text_input,
             hover_input,
@@ -330,7 +346,54 @@ impl Gallery {
             tree: demo_tree(),
             tree_selected: Some(1),
             scroll_handle: ScrollHandle::new(),
-        }
+        };
+        gallery.new_env_row(
+            "base_url",
+            "https://api.example.com",
+            false,
+            None,
+            window,
+            cx,
+        );
+        gallery.new_env_row("api_token", "", true, None, window, cx);
+        gallery.new_env_row(
+            "timeout",
+            "30",
+            true,
+            Some("Overrides the value in staging.env"),
+            window,
+            cx,
+        );
+        gallery
+    }
+
+    /// A row for the editable table demo, with real inputs.
+    pub(crate) fn new_env_row(
+        &mut self,
+        name: &str,
+        value: &str,
+        local: bool,
+        note: Option<&'static str>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let id = self.env_next;
+        self.env_next += 1;
+        let name_input = cx.new(|cx| InputState::new(window, cx).placeholder("Name"));
+        name_input.update(cx, |state, cx| {
+            state.set_value(name.to_string(), window, cx)
+        });
+        let value_input = cx.new(|cx| InputState::new(window, cx).placeholder("Value"));
+        value_input.update(cx, |state, cx| {
+            state.set_value(value.to_string(), window, cx)
+        });
+        self.env_rows.push(DemoEnvRow {
+            id,
+            name: name_input,
+            value: value_input,
+            local,
+            note,
+        });
     }
 
     /// Records what the user just did, shown in the "Last action" line.
@@ -556,6 +619,7 @@ impl Render for Gallery {
             .child(section("Inline messages", self.render_inline_messages(cx)))
             .child(section("Controls", self.render_controls(cx)))
             .child(section("Key-value table", self.render_key_value_table(cx)))
+            .child(section("Editable table", self.render_editable_table(cx)))
             .child(section("Data table", self.render_data_table(cx)))
             .child(section("Empty state", self.render_empty_state(cx)))
             .child(section("Tree row", self.render_tree_rows(cx)))
