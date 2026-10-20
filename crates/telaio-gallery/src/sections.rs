@@ -17,9 +17,10 @@ use telaio_ui::components::{
     EmptyState, GhostButton, HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow,
     KeyValueTable, MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel,
     SegmentedItem, Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow,
-    UnderlineTabItem, UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer,
-    modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row,
-    select_trigger, switch_halo, text_field,
+    UnderlineTabItem, UnderlineTabs, checkbox_halo, edit_menu, framed_dialog, labelled_checkbox,
+    labelled_radio, modal_body, modal_footer, modal_header, open_confirm_dialog,
+    open_shortcuts_dialog, open_tooltip, radio_halo, select_label_row, select_trigger, switch_halo,
+    text_field,
 };
 use telaio_ui::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_LG};
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
@@ -456,27 +457,52 @@ impl Gallery {
     /// Controls: checkbox, radios, and switches inside their halo.
     pub(crate) fn render_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
-        let item = |control: AnyElement, text: &'static str| {
-            h_flex()
-                .gap_2()
-                .items_center()
-                .child(control)
-                .child(div().text_size(px(12.5)).child(text))
-        };
-        let checkbox = Checkbox::new("gallery-checkbox")
-            .checked(self.checkbox)
-            .on_click(cx.listener(|this, checked: &bool, _, cx| {
+        let checkbox = labelled_checkbox("gallery-checkbox", self.checkbox, "Checked", &palette)
+            .on_change(cx.listener(|this, checked: &bool, _, cx| {
                 this.checkbox = *checked;
                 this.record(format!("Checkbox {}", on_off(*checked)), cx);
             }));
+        let checkbox_off = labelled_checkbox(
+            "gallery-checkbox-off",
+            self.checkbox_off,
+            "Unchecked",
+            &palette,
+        )
+        .on_change(cx.listener(|this, checked: &bool, _, cx| {
+            this.checkbox_off = *checked;
+            this.record(format!("Unchecked checkbox {}", on_off(*checked)), cx);
+        }));
         let radio = |index: usize| {
-            Radio::new(("gallery-radio", index))
-                .checked(self.radio == index)
-                .on_click(cx.listener(move |this, _: &bool, _, cx| {
-                    this.radio = index;
-                    this.record(format!("Radio {}", index + 1), cx);
-                }))
+            labelled_radio(
+                ("gallery-radio", index),
+                self.radio == index,
+                format!("Radio {}", index + 1),
+                &palette,
+            )
+            .on_change(cx.listener(move |this, _: &bool, _, cx| {
+                this.radio = index;
+                this.record(format!("Radio {}", index + 1), cx);
+            }))
         };
+        // The bare forms, as the key-value table and a toolbar place them: the box alone.
+        let bare_checkbox = checkbox_halo(
+            Checkbox::new("gallery-checkbox-bare").checked(self.checkbox),
+            false,
+            &palette,
+        )
+        .on_click(cx.listener(|this, checked: &bool, _, cx| {
+            this.checkbox = *checked;
+            this.record(format!("Checkbox {}", on_off(*checked)), cx);
+        }));
+        let bare_radio = radio_halo(
+            Radio::new("gallery-radio-bare").checked(self.radio == 0),
+            false,
+            &palette,
+        )
+        .on_click(cx.listener(|this, _: &bool, _, cx| {
+            this.radio = 0;
+            this.record("Radio 1", cx);
+        }));
         let switch_on = switch_halo(
             "gallery-switch-on-halo",
             Switch::new("gallery-switch-on")
@@ -515,15 +541,56 @@ impl Gallery {
                     .flex_wrap()
                     .gap_6()
                     .items_center()
-                    .child(item(checkbox.into_any_element(), "Checkbox"))
-                    .child(item(radio(0).into_any_element(), "Radio 1"))
-                    .child(item(radio(1).into_any_element(), "Radio 2"))
-                    .child(item(
-                        Radio::new("gallery-radio-off")
-                            .disabled(true)
-                            .into_any_element(),
-                        "Disabled radio",
-                    )),
+                    .child(checkbox)
+                    .child(checkbox_off)
+                    .child(radio(0))
+                    .child(radio(1)),
+            )
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_6()
+                    .items_center()
+                    .child(
+                        labelled_checkbox(
+                            "gallery-checkbox-dis-on",
+                            true,
+                            "Disabled, checked",
+                            &palette,
+                        )
+                        .disabled(true),
+                    )
+                    .child(
+                        labelled_checkbox("gallery-checkbox-dis-off", false, "Disabled", &palette)
+                            .disabled(true),
+                    )
+                    .child(
+                        labelled_radio(
+                            "gallery-radio-dis-on",
+                            true,
+                            "Disabled, selected",
+                            &palette,
+                        )
+                        .disabled(true),
+                    )
+                    .child(
+                        labelled_radio("gallery-radio-dis-off", false, "Disabled", &palette)
+                            .disabled(true),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_6()
+                    .items_center()
+                    .child(bare_checkbox)
+                    .child(bare_radio)
+                    .child(
+                        div()
+                            .text_size(px(12.5))
+                            .text_color(palette.fg_subtle)
+                            .child("Bare, without a label"),
+                    ),
             )
             .child(switch_row(switch_on.into_any_element(), "Switch with halo"))
             .child(switch_row(switch_off.into_any_element(), "Another switch"))
