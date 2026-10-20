@@ -5,15 +5,14 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::switch::Switch;
-use gpui_kit::component::{Icon, Sizable as _, WindowExt as _, h_flex, v_flex};
+use gpui_kit::component::{WindowExt as _, h_flex, v_flex};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::{
-    GhostButton, LabeledRow, SearchableSelect, SecondaryButton, SectionHeading, SelectHandle,
-    SelectOption, SettingsCategory, SettingsLayout, ThemeCard, on_pick, select_state,
+    GhostButton, LabeledRow, NumberStepper, SearchableSelect, SecondaryButton, SectionHeading,
+    SelectHandle, SelectOption, SettingsCategory, SettingsLayout, ThemeCard, on_pick, select_state,
     settings_dialog, switch_halo,
 };
-use telaio_ui::metrics::{CONTROL_HEIGHT, RADIUS_MD};
 use telaio_ui::{Palette, PaletteExt, ThemeChoice};
 
 use crate::gallery::Gallery;
@@ -112,11 +111,6 @@ const CATEGORIES: [(IconName, &str); 3] = [
 /// The UI font size steps and range of the dialog's stepper.
 const SIZE_STEP: f32 = 0.5;
 const SIZE_RANGE: (f32, f32) = (10.0, 20.0);
-
-/// Moves `value` by `delta`, kept inside [`SIZE_RANGE`].
-fn step_size(value: f32, delta: f32) -> f32 {
-    (value + delta).clamp(SIZE_RANGE.0, SIZE_RANGE.1)
-}
 
 /// Every piece of state the Settings demo needs.
 pub struct SettingsDemo {
@@ -245,7 +239,7 @@ fn render_sample_settings(weak: &WeakEntity<Gallery>, demo: &SettingsDemo, cx: &
     let sections = match category {
         0 => vec![
             theme_section(weak, &palette, demo.theme),
-            font_section(weak, &palette, demo),
+            font_section(weak, demo),
         ],
         1 => vec![
             switch_section(
@@ -363,7 +357,7 @@ fn theme_section(
 }
 
 /// The "Font" section: the searchable select and the size stepper.
-fn font_section(weak: &WeakEntity<Gallery>, palette: &Palette, demo: &SettingsDemo) -> AnyElement {
+fn font_section(weak: &WeakEntity<Gallery>, demo: &SettingsDemo) -> AnyElement {
     v_flex()
         .gap(px(14.0))
         .child(SectionHeading::new("Font"))
@@ -371,41 +365,23 @@ fn font_section(weak: &WeakEntity<Gallery>, palette: &Palette, demo: &SettingsDe
             "Family",
             SearchableSelect::new("settings-font", &demo.dialog_font),
         ))
-        .child(LabeledRow::new("Size", stepper(weak, palette, demo.size)))
+        .child(LabeledRow::new("Size", stepper(weak, demo.size)))
         .into_any_element()
 }
 
-/// A `-`/`N px`/`+` stepper.
-fn stepper(weak: &WeakEntity<Gallery>, palette: &Palette, value: f32) -> AnyElement {
-    let button = |id: &'static str, icon: IconName, delta: f32| {
-        let weak = weak.clone();
-        div()
-            .id(id)
-            .size(px(CONTROL_HEIGHT))
-            .flex()
-            .items_center()
-            .justify_center()
-            .cursor_pointer()
-            .rounded(px(RADIUS_MD - 1.0))
-            .border_1()
-            .border_color(palette.border_strong)
-            .bg(palette.raised)
-            .hover(|style| style.bg(palette.hover_over(palette.raised)))
-            .active(|style| style.bg(palette.pressed_over(palette.raised)))
-            .child(Icon::new(icon).small())
-            .on_click(move |_, _, cx| {
-                let _ = weak.update(cx, |gallery, cx| {
-                    gallery.settings.size = step_size(gallery.settings.size, delta);
-                    cx.notify();
-                });
-            })
-    };
-    h_flex()
-        .items_center()
-        .gap(px(8.0))
-        .child(button("settings-size-minus", IconName::Minus, -SIZE_STEP))
-        .child(div().w(px(64.0)).text_center().child(format!("{value} px")))
-        .child(button("settings-size-plus", IconName::Plus, SIZE_STEP))
+/// The size stepper, a [`NumberStepper`] writing into the demo's state.
+fn stepper(weak: &WeakEntity<Gallery>, value: f32) -> AnyElement {
+    let weak = weak.clone();
+    NumberStepper::new("settings-size", value)
+        .step(SIZE_STEP)
+        .range(SIZE_RANGE.0, SIZE_RANGE.1)
+        .unit("px")
+        .on_change(move |value, _, cx| {
+            let _ = weak.update(cx, |gallery, cx| {
+                gallery.settings.size = value;
+                cx.notify();
+            });
+        })
         .into_any_element()
 }
 
@@ -449,16 +425,4 @@ fn switch_section<const N: usize>(
             .description(description)
         }))
         .into_any_element()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{SIZE_RANGE, step_size};
-
-    #[test]
-    fn the_stepper_stays_inside_its_range() {
-        assert_eq!(step_size(13.0, 0.5), 13.5);
-        assert_eq!(step_size(SIZE_RANGE.1, 0.5), SIZE_RANGE.1);
-        assert_eq!(step_size(SIZE_RANGE.0, -0.5), SIZE_RANGE.0);
-    }
 }
