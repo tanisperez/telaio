@@ -251,6 +251,9 @@ pub struct Gallery {
     pub(crate) badges_busy: bool,
     /// The value of the progress bar demo, 0 to 1 (or above, to show the clamping).
     pub(crate) progress: f32,
+    /// The values of the number stepper demos.
+    pub(crate) stepper_font: f32,
+    pub(crate) stepper_half: f32,
     pub(crate) rows: Vec<DemoRow>,
     pub(crate) next_row: usize,
     /// The rows of the editable table demo.
@@ -340,6 +343,8 @@ impl Gallery {
             switch_off: false,
             badges_busy: false,
             progress: 0.5,
+            stepper_font: 13.0,
+            stepper_half: 12.5,
             rows: rows.to_vec(),
             next_row: 1,
             env_rows: Vec::new(),

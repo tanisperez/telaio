@@ -12,8 +12,8 @@ use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
 use telaio_ui::components::{
-    HoverInput, SegmentedItem, checkbox_halo, edit_menu, labelled_checkbox, labelled_radio,
-    radio_halo, select_label_row, select_trigger, switch_halo, text_field,
+    HoverInput, NumberStepper, SegmentedItem, checkbox_halo, edit_menu, labelled_checkbox,
+    labelled_radio, radio_halo, select_label_row, select_trigger, switch_halo, text_field,
 };
 
 use super::{label, on_off};
@@ -32,6 +32,7 @@ impl Gallery {
             .child(section("Select trigger", self.render_select(cx)))
             .child(section("Segmented control", self.render_segmented(cx)))
             .child(section("Controls", self.render_controls(cx)))
+            .child(section("Number stepper", self.render_steppers(cx)))
     }
 
     /// Inputs: a `text_field` and a bare `HoverInput`, both with the edit menu on right click.
@@ -253,5 +254,50 @@ impl Gallery {
             )
             .child(switch_row(switch_on.into_any_element(), "Switch with halo"))
             .child(switch_row(switch_off.into_any_element(), "Another switch"))
+    }
+
+    /// Number steppers: a font size from 10 to 20 in whole steps, one in half steps, and one
+    /// stuck at its minimum to show the dimmed button.
+    pub(crate) fn render_steppers(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let captioned = |caption: &'static str, stepper: NumberStepper| {
+            v_flex()
+                .flex_none()
+                .gap_1()
+                .child(label(caption, &palette))
+                .child(stepper)
+        };
+        h_flex()
+            .flex_wrap()
+            .items_start()
+            .gap_x_8()
+            .gap_y_4()
+            .child(captioned(
+                "Font size, 10 to 20, step 1",
+                NumberStepper::new("gallery-stepper-font", self.stepper_font)
+                    .range(10.0, 20.0)
+                    .unit("px")
+                    .on_change(Self::act_with(cx, |this, value, _, cx| {
+                        this.stepper_font = value;
+                        this.record(format!("Font size {value} px"), cx);
+                    })),
+            ))
+            .child(captioned(
+                "Step 0.5, 10 to 20",
+                NumberStepper::new("gallery-stepper-half", self.stepper_half)
+                    .step(0.5)
+                    .range(10.0, 20.0)
+                    .unit("px")
+                    .on_change(Self::act_with(cx, |this, value, _, cx| {
+                        this.stepper_half = value;
+                        this.record(format!("Half step {value} px"), cx);
+                    })),
+            ))
+            .child(captioned(
+                "At the minimum, no handler",
+                NumberStepper::new("gallery-stepper-min", 10.0)
+                    .range(10.0, 20.0)
+                    .unit("px"),
+            ))
     }
 }

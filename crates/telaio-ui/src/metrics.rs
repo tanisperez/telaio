@@ -129,3 +129,8 @@ pub const BUTTON_GLOW_OPACITY: f32 = 0.35;
 
 /// Height of a `ProgressBar`'s track.
 pub const PROGRESS_BAR_HEIGHT: f32 = 6.0;
+
+/// Width of a `NumberStepper`'s readout, wide enough for "12.5 px" in the mono font.
+pub const STEPPER_READOUT_WIDTH: f32 = 64.0;
+/// Gap between a `NumberStepper`'s buttons and its readout.
+pub const STEPPER_GAP: f32 = 8.0;
