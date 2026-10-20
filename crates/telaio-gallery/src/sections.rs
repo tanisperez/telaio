@@ -678,6 +678,8 @@ impl Gallery {
                     .trailing(
                         IconButton::new(("gallery-tree-play", index), IconName::Play).on_click(
                             Self::click(cx, move |this, _, cx| {
+                                // Keep the row's own click from selecting it.
+                                cx.stop_propagation();
                                 let label = this.tree[index].label;
                                 this.record(format!("Tree row: play {label}"), cx);
                             }),
