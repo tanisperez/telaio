@@ -23,6 +23,7 @@ pub mod status_badge;
 pub mod switch_halo;
 pub mod text_field;
 pub mod theme_card;
+pub mod tree_row;
 pub mod underline_tabs;
 
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
@@ -50,4 +51,5 @@ pub use status_badge::StatusBadge;
 pub use switch_halo::switch_halo;
 pub use text_field::text_field;
 pub use theme_card::ThemeCard;
+pub use tree_row::TreeRow;
 pub use underline_tabs::{UnderlineTabItem, UnderlineTabs};

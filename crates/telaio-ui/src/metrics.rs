@@ -78,3 +78,15 @@ pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;
 pub const EMPTY_STATE_COMPACT_PADDING: f32 = 40.0;
 /// Widest an `EmptyState` explanation grows before it wraps.
 pub const EMPTY_STATE_DESCRIPTION_MAX_WIDTH: f32 = 360.0;
+
+/// Height of a `TreeRow`.
+pub const TREE_ROW_HEIGHT: f32 = 26.0;
+/// Width of a `TreeRow`'s chevron slot, kept (empty) on a leaf so a leaf lines up with its
+/// sibling folders' chevrons.
+pub const TREE_ROW_ICON_WIDTH: f32 = 13.0;
+/// How far each depth level indents a `TreeRow`.
+pub const TREE_ROW_INDENT: f32 = 16.0;
+/// Left padding of a `TreeRow` at depth 0.
+pub const TREE_ROW_PADDING_LEFT: f32 = 8.0;
+/// Extra space after a `TreeRow`'s leading element, on top of the row's 4 px gap.
+pub const TREE_ROW_LEADING_GAP: f32 = 2.0;

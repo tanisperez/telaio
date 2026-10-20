@@ -78,6 +78,56 @@ pub struct DemoRow {
     pub enabled: bool,
 }
 
+/// One node of the tree row demo, in pre-order: a folder is followed by its children, one level
+/// deeper.
+#[derive(Debug, Clone)]
+pub struct DemoNode {
+    pub label: &'static str,
+    pub depth: usize,
+    pub folder: bool,
+    pub expanded: bool,
+}
+
+/// The tree row demo's nodes: two folders, one of them nested, and loose requests.
+pub fn demo_tree() -> Vec<DemoNode> {
+    let node = |label, depth, folder, expanded| DemoNode {
+        label,
+        depth,
+        folder,
+        expanded,
+    };
+    vec![
+        node("auth", 0, true, true),
+        node("login", 1, false, false),
+        node("refresh token", 1, false, false),
+        node("users", 0, true, false),
+        node("list users", 1, false, false),
+        node("admin", 1, true, false),
+        node("delete user", 2, false, false),
+        node("health check", 0, false, false),
+    ]
+}
+
+/// The indexes of the nodes shown: every node except those inside a collapsed folder.
+pub fn visible_nodes(nodes: &[DemoNode]) -> Vec<usize> {
+    let mut visible = Vec::new();
+    // The depth of the collapsed folder whose children are being skipped.
+    let mut hidden_below: Option<usize> = None;
+    for (index, node) in nodes.iter().enumerate() {
+        if let Some(depth) = hidden_below {
+            if node.depth > depth {
+                continue;
+            }
+            hidden_below = None;
+        }
+        visible.push(index);
+        if node.folder && !node.expanded {
+            hidden_below = Some(node.depth);
+        }
+    }
+    visible
+}
+
 /// The state of the whole gallery.
 pub struct Gallery {
     pub(crate) focus_handle: FocusHandle,
@@ -107,6 +157,10 @@ pub struct Gallery {
     pub(crate) table_header: bool,
     /// How many request rows the data table demo shows.
     pub(crate) table_rows: usize,
+    /// The tree row demo's nodes, see [`demo_tree`].
+    pub(crate) tree: Vec<DemoNode>,
+    /// The selected node of the tree row demo.
+    pub(crate) tree_selected: Option<usize>,
     /// Tracks the main column's scroll position, for its scrollbar.
     pub(crate) scroll_handle: ScrollHandle,
 }
@@ -176,6 +230,8 @@ impl Gallery {
             table_mono: true,
             table_header: true,
             table_rows: 3,
+            tree: demo_tree(),
+            tree_selected: Some(1),
             scroll_handle: ScrollHandle::new(),
         }
     }
@@ -404,6 +460,7 @@ impl Render for Gallery {
             .child(section("Key-value table", self.render_key_value_table(cx)))
             .child(section("Data table", self.render_data_table(cx)))
             .child(section("Empty state", self.render_empty_state(cx)))
+            .child(section("Tree row", self.render_tree_rows(cx)))
             .child(section("Theme cards", self.render_theme_cards(cx)))
             .child(section("Card", self.render_card()))
             .child(section("Modals", self.render_modals(cx)));
@@ -443,5 +500,31 @@ impl Render for Gallery {
                 this.relative()
                     .child(div().absolute().inset_0().bg(palette.scrim))
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{demo_tree, visible_nodes};
+
+    #[test]
+    fn collapsed_folders_hide_their_whole_subtree() {
+        let mut nodes = demo_tree();
+        // auth is open and users is closed: its list, admin and delete user are hidden.
+        assert_eq!(visible_nodes(&nodes), vec![0, 1, 2, 3, 7]);
+        nodes[3].expanded = true;
+        // admin is still closed, so only its child stays hidden.
+        assert_eq!(visible_nodes(&nodes), vec![0, 1, 2, 3, 4, 5, 7]);
+        nodes[5].expanded = true;
+        assert_eq!(visible_nodes(&nodes), vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn closing_a_parent_hides_an_open_child_folder_too() {
+        let mut nodes = demo_tree();
+        nodes[3].expanded = true;
+        nodes[5].expanded = true;
+        nodes[3].expanded = false;
+        assert_eq!(visible_nodes(&nodes), vec![0, 1, 2, 3, 7]);
     }
 }

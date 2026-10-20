@@ -16,15 +16,15 @@ use telaio_ui::components::{
     Card, DangerButton, DataAlign, DataCell, DataColumn, DataTable, EmptyState, GhostButton,
     HoverInput, IconButton, InlineMessage, InlineMessageKind, KeyValueRow, KeyValueTable,
     MODIFIER_KEY, ModalPlacement, PrimaryButton, SecondaryButton, SectionLabel, SegmentedItem,
-    Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, UnderlineTabItem,
-    UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer, modal_header,
-    open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row, select_trigger,
-    switch_halo, text_field,
+    Shortcut, ShortcutGroup, SortColumn, SortOrder, StatusBadge, ThemeCard, TreeRow,
+    UnderlineTabItem, UnderlineTabs, edit_menu, framed_dialog, modal_body, modal_footer,
+    modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip, select_label_row,
+    select_trigger, switch_halo, text_field,
 };
 use telaio_ui::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_LG};
 use telaio_ui::{PaletteExt, ThemeChoice, Tone};
 
-use crate::gallery::{DemoRow, Gallery, segmented};
+use crate::gallery::{DemoRow, Gallery, segmented, visible_nodes};
 
 /// The picks of the select trigger demo.
 const SELECT_PICKS: [&str; 3] = ["staging", "production", "local"];
@@ -652,6 +652,61 @@ impl Gallery {
                     .bg(palette.raised)
                     .child(EmptyState::new("Compact, in the flow of a page").compact(true)),
             )
+    }
+
+    /// Tree rows: a small tree whose folders really expand and collapse, with a leading element
+    /// on requests, a play button shown on hover, and a selected row.
+    pub(crate) fn render_tree_rows(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let rows = visible_nodes(&self.tree).into_iter().map(|index| {
+            let node = &self.tree[index];
+            let mut row = TreeRow::new(("gallery-tree-row", index), node.label)
+                .depth(node.depth)
+                .selected(self.tree_selected == Some(index));
+            if node.folder {
+                row = row.folder(node.expanded);
+            } else {
+                row = row
+                    .leading(
+                        div()
+                            .font_family(telaio_ui::fonts::MONO_FAMILY)
+                            .text_size(px(10.5))
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(palette.success)
+                            .child(if index % 2 == 0 { "GET" } else { "POST" }),
+                    )
+                    .trailing(
+                        IconButton::new(("gallery-tree-play", index), IconName::Play).on_click(
+                            Self::click(cx, move |this, _, cx| {
+                                let label = this.tree[index].label;
+                                this.record(format!("Tree row: play {label}"), cx);
+                            }),
+                        ),
+                    );
+            }
+            row.on_click(Self::click(cx, move |this, _, cx| {
+                let node = &mut this.tree[index];
+                if node.folder {
+                    node.expanded = !node.expanded;
+                    let (label, expanded) = (node.label, node.expanded);
+                    let state = if expanded { "expanded" } else { "collapsed" };
+                    this.record(format!("Tree row: {label} {state}"), cx);
+                } else {
+                    this.tree_selected = Some(index);
+                    let label = node.label;
+                    this.record(format!("Tree row: selected {label}"), cx);
+                }
+            }))
+        });
+        v_flex()
+            .w(px(320.0))
+            .p_2()
+            .gap_px()
+            .border_1()
+            .border_color(palette.border)
+            .rounded(px(RADIUS_LG))
+            .bg(palette.surface)
+            .children(rows)
     }
 
     /// Card: a container with a couple of children.
