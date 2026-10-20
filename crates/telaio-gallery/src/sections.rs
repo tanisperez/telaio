@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use gpui_kit::component::checkbox::Checkbox;
 use gpui_kit::component::input::Input;
-use gpui_kit::component::menu::{DropdownMenu as _, PopupMenuItem};
+use gpui_kit::component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenu, PopupMenuItem};
 use gpui_kit::component::radio::Radio;
 use gpui_kit::component::switch::Switch;
 use gpui_kit::component::*;
@@ -707,6 +707,96 @@ impl Gallery {
             .rounded(px(RADIUS_LG))
             .bg(palette.surface)
             .children(rows)
+    }
+
+    /// Menus: gpui-component's real `PopupMenu` under the telaio theme, from a button and from a
+    /// right click. Both show a label, items with an icon, a checked item that really toggles,
+    /// a disabled item, separators and a submenu.
+    pub(crate) fn render_menus(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let weak = cx.weak_entity();
+        let checked = self.menu_checked;
+        // The same content for both entry points: a `PopupMenu` is built again on every open.
+        let build = move |menu: PopupMenu, window: &mut Window, cx: &mut Context<PopupMenu>| {
+            let record = |text: &'static str| {
+                let weak = weak.clone();
+                move |_: &ClickEvent, _: &mut Window, cx: &mut App| {
+                    let _ = weak.update(cx, |this, cx| this.record(text, cx));
+                }
+            };
+            let toggle_weak = weak.clone();
+            let submenu_record = record("Menu: exported as JSON");
+            let submenu_record_2 = record("Menu: exported as YAML");
+            menu.label("Request")
+                .item(
+                    PopupMenuItem::new("Duplicate")
+                        .icon(gpui_kit::assets::IconName::Copy)
+                        .on_click(record("Menu: Duplicate")),
+                )
+                .item(
+                    PopupMenuItem::new("Rename")
+                        .icon(gpui_kit::assets::IconName::Pencil)
+                        .on_click(record("Menu: Rename")),
+                )
+                .item(
+                    PopupMenuItem::new("Archive")
+                        .icon(gpui_kit::assets::IconName::Archive)
+                        .disabled(true),
+                )
+                .separator()
+                .item(
+                    PopupMenuItem::new("Show line numbers")
+                        .checked(checked)
+                        .on_click(move |_, _, cx| {
+                            let _ = toggle_weak.update(cx, |this, cx| {
+                                this.menu_checked = !this.menu_checked;
+                                let state = on_off(this.menu_checked);
+                                this.record(format!("Menu: line numbers {state}"), cx);
+                            });
+                        }),
+                )
+                .submenu("Export as", window, cx, move |menu, _, _| {
+                    let (json, yaml) = (submenu_record.clone(), submenu_record_2.clone());
+                    menu.item(PopupMenuItem::new("JSON").on_click(json))
+                        .item(PopupMenuItem::new("YAML").on_click(yaml))
+                })
+                .separator()
+                .item(
+                    PopupMenuItem::new("Delete")
+                        .icon(gpui_kit::assets::IconName::Trash)
+                        .on_click(record("Menu: Delete")),
+                )
+        };
+        let context_build = build.clone();
+        v_flex().gap_3().child(
+            h_flex()
+                .flex_wrap()
+                .gap_3()
+                .items_center()
+                .child(
+                    select_trigger("gallery-menu-trigger", &palette, cx)
+                        .w(px(160.0))
+                        .text_color(palette.fg)
+                        .child(select_label_row(div().child("Open menu"), &palette))
+                        .dropdown_menu(build),
+                )
+                .child(
+                    div()
+                        .id("gallery-context-area")
+                        .w(px(300.0))
+                        .h(px(80.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .border_1()
+                        .border_dashed()
+                        .border_color(palette.border_strong)
+                        .rounded(px(RADIUS_LG))
+                        .text_color(palette.fg_muted)
+                        .child("Right click here")
+                        .context_menu(context_build),
+                ),
+        )
     }
 
     /// Card: a container with a couple of children.
