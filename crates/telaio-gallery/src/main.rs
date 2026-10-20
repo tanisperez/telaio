@@ -13,6 +13,7 @@
 
 mod gallery;
 mod samples;
+mod settings_demo;
 mod tabs;
 
 use gpui_kit::component::theme::Theme;

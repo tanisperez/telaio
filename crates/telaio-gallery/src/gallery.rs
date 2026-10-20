@@ -18,6 +18,7 @@ use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::SamplePalette;
 use crate::tabs::Tab;
+use crate::settings_demo::SettingsDemo;
 
 /// The widest the content grows, in pixels.
 const CONTENT_MAX_WIDTH: f32 = 820.0;
@@ -279,6 +280,8 @@ pub struct Gallery {
     /// One scroll position per tab, indexed by [`Tab::index`], so each tab keeps its own when
     /// the user comes back to it. Each also feeds that tab's scrollbar.
     pub(crate) scroll_handles: [ScrollHandle; Tab::ALL.len()],
+    /// The state of the Settings demo (select and dialog).
+    pub(crate) settings: SettingsDemo,
 }
 
 impl Gallery {
@@ -360,6 +363,7 @@ impl Gallery {
             tree_selected: Some(1),
             tab,
             scroll_handles: std::array::from_fn(|_| ScrollHandle::new()),
+            settings: SettingsDemo::new(window, cx),
         };
         gallery.new_env_row(
             "base_url",

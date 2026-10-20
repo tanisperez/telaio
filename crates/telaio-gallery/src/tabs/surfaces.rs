@@ -93,9 +93,7 @@ impl Gallery {
             .child(section("Theme cards", self.render_theme_cards(cx)))
             .child(section("Card", self.render_card()))
             .child(section("Modals", self.render_modals(cx)))
-        // SETTINGS DEMO GOES HERE: add
-        // `.child(section("Settings dialog", self.render_settings_demo(cx)))` after "Modals",
-        // with `render_settings_demo` in `crate::settings_demo` (an `impl Gallery` block).
+            .child(section("Settings", self.render_settings_demo(cx)))
     }
 
     /// Theme cards: a click changes the theme mode.
