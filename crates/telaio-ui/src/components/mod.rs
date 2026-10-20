@@ -24,6 +24,7 @@ pub mod searchable_select;
 pub mod section_label;
 pub mod segmented_control;
 pub mod select_trigger;
+pub mod settings;
 pub mod shortcuts;
 pub mod status_badge;
 pub mod switch_halo;
@@ -60,6 +61,7 @@ pub use searchable_select::{
 pub use section_label::SectionLabel;
 pub use segmented_control::{SegmentedControl, SegmentedItem};
 pub use select_trigger::{select_label_row, select_trigger};
+pub use settings::{LabeledRow, SectionHeading, SettingsCategory, SettingsLayout, settings_dialog};
 pub use shortcuts::{
     MODIFIER_KEY, OPEN_SHORTCUTS_KEYSTROKE, Shortcut, ShortcutGroup, open_hint, open_keys,
     open_shortcuts_dialog, open_tooltip,

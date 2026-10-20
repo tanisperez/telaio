@@ -144,3 +144,10 @@ pub const SELECT_SEARCH_ROWS: usize = 12;
 pub const SELECT_MENU_MAX_HEIGHT: f32 = 252.0;
 /// Text size of a select's label when it is set in the monospace family, as in the editors.
 pub const SELECT_MONO_TEXT_SIZE: f32 = 12.5;
+
+/// Width of the Settings modal.
+pub const SETTINGS_WIDTH: f32 = 800.0;
+/// Height of the Settings modal.
+pub const SETTINGS_HEIGHT: f32 = 720.0;
+/// Width of the Settings modal's category navigation column.
+pub const SETTINGS_NAV_WIDTH: f32 = 188.0;
