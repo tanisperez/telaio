@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/tanisperez/telaio)](https://github.com/tanisperez/telaio/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/tanisperez/telaio/ci.yml?branch=main&label=CI)](https://github.com/tanisperez/telaio/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/tanisperez/telaio)](LICENSE)
-[![gpui-kit](https://img.shields.io/badge/gpui--kit-0.7.0-blue)](https://crates.io/crates/gpui-kit/0.7.0)
+[![gpui-kit](https://img.shields.io/badge/gpui--kit-0.8.0-blue)](https://crates.io/crates/gpui-kit/0.8.0)
 [![Rust](https://img.shields.io/badge/rust-stable%20%C2%B7%20edition%202024-orange)](rust-toolchain.toml)
 
 telaio (Italian word for a frame, a chassis or a loom) is a rapid application development kit

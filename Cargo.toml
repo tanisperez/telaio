@@ -11,10 +11,10 @@ authors = ["Estanislao Pérez Nartallo <tanisperez@gmail.com>"]
 repository = "https://github.com/tanisperez/telaio"
 
 [workspace.dependencies]
-# The exact pin of the apps that use telaio: gpui-kit 0.7.0 bundles gpui-component and gpui-base
-# and pins gpui-pre 0.3.7. Upgrading it means a new telaio release and an upgrade in every app,
+# The exact pin of the apps that use telaio: gpui-kit 0.8.0 bundles gpui-component and gpui-base
+# and pins gpui-pre 0.3.9. Upgrading it means a new telaio release and an upgrade in every app,
 # and `cargo tree -d --depth 0 | grep gpui` must stay empty there.
-gpui-kit = "0.7.0"
+gpui-kit = "0.8.0"
 serde_json = "1"
 # The same version as the apps, already built by gpui-component (translations).
 rust-i18n = "4.2"

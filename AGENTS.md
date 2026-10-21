@@ -21,7 +21,7 @@ building an app with telaio are in `~/.claude/rust/RULES.md` (the author's dotfi
 
 ## Rules
 
-- Same pin as the apps: `gpui-kit` at the exact version in `Cargo.toml` (0.7.0).
+- Same pin as the apps: `gpui-kit` at the exact version in `Cargo.toml` (0.8.0).
   `cargo tree -d --depth 0 | grep gpui` must stay empty here and in every app.
 - No domain code. A component that needs an app concept (an HTTP method, a scan category) takes
   plain values or colors instead; the mapping lives in the app.

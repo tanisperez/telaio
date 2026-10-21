@@ -455,7 +455,7 @@ pub(crate) fn theme_colors_and_highlight(
         // A different field from `popover.background` above: this is `Dialog`'s own backdrop
         // scrim color (`overlay_color()` in gpui-component's `dialog/dialog.rs`, reading
         // `cx.theme().overlay`), not the modal/popover surface fill. Transparent because
-        // gpui-kit 0.7.0 paints that backdrop over the whole window, client side shadow margin
+        // gpui-kit 0.8.0 paints that backdrop over the whole window, client side shadow margin
         // included, which showed as a gray frame around the window; the app paints
         // `Palette::scrim` over the content instead.
         "overlay": "#00000000",
