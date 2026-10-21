@@ -44,7 +44,8 @@ Postino as the reference implementation.
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
   `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`, `modal_body`,
   `modal_footer`, `open_confirm_dialog`), `SegmentedControl`, `select_trigger`, `StatusBadge`,
-  `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `InlineMessage`, `Card`,
+  `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `TextArea` (multi line plain text),
+  `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `ProgressBar`, `NumberStepper`, `SearchableSelect` (a select with an
   optional search box, from a `select_state` the app creates once), `SectionLabel`, the Settings
   dialog pieces (`settings_dialog`, `SettingsLayout` with its `SettingsCategory` list,

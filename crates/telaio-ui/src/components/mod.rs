@@ -28,6 +28,7 @@ pub mod settings;
 pub mod shortcuts;
 pub mod status_badge;
 pub mod switch_halo;
+pub mod text_area;
 pub mod text_field;
 pub mod theme_card;
 pub mod tree_row;
@@ -68,6 +69,7 @@ pub use shortcuts::{
 };
 pub use status_badge::StatusBadge;
 pub use switch_halo::switch_halo;
+pub use text_area::TextArea;
 pub use text_field::{input_line_height, text_field};
 pub use theme_card::ThemeCard;
 pub use tree_row::TreeRow;
