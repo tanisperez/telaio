@@ -2,8 +2,8 @@
 //! raised surface), with the app's edit menu, filling the height of its parent.
 //!
 //! The editor sets the monospace font and size of the theme (`mono_font` in the theme JSON) and
-//! its syntax colors come from the palette (`highlight.syntax`, see [`crate::theme`]). The
-//! language, the line numbers and the text live on the [`EditorState`], built by the app:
+//! its syntax colors come from the app's [`crate::SyntaxTheme`]. The language, the line numbers
+//! and the text live on the [`EditorState`], built by the app:
 //!
 //! ```ignore
 //! let body = cx.new(|cx| EditorState::new(window, cx).language("json"));

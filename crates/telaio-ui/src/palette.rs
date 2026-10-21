@@ -61,14 +61,6 @@ pub struct Tokens {
     pub info: &'static str,
     /// Info badge background.
     pub info_subtle: &'static str,
-    /// Object key syntax highlight color.
-    pub syn_key: &'static str,
-    /// String syntax highlight color.
-    pub syn_str: &'static str,
-    /// Number syntax highlight color.
-    pub syn_num: &'static str,
-    /// Boolean syntax highlight color.
-    pub syn_bool: &'static str,
     /// The dimmed backdrop behind a modal (`rgba(10,11,16,.45)` in the default tokens).
     pub scrim: &'static str,
     /// The two elevation shadow layers, in CSS `box-shadow` order. Horizontal offset is always 0
@@ -115,10 +107,6 @@ impl Tokens {
         danger_subtle: "#fde7e7",
         info: "#1c6fb0",
         info_subtle: "#e1eef9",
-        syn_key: "#3f47c4",
-        syn_str: "#1d7a4f",
-        syn_num: "#9a6500",
-        syn_bool: "#b03a78",
         scrim: "#0a0b1073",
         shadow: [
             ShadowLayer {
@@ -163,10 +151,6 @@ impl Tokens {
         danger_subtle: "#3b1e21",
         info: "#62b3f0",
         info_subtle: "#162a3b",
-        syn_key: "#a3a9ff",
-        syn_str: "#86d7a5",
-        syn_num: "#e8b75a",
-        syn_bool: "#f3a2c6",
         scrim: "#0a0b1073",
         shadow: [
             ShadowLayer {
@@ -263,16 +247,6 @@ pub struct Palette {
     pub info: Hsla,
     /// Info badge background.
     pub info_subtle: Hsla,
-    /// Object key syntax highlight color. Code editors get it from the theme JSON's own
-    /// `highlight.syntax` config ([`theme_colors_and_highlight`]); kept here for a view that
-    /// colors a code line by hand outside a live editor.
-    pub syn_key: Hsla,
-    /// String syntax highlight color, see [`Self::syn_key`].
-    pub syn_str: Hsla,
-    /// Number syntax highlight color, see [`Self::syn_key`].
-    pub syn_num: Hsla,
-    /// Boolean syntax highlight color, see [`Self::syn_key`].
-    pub syn_bool: Hsla,
     /// The elevation shadow for `overlay`-level surfaces (menus, popovers, modals). There is no
     /// `ThemeConfigColors` field for it, so components apply it with gpui's own `.shadow(...)`.
     pub shadow: Vec<BoxShadow>,
@@ -337,10 +311,6 @@ impl Palette {
             danger_subtle: hex(tokens.danger_subtle),
             info: hex(tokens.info),
             info_subtle: hex(tokens.info_subtle),
-            syn_key: hex(tokens.syn_key),
-            syn_str: hex(tokens.syn_str),
-            syn_num: hex(tokens.syn_num),
-            syn_bool: hex(tokens.syn_bool),
             shadow: tokens.shadow.iter().map(shadow_layer).collect(),
         }
     }
@@ -437,7 +407,8 @@ impl PaletteExt for App {
 }
 
 /// The `"colors"` and `"highlight"` JSON fragments for one mode's `ThemeConfig`, built straight
-/// from `tokens`, never a separate literal.
+/// from `tokens`, never a separate literal. The `"syntax"` part of `"highlight"` comes from the
+/// app's [`crate::SyntaxTheme`], added by [`crate::ThemeFamily`].
 pub(crate) fn theme_colors_and_highlight(
     tokens: &Tokens,
     dark: bool,
@@ -515,12 +486,6 @@ pub(crate) fn theme_colors_and_highlight(
         // sit in. Unset, it took gpui-component's input background, a lighter strip whose edge
         // read as a divider right where a cursor at the start of a line is drawn.
         "editor.gutter.background": tokens.raised,
-        "syntax": {
-            "property": { "color": tokens.syn_key },
-            "string": { "color": tokens.syn_str },
-            "number": { "color": tokens.syn_num },
-            "boolean": { "color": tokens.syn_bool },
-        }
     });
     (colors, highlight)
 }
@@ -641,7 +606,6 @@ mod tests {
         assert!(!palette.dark);
         assert_eq!(to_hex(palette.bg), "#fcfcfd");
         assert_eq!(to_hex(palette.accent), "#4f57d8");
-        assert_eq!(to_hex(palette.syn_key), "#3f47c4");
     }
 
     #[test]
@@ -650,7 +614,6 @@ mod tests {
         assert!(palette.dark);
         assert_eq!(to_hex(palette.bg), "#15161a");
         assert_eq!(to_hex(palette.accent), "#5b63e6");
-        assert_eq!(to_hex(palette.syn_key), "#a3a9ff");
     }
 
     #[test]

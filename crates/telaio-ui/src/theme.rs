@@ -1,4 +1,4 @@
-//! The gpui-kit theme family built from an app's [`Tokens`].
+//! The gpui-kit theme family built from an app's [`Tokens`] and [`SyntaxTheme`]s.
 //!
 //! [`install`] does the startup work: register the bundled fonts, build the "<Name> Light" and
 //! "<Name> Dark" theme family JSON from the tokens, load it into gpui-kit's `ThemeRegistry` so
@@ -14,6 +14,7 @@ use gpui_kit::{App, SharedString, Window};
 
 use crate::fonts;
 use crate::palette::{Palettes, Tokens, theme_colors_and_highlight};
+use crate::syntax::SyntaxTheme;
 
 /// General radius for gpui-kit's own stock widgets (inputs, buttons), matching the design's
 /// radius scale ([`crate::metrics::RADIUS_MD`]).
@@ -47,7 +48,8 @@ impl Default for Fonts {
     }
 }
 
-/// Everything a theme family is built from: a name, the tokens of both modes and the fonts.
+/// Everything a theme family is built from: a name, the tokens and syntax colors of both modes
+/// and the fonts.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ThemeFamily {
     /// The family name. The two themes are registered as "<name> Light" and "<name> Dark".
@@ -56,17 +58,23 @@ pub struct ThemeFamily {
     pub light: Tokens,
     /// The dark mode tokens.
     pub dark: Tokens,
+    /// The light mode syntax colors of the code editors, empty by default.
+    pub syntax_light: SyntaxTheme,
+    /// The dark mode syntax colors of the code editors, empty by default.
+    pub syntax_dark: SyntaxTheme,
     /// The UI and monospace fonts.
     pub fonts: Fonts,
 }
 
 impl ThemeFamily {
-    /// A family named `name` with the default tokens and fonts.
+    /// A family named `name` with the default tokens and fonts, and no syntax colors.
     pub fn new(name: impl Into<SharedString>) -> Self {
         Self {
             name: name.into(),
             light: Tokens::DEFAULT_LIGHT,
             dark: Tokens::DEFAULT_DARK,
+            syntax_light: SyntaxTheme::default(),
+            syntax_dark: SyntaxTheme::default(),
             fonts: Fonts::default(),
         }
     }
@@ -75,6 +83,13 @@ impl ThemeFamily {
     pub fn tokens(mut self, light: Tokens, dark: Tokens) -> Self {
         self.light = light;
         self.dark = dark;
+        self
+    }
+
+    /// Sets the syntax colors of both modes. See [`SyntaxTheme`].
+    pub fn syntax(mut self, light: SyntaxTheme, dark: SyntaxTheme) -> Self {
+        self.syntax_light = light;
+        self.syntax_dark = dark;
         self
     }
 
@@ -105,12 +120,13 @@ impl ThemeFamily {
 
     /// One mode's `ThemeConfig` entry.
     fn config_json(&self, dark: bool) -> serde_json::Value {
-        let (name, mode, tokens) = if dark {
-            (self.dark_name(), "dark", &self.dark)
+        let (name, mode, tokens, syntax) = if dark {
+            (self.dark_name(), "dark", &self.dark, self.syntax_dark)
         } else {
-            (self.light_name(), "light", &self.light)
+            (self.light_name(), "light", &self.light, self.syntax_light)
         };
-        let (colors, highlight) = theme_colors_and_highlight(tokens, dark);
+        let (colors, mut highlight) = theme_colors_and_highlight(tokens, dark);
+        highlight["syntax"] = syntax.to_json();
         serde_json::json!({
             "name": name,
             "mode": mode,
@@ -250,6 +266,35 @@ mod tests {
         assert_eq!(json["themes"][0]["colors"]["primary.background"], "#4f57d8");
         assert_eq!(json["themes"][1]["colors"]["background"], "#15161a");
         assert_eq!(json["themes"][1]["colors"]["primary.background"], "#5b63e6");
+    }
+
+    #[test]
+    fn each_mode_gets_its_own_syntax_theme() {
+        use crate::syntax::SyntaxStyle;
+        const LIGHT: SyntaxTheme = SyntaxTheme(&[("keyword", SyntaxStyle::color("#7a4fd6"))]);
+        const DARK: SyntaxTheme =
+            SyntaxTheme(&[("comment", SyntaxStyle::color("#a0a3ae").italic())]);
+        let json = ThemeFamily::new("Postino").syntax(LIGHT, DARK).to_json();
+
+        let light_syntax = &json["themes"][0]["highlight"]["syntax"];
+        assert_eq!(light_syntax["keyword"]["color"], "#7a4fd6");
+        assert!(light_syntax.get("comment").is_none());
+        let dark_syntax = &json["themes"][1]["highlight"]["syntax"];
+        assert_eq!(dark_syntax["comment"]["font_style"], "italic");
+        // The rest of `highlight` still comes from the tokens.
+        assert_eq!(
+            json["themes"][1]["highlight"]["editor.gutter.background"],
+            "#23252c"
+        );
+    }
+
+    #[test]
+    fn a_family_without_syntax_colors_has_an_empty_syntax_object() {
+        let json = ThemeFamily::new("Postino").to_json();
+        assert_eq!(
+            json["themes"][0]["highlight"]["syntax"],
+            serde_json::json!({})
+        );
     }
 
     #[test]

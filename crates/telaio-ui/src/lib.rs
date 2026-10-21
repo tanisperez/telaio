@@ -19,6 +19,7 @@ pub mod fonts;
 mod locale;
 pub mod metrics;
 pub mod palette;
+pub mod syntax;
 pub mod theme;
 
 /// telaio's version, from its `Cargo.toml`, for an app's About screen.
@@ -28,4 +29,5 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 
 pub use palette::{Palette, PaletteExt, Palettes, ShadowLayer, Tokens, Tone};
+pub use syntax::{SyntaxStyle, SyntaxTheme};
 pub use theme::{Fonts, ThemeChoice, ThemeFamily, apply, install};

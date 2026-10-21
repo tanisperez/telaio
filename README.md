@@ -39,6 +39,10 @@ Postino as the reference implementation.
 - **Theme**: `ThemeFamily` builds the gpui-kit theme JSON from the tokens and the fonts;
   `telaio_ui::install` loads it at startup and `telaio_ui::apply` swaps it live.
   `ThemeChoice::apply` sets the mode.
+- **Syntax colors**: the code editors' colors come from the app, never from telaio. A
+  `SyntaxTheme` per mode maps tree-sitter captures (`keyword`, `comment`, `string`, `tag`, ...)
+  to a `SyntaxStyle` (color, optional italic), set with `ThemeFamily::syntax(light, dark)`.
+  Captures it leaves out show in the text color.
 - **Metrics**: control heights, the radius scale and component sizes (`telaio_ui::metrics`).
 - **Fonts**: Geist and Geist Mono, bundled (SIL Open Font License 1.1).
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
@@ -64,7 +68,7 @@ treemap), and so do domain colors, as an extension trait on `Palette`.
 At startup, after `gpui_kit::init` and before opening a window:
 
 ```rust
-let family = telaio_ui::ThemeFamily::new("Postino"); // or .tokens(light, dark), .fonts(...)
+let family = telaio_ui::ThemeFamily::new("Postino"); // .tokens(..), .syntax(..), .fonts(..)
 telaio_ui::install(cx, &family);
 ```
 
