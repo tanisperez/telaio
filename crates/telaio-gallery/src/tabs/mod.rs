@@ -10,6 +10,9 @@ use crate::gallery::Gallery;
 
 mod actions;
 mod data;
+mod editors;
+
+pub(crate) use editors::EditorsDemo;
 mod feedback;
 mod inputs;
 mod navigation;
@@ -26,6 +29,8 @@ pub enum Tab {
     Navigation,
     /// The key-value, data and editable tables.
     Data,
+    /// The text area and the code editors.
+    Editors,
     /// Status badges, inline messages and the empty state.
     Feedback,
     /// Cards, theme cards and modals.
@@ -34,11 +39,12 @@ pub enum Tab {
 
 impl Tab {
     /// Every tab, in the order the tab row lists them.
-    pub const ALL: [Tab; 6] = [
+    pub const ALL: [Tab; 7] = [
         Tab::Actions,
         Tab::Inputs,
         Tab::Navigation,
         Tab::Data,
+        Tab::Editors,
         Tab::Feedback,
         Tab::Surfaces,
     ];
@@ -50,6 +56,7 @@ impl Tab {
             Tab::Inputs => "Inputs",
             Tab::Navigation => "Navigation",
             Tab::Data => "Data",
+            Tab::Editors => "Editors",
             Tab::Feedback => "Feedback",
             Tab::Surfaces => "Surfaces",
         }
@@ -79,6 +86,7 @@ impl Gallery {
             Tab::Inputs => self.render_inputs_tab(cx).into_any_element(),
             Tab::Navigation => self.render_navigation_tab(cx).into_any_element(),
             Tab::Data => self.render_data_tab(cx).into_any_element(),
+            Tab::Editors => self.render_editors_tab(cx).into_any_element(),
             Tab::Feedback => self.render_feedback_tab(cx).into_any_element(),
             Tab::Surfaces => self.render_surfaces_tab(cx).into_any_element(),
         }

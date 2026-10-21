@@ -9,7 +9,7 @@
 //! - `TELAIO_THEME=system|light|dark`
 //! - `TELAIO_PALETTE=postino|indigo|graphite|electric`
 //! - `TELAIO_LANG=en|es|gl|it`
-//! - `TELAIO_TAB=actions|inputs|navigation|data|feedback|surfaces`
+//! - `TELAIO_TAB=actions|inputs|navigation|data|editors|feedback|surfaces`
 
 mod gallery;
 mod samples;

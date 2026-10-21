@@ -12,7 +12,9 @@ name = "telaio-gallery"
 path = "src/main.rs"
 
 [dependencies]
-gpui-kit = { workspace = true }
+# The grammars of the code editor demos, the same ones Postino enables (JSON comes with the
+# base "tree-sitter" feature, XML uses the HTML grammar).
+gpui-kit = { workspace = true, features = ["tree-sitter-javascript", "tree-sitter-html"] }
 rust-i18n = { workspace = true }
 telaio-ui = { path = "../telaio-ui" }
 

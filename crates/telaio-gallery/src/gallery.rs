@@ -18,7 +18,7 @@ use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::SamplePalette;
 use crate::settings_demo::SettingsDemo;
-use crate::tabs::Tab;
+use crate::tabs::{EditorsDemo, Tab};
 
 /// The widest the content grows, in pixels.
 const CONTENT_MAX_WIDTH: f32 = 820.0;
@@ -282,6 +282,8 @@ pub struct Gallery {
     pub(crate) scroll_handles: [ScrollHandle; Tab::ALL.len()],
     /// The state of the Settings demo (select and dialog).
     pub(crate) settings: SettingsDemo,
+    /// The text areas and code editors of the Editors tab.
+    pub(crate) editors: EditorsDemo,
 }
 
 impl Gallery {
@@ -364,6 +366,7 @@ impl Gallery {
             tab,
             scroll_handles: std::array::from_fn(|_| ScrollHandle::new()),
             settings: SettingsDemo::new(window, cx),
+            editors: EditorsDemo::new(window, cx),
         };
         gallery.new_env_row(
             "base_url",
