@@ -2,10 +2,45 @@
 //!
 //! The Vano values are copied from `vano-app/src/theme/palette.rs` (the `Base` tables of each
 //! accent and the `SHARED_LIGHT`/`SHARED_DARK` status colors, scrim and shadow). Vano has no
-//! `danger_subtle`, `info_subtle` or syntax tokens, so those come from
-//! [`Tokens::DEFAULT_LIGHT`] and [`Tokens::DEFAULT_DARK`].
+//! `danger_subtle` or `info_subtle` tokens, so those come from [`Tokens::DEFAULT_LIGHT`] and
+//! [`Tokens::DEFAULT_DARK`].
+//!
+//! The syntax colors are Postino's, [`SYNTAX_LIGHT`] and [`SYNTAX_DARK`], under every sample
+//! palette: Vano has no code editor.
 
-use telaio_ui::{ShadowLayer, Tokens};
+use telaio_ui::{ShadowLayer, SyntaxStyle, SyntaxTheme, Tokens};
+
+/// Postino's light syntax colors, all taken from its palette: comments in `fg_muted` italics,
+/// keywords in the PATCH purple, functions in `info`, keys in `accent_text`, strings in green,
+/// numbers and types in `warning`, booleans and constants in pink, XML tags in `danger`.
+pub const SYNTAX_LIGHT: SyntaxTheme = SyntaxTheme(&[
+    ("comment", SyntaxStyle::color("#5c606e").italic()),
+    ("keyword", SyntaxStyle::color("#7a4fd6")),
+    ("function", SyntaxStyle::color("#1c6fb0")),
+    ("property", SyntaxStyle::color("#3f47c4")),
+    ("attribute", SyntaxStyle::color("#3f47c4")),
+    ("string", SyntaxStyle::color("#1d7a4f")),
+    ("number", SyntaxStyle::color("#9a6500")),
+    ("type", SyntaxStyle::color("#9a6500")),
+    ("boolean", SyntaxStyle::color("#b03a78")),
+    ("constant", SyntaxStyle::color("#b03a78")),
+    ("tag", SyntaxStyle::color("#cf3535")),
+]);
+
+/// Postino's dark syntax colors, the dark values of the same palette roles as [`SYNTAX_LIGHT`].
+pub const SYNTAX_DARK: SyntaxTheme = SyntaxTheme(&[
+    ("comment", SyntaxStyle::color("#a0a3ae").italic()),
+    ("keyword", SyntaxStyle::color("#b597f7")),
+    ("function", SyntaxStyle::color("#62b3f0")),
+    ("property", SyntaxStyle::color("#a3a9ff")),
+    ("attribute", SyntaxStyle::color("#a3a9ff")),
+    ("string", SyntaxStyle::color("#86d7a5")),
+    ("number", SyntaxStyle::color("#e8b75a")),
+    ("type", SyntaxStyle::color("#e8b75a")),
+    ("boolean", SyntaxStyle::color("#f3a2c6")),
+    ("constant", SyntaxStyle::color("#f3a2c6")),
+    ("tag", SyntaxStyle::color("#f27171")),
+]);
 
 /// The neutrals and the accent of one Vano accent in one mode.
 struct Base {

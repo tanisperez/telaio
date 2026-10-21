@@ -16,7 +16,7 @@ use telaio_ui::components::{
 use telaio_ui::components::{SortColumn, SortOrder};
 use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
-use crate::samples::SamplePalette;
+use crate::samples::{self, SamplePalette};
 use crate::settings_demo::SettingsDemo;
 use crate::tabs::{EditorsDemo, Tab};
 
@@ -66,6 +66,7 @@ pub fn family(sample: SamplePalette, font_size: f32) -> ThemeFamily {
     let (light, dark) = sample.tokens();
     ThemeFamily::new("telaio gallery")
         .tokens(light, dark)
+        .syntax(samples::SYNTAX_LIGHT, samples::SYNTAX_DARK)
         .fonts(Fonts {
             ui_size: font_size,
             ..Fonts::default()
