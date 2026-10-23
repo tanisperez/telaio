@@ -18,6 +18,7 @@ pub mod hover_input;
 pub mod icon_button;
 pub mod inline_message;
 pub mod key_value_table;
+pub mod menu_rows;
 pub mod modal;
 pub mod number_stepper;
 pub mod progress_bar;
@@ -52,6 +53,9 @@ pub use hover_input::HoverInput;
 pub use icon_button::IconButton;
 pub use inline_message::{InlineMessage, InlineMessageKind};
 pub use key_value_table::{KeyValueRow, KeyValueTable, SortColumn, SortOrder};
+pub use menu_rows::{
+    menu_choice_item, menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width,
+};
 pub use modal::{
     ConfirmDialog, MODAL_INNER_RADIUS, ModalPlacement, framed_dialog, modal_body, modal_footer,
     modal_header, open_confirm_dialog,

@@ -109,6 +109,17 @@ pub const CHIP_ICON_SIZE: f32 = 12.0;
 /// Side length of the dismiss button of a `Chip`.
 pub const CHIP_DISMISS_SIZE: f32 = 18.0;
 
+/// Height of a single line row of a rich popup menu (choice and shortcut rows).
+pub const RICH_MENU_ROW_HEIGHT: f32 = 30.0;
+/// Text size of the labels of a rich popup menu.
+pub const RICH_MENU_TEXT_SIZE: f32 = 12.5;
+/// Text size of the details, descriptions and hints of a rich popup menu.
+pub const RICH_MENU_DETAIL_SIZE: f32 = 12.0;
+/// Text size of the monospace tags and shortcut hints of a rich popup menu.
+pub const RICH_MENU_TAG_SIZE: f32 = 11.0;
+/// Size of the check box of a toggle row of a rich popup menu.
+pub const RICH_MENU_CHECK_SIZE: f32 = 14.0;
+
 /// Side length of the icon of an `EmptyState`.
 pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;
 /// Vertical padding of a compact `EmptyState`, which sits in the flow of a page instead of

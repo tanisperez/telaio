@@ -272,6 +272,10 @@ pub struct Gallery {
     pub(crate) table_rows: usize,
     /// Whether the "Show line numbers" item of the menus demo is checked.
     pub(crate) menu_checked: bool,
+    /// The run the "Compare with" menu demo has picked.
+    pub(crate) compare_pick: usize,
+    /// Whether the "Only the range" row of the "Export" menu demo is checked.
+    pub(crate) export_range: bool,
     /// Whether the dismissible chip demo is shown.
     pub(crate) chip_shown: bool,
     /// The tree row demo's nodes, see [`demo_tree`].
@@ -366,6 +370,8 @@ impl Gallery {
             table_header: true,
             table_rows: 3,
             menu_checked: true,
+            compare_pick: 0,
+            export_range: false,
             chip_shown: true,
             tree: demo_tree(),
             tree_selected: Some(1),

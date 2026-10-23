@@ -8,13 +8,43 @@ use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
 use telaio_ui::components::{
-    DangerButton, GhostButton, IconButton, PrimaryButton, SecondaryButton, select_label_row,
+    DangerButton, GhostButton, IconButton, PrimaryButton, SecondaryButton, menu_choice_item,
+    menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width, select_label_row,
     select_trigger,
 };
 use telaio_ui::metrics::RADIUS_LG;
 
 use super::on_off;
 use crate::gallery::{Gallery, section};
+
+/// The runs the "Compare with" menu offers: a name and its detail.
+const COMPARE_RUNS: [(&str, &str); 3] = [
+    ("Previous run", "yesterday \u{b7} 2,010 req/s"),
+    ("Baseline v1.2", "last week \u{b7} 1,880 req/s"),
+    ("Staging smoke", "Mar 3 \u{b7} 940 req/s"),
+];
+
+/// The formats the "Export" menu offers: an icon, a title, an extension and a description.
+const EXPORTS: [(gpui_kit::assets::IconName, &str, &str, &str); 3] = [
+    (
+        gpui_kit::assets::IconName::FileText,
+        "Markdown",
+        ".md",
+        "A readable summary with the key figures and the tables, to paste in a report or an issue",
+    ),
+    (
+        gpui_kit::assets::IconName::Braces,
+        "JSON",
+        ".json",
+        "Time series, histogram, errors and requests",
+    ),
+    (
+        gpui_kit::assets::IconName::Table,
+        "CSV",
+        ".csv",
+        "One row per request",
+    ),
+];
 
 impl Gallery {
     /// The sections of the tab, in order.
@@ -25,6 +55,7 @@ impl Gallery {
             .child(section("Buttons", self.render_buttons(cx)))
             .child(section("Icon buttons", self.render_icon_buttons(cx)))
             .child(section("Menus", self.render_menus(cx)))
+            .child(section("Rich menu rows", self.render_rich_menus(cx)))
     }
 
     /// Buttons: the four kinds, with an icon, a key hint, disabled, other heights and full width.
@@ -222,5 +253,91 @@ impl Gallery {
                         .context_menu(context_build),
                 ),
         )
+    }
+
+    /// Rich menu rows: a "Compare with" menu of choices with a check and a detail, and an
+    /// "Export" menu of described items, a checkbox that keeps the menu open and a shortcut row.
+    pub(crate) fn render_rich_menus(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let weak = cx.weak_entity();
+        let picked = self.compare_pick;
+        let only_range = self.export_range;
+
+        let compare_weak = weak.clone();
+        let compare = select_trigger("gallery-compare-trigger", &palette, cx)
+            .w(px(220.0))
+            .text_color(palette.fg)
+            .child(select_label_row(
+                div().child(format!("Compare with: {}", COMPARE_RUNS[picked].0)),
+                &palette,
+            ))
+            .dropdown_menu(move |menu, _, _| {
+                COMPARE_RUNS.iter().enumerate().fold(
+                    rich_menu_width(menu, 240.0),
+                    |menu, (index, (name, detail))| {
+                        let weak = compare_weak.clone();
+                        menu.item(menu_choice_item(
+                            *name,
+                            Some((*detail).into()),
+                            index == picked,
+                            move |_, cx| {
+                                let _ = weak.update(cx, |this, cx| {
+                                    this.compare_pick = index;
+                                    this.record(format!("Compare with {name}"), cx);
+                                });
+                            },
+                        ))
+                    },
+                )
+            });
+
+        let export = select_trigger("gallery-export-trigger", &palette, cx)
+            .w(px(140.0))
+            .text_color(palette.fg)
+            .child(select_label_row(div().child("Export"), &palette))
+            .dropdown_menu(move |menu, _, _| {
+                let record = |text: String| {
+                    let weak = weak.clone();
+                    move |_: &mut Window, cx: &mut App| {
+                        let _ = weak.update(cx, |this, cx| this.record(text.clone(), cx));
+                    }
+                };
+                let toggle_weak = weak.clone();
+                let menu = EXPORTS.iter().fold(
+                    rich_menu_width(menu, 320.0),
+                    |menu, (icon, title, tag, description)| {
+                        menu.item(menu_described_item(
+                            Icon::new(*icon),
+                            *title,
+                            Some((*tag).into()),
+                            *description,
+                            record(format!("Export as {title}")),
+                        ))
+                    },
+                );
+                menu.separator()
+                    .item(menu_toggle_item(
+                        "Only the 34-46 s range",
+                        only_range,
+                        move |checked, _, cx| {
+                            let _ = toggle_weak.update(cx, |this, cx| {
+                                this.export_range = checked;
+                                this.record(format!("Export range only {}", on_off(checked)), cx);
+                            });
+                        },
+                    ))
+                    .item(menu_shortcut_item(
+                        Icon::new(gpui_kit::assets::IconName::Clipboard),
+                        "Copy summary as Markdown",
+                        "Ctrl+Shift+C",
+                        record("Copied the summary".to_string()),
+                    ))
+            });
+        h_flex()
+            .flex_wrap()
+            .gap_3()
+            .items_center()
+            .child(compare)
+            .child(export)
     }
 }
