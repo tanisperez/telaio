@@ -286,7 +286,10 @@ fn line(
     height: f32,
     text_size: f32,
 ) -> Div {
+    // `w_full`: a virtualized row is laid out on its own, and would otherwise be as wide as
+    // its content, giving the flex column a different width on every row.
     let mut row = h_flex()
+        .w_full()
         .h(px(height))
         .items_center()
         .gap(px(look.gap))
@@ -295,7 +298,7 @@ fn line(
     for (column, cell) in columns.iter().zip(cells) {
         let mut slot = div();
         slot = match column.width {
-            Width::Flex => slot.flex_1().min_w(px(look.flex_min)),
+            Width::Flex => slot.flex_1().min_w(px(look.flex_min)).overflow_hidden(),
             Width::Fixed(width) => slot.flex_none().w(px(width)),
         };
         if column.align == DataAlign::Right {

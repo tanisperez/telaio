@@ -35,6 +35,9 @@ use crate::metrics::{
 
 /// Space between the parts of a row.
 const ROW_GAP: f32 = 8.0;
+/// The horizontal space a gpui-component popup menu takes around an item's own element: the
+/// list's 4 px padding and the item's 8 px padding, on each side.
+const MENU_CHROME_X: f32 = 24.0;
 /// Space between the icon and the text of a described row.
 const DESCRIBED_GAP: f32 = 10.0;
 /// Padding added to the menu's own 8 px item padding, so a row's content sits 10 px in.
@@ -113,7 +116,11 @@ pub fn menu_choice_item(
 /// A row with a 15 px `accent_text` icon, a medium `title` with a right aligned monospace `tag`
 /// (a file extension such as ".md") and a wrapping `description` in `fg_muted` under them.
 /// Picking it calls `on_click` and closes the menu.
+///
+/// `menu_width` is the width given to [`rich_menu_width`]: gpui-component lays an element row
+/// out at its content's width, so the description only wraps inside a row of a fixed width.
 pub fn menu_described_item(
+    menu_width: f32,
     icon: impl Into<Icon>,
     title: impl Into<SharedString>,
     tag: Option<SharedString>,
@@ -126,6 +133,9 @@ pub fn menu_described_item(
     PopupMenuItem::element(move |_window, cx| {
         let palette = cx.palette();
         row()
+            // `flex_none`: the row's `flex_1` basis would otherwise win over the width.
+            .flex_none()
+            .w(px((menu_width - MENU_CHROME_X).max(0.0)))
             .items_start()
             .gap(px(DESCRIBED_GAP))
             .py(px(DESCRIBED_PADDING_Y))

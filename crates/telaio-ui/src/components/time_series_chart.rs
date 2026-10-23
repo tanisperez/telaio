@@ -332,6 +332,7 @@ pub struct ChartSeries {
     scale_max: Option<f64>,
     format: ValueFormat,
     dot: bool,
+    tooltip_order: i32,
 }
 
 impl ChartSeries {
@@ -350,6 +351,7 @@ impl ChartSeries {
             scale_max: None,
             format: Rc::new(default_format),
             dot: true,
+            tooltip_order: 0,
         }
     }
 
@@ -382,6 +384,14 @@ impl ChartSeries {
     /// other series usually has none.
     pub fn dot(mut self, dot: bool) -> Self {
         self.dot = dot;
+        self
+    }
+
+    /// Where the series' row goes in the tooltip: rows are sorted by this key, lowest first, and
+    /// series with the same key keep the order they were added in. All `0` by default, so the
+    /// tooltip follows the drawing order unless the app lists the series like its legend.
+    pub fn tooltip_order(mut self, order: i32) -> Self {
+        self.tooltip_order = order;
         self
     }
 }
@@ -804,35 +814,37 @@ impl RenderOnce for TimeSeriesChart {
                         .border_2()
                         .border_color(ring)
                 });
-            let rows = self
+            let mut listed: Vec<&ChartSeries> = self
                 .series
                 .iter()
                 .filter(|series| value_at(&series.values, index).is_finite())
-                .map(|series| {
-                    h_flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(
-                            div()
-                                .flex_none()
-                                .size(px(8.0))
-                                .rounded(px(2.0))
-                                .bg(series.color),
-                        )
-                        .child(
-                            div()
-                                .flex_1()
-                                .truncate()
-                                .text_color(palette.fg_muted)
-                                .child(series.label.clone()),
-                        )
-                        .child(
-                            div()
-                                .font_family(MONO_FAMILY)
-                                .text_color(palette.fg)
-                                .child((series.format)(value_at(&series.values, index))),
-                        )
-                });
+                .collect();
+            listed.sort_by_key(|series| series.tooltip_order);
+            let rows = listed.into_iter().map(|series| {
+                h_flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(
+                        div()
+                            .flex_none()
+                            .size(px(8.0))
+                            .rounded(px(2.0))
+                            .bg(series.color),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .truncate()
+                            .text_color(palette.fg_muted)
+                            .child(series.label.clone()),
+                    )
+                    .child(
+                        div()
+                            .font_family(MONO_FAMILY)
+                            .text_color(palette.fg)
+                            .child((series.format)(value_at(&series.values, index))),
+                    )
+            });
             let header = self.time_label.as_ref().map(|label| {
                 div()
                     .font_family(MONO_FAMILY)

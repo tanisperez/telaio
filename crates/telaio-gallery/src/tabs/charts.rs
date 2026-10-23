@@ -240,10 +240,17 @@ impl Gallery {
         let legend = Key::ALL.map(|key| {
             let color = key.color(&palette);
             let hidden = demo.is_hidden(key);
-            let mut swatch = div().w(px(12.0)).h_0().border_t_2().border_color(color);
-            if key.dashed() {
-                swatch = swatch.border_dashed();
-            }
+            // A filled bar, since a zero height box with a top border is drawn without its
+            // color; the dashed key is two short dashes.
+            let swatch = if key.dashed() {
+                h_flex()
+                    .w(px(12.0))
+                    .gap(px(2.0))
+                    .child(div().w(px(5.0)).h(px(2.0)).bg(color))
+                    .child(div().w(px(5.0)).h(px(2.0)).bg(color))
+            } else {
+                h_flex().child(div().w(px(12.0)).h(px(2.0)).bg(color))
+            };
             h_flex()
                 .id(SharedString::from(format!(
                     "gallery-legend-{}",

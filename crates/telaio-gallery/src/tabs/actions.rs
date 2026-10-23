@@ -307,6 +307,7 @@ impl Gallery {
                     rich_menu_width(menu, 320.0),
                     |menu, (icon, title, tag, description)| {
                         menu.item(menu_described_item(
+                            320.0,
                             Icon::new(*icon),
                             *title,
                             Some((*tag).into()),
