@@ -18,7 +18,7 @@ use telaio_ui::{Fonts, PaletteExt, ThemeChoice, ThemeFamily};
 
 use crate::samples::{self, SamplePalette};
 use crate::settings_demo::SettingsDemo;
-use crate::tabs::{ChartsDemo, EditorsDemo, Tab};
+use crate::tabs::{ChartsDemo, EditorsDemo, Tab, VirtualTableDemo};
 
 /// The widest the content grows, in pixels.
 const CONTENT_MAX_WIDTH: f32 = 820.0;
@@ -268,10 +268,18 @@ pub struct Gallery {
     pub(crate) table_mono: bool,
     /// Whether the data table demo shows its header row.
     pub(crate) table_header: bool,
+    /// The column the data table demo is sorted by, and the direction.
+    pub(crate) table_sort: Option<(usize, SortOrder)>,
     /// How many request rows the data table demo shows.
     pub(crate) table_rows: usize,
     /// Whether the "Show line numbers" item of the menus demo is checked.
     pub(crate) menu_checked: bool,
+    /// The run the "Compare with" menu demo has picked.
+    pub(crate) compare_pick: usize,
+    /// Whether the "Only the range" row of the "Export" menu demo is checked.
+    pub(crate) export_range: bool,
+    /// Whether the dismissible chip demo is shown.
+    pub(crate) chip_shown: bool,
     /// The tree row demo's nodes, see [`demo_tree`].
     pub(crate) tree: Vec<DemoNode>,
     /// The selected node of the tree row demo.
@@ -287,6 +295,8 @@ pub struct Gallery {
     pub(crate) editors: EditorsDemo,
     /// The sample run, legend toggles and range of the Charts tab.
     pub(crate) charts: ChartsDemo,
+    /// The virtualized data table of the Data tab.
+    pub(crate) virtual_table: VirtualTableDemo,
 }
 
 impl Gallery {
@@ -362,8 +372,12 @@ impl Gallery {
             hover_input,
             table_mono: true,
             table_header: true,
+            table_sort: None,
             table_rows: 3,
             menu_checked: true,
+            compare_pick: 0,
+            export_range: false,
+            chip_shown: true,
             tree: demo_tree(),
             tree_selected: Some(1),
             tab,
@@ -371,6 +385,7 @@ impl Gallery {
             settings: SettingsDemo::new(window, cx),
             editors: EditorsDemo::new(window, cx),
             charts: ChartsDemo::new(),
+            virtual_table: VirtualTableDemo::new(),
         };
         gallery.new_env_row(
             "base_url",

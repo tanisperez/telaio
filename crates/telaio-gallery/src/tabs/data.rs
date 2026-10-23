@@ -25,6 +25,10 @@ impl Gallery {
             .child(section("Key-value table", self.render_key_value_table(cx)))
             .child(section("Editable table", self.render_editable_table(cx)))
             .child(section("Data table", self.render_data_table(cx)))
+            .child(section(
+                "Virtual data table (100,000 rows)",
+                self.render_virtual_table(cx),
+            ))
     }
 
     /// Key-value table: add, delete, toggle and sort by Key or Value, kept in the view's rows.
@@ -189,8 +193,8 @@ impl Gallery {
         )
     }
 
-    /// Data table: the font and header toggles, an "Add row" button, a colored cell, an element
-    /// cell, a missing cell, and a narrow copy that scrolls sideways.
+    /// Data table: the font and header toggles, an "Add row" button, sortable headers, a colored
+    /// cell, an element cell, a missing cell, and a narrow copy that scrolls sideways.
     pub(crate) fn render_data_table(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
         const NAMES: [&str; 5] = [
@@ -204,12 +208,39 @@ impl Gallery {
             let mut table = DataTable::new(id)
                 .header(self.table_header)
                 .mono(self.table_mono)
-                .column(DataColumn::new("Request"))
-                .column(DataColumn::numeric("Count"))
-                .column(DataColumn::numeric("p95"))
-                .column(DataColumn::numeric("Errors"))
+                .sort(self.table_sort)
+                .on_sort(Self::act_with(cx, |this, column: usize, _, cx| {
+                    let order = match this.table_sort {
+                        Some((current, SortOrder::Ascending)) if current == column => {
+                            SortOrder::Descending
+                        }
+                        _ => SortOrder::Ascending,
+                    };
+                    this.table_sort = Some((column, order));
+                    this.record(
+                        format!("Data table sorted by column {column}, {order:?}"),
+                        cx,
+                    );
+                }))
+                .column(DataColumn::new("Request").sortable())
+                .column(DataColumn::numeric("Count").sortable())
+                .column(DataColumn::numeric("p95").sortable())
+                .column(DataColumn::numeric("Errors").sortable())
                 .column(DataColumn::new("Note").width(90.0).align(DataAlign::Right));
-            for index in 0..self.table_rows {
+            // The rows in the order of the sorted column; the table only shows the arrow.
+            let mut order: Vec<usize> = (0..self.table_rows).collect();
+            if let Some((column, direction)) = self.table_sort {
+                let key = |index: usize| match column {
+                    0 => (NAMES[index % NAMES.len()].to_string(), 0),
+                    1 | 2 => (String::new(), index),
+                    _ => (String::new(), (index * 7) % 5),
+                };
+                order.sort_by_key(|index| key(*index));
+                if direction == SortOrder::Descending {
+                    order.reverse();
+                }
+            }
+            for index in order {
                 let errors = (index * 7) % 5;
                 let errors_cell = DataCell::text(format!("{errors}.0%"));
                 let errors_cell = if errors > 2 {

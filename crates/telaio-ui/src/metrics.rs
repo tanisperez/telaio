@@ -81,6 +81,44 @@ pub const DATA_TABLE_COL_GAP: f32 = 10.0;
 pub const DATA_TABLE_NUMERIC_COL_WIDTH: f32 = 64.0;
 /// Least width of a flexible `DataTable` column before the table scrolls sideways.
 pub const DATA_TABLE_FLEX_MIN_WIDTH: f32 = 60.0;
+/// Height of the header row of a `VirtualDataTable`.
+pub const VIRTUAL_TABLE_HEADER_HEIGHT: f32 = 32.0;
+/// Height of a body row of a `VirtualDataTable`. The list is uniform, so every row has it.
+pub const VIRTUAL_TABLE_ROW_HEIGHT: f32 = 30.0;
+/// Horizontal padding of a `VirtualDataTable` row.
+pub const VIRTUAL_TABLE_PADDING_X: f32 = 14.0;
+/// Space between the cells of a `VirtualDataTable` row.
+pub const VIRTUAL_TABLE_COL_GAP: f32 = 12.0;
+/// Text size of the body rows of a `VirtualDataTable`.
+pub const VIRTUAL_TABLE_TEXT_SIZE: f32 = 12.0;
+/// Size of the sort arrow or the neutral sort icon in a sortable table header.
+pub const TABLE_SORT_ICON_SIZE: f32 = 11.0;
+
+/// Height of a `Chip`.
+pub const CHIP_HEIGHT: f32 = 24.0;
+/// Left padding of a `Chip`, and its right padding when it has no dismiss button.
+pub const CHIP_PADDING_LEFT: f32 = 9.0;
+/// Right padding of a `Chip` with a dismiss button.
+pub const CHIP_PADDING_RIGHT: f32 = 4.0;
+/// Space between the parts of a `Chip`.
+pub const CHIP_GAP: f32 = 6.0;
+/// Text size of a `Chip`.
+pub const CHIP_TEXT_SIZE: f32 = 12.0;
+/// Size of the icons of a `Chip`, the leading one and the dismiss cross.
+pub const CHIP_ICON_SIZE: f32 = 12.0;
+/// Side length of the dismiss button of a `Chip`.
+pub const CHIP_DISMISS_SIZE: f32 = 18.0;
+
+/// Height of a single line row of a rich popup menu (choice and shortcut rows).
+pub const RICH_MENU_ROW_HEIGHT: f32 = 30.0;
+/// Text size of the labels of a rich popup menu.
+pub const RICH_MENU_TEXT_SIZE: f32 = 12.5;
+/// Text size of the details, descriptions and hints of a rich popup menu.
+pub const RICH_MENU_DETAIL_SIZE: f32 = 12.0;
+/// Text size of the monospace tags and shortcut hints of a rich popup menu.
+pub const RICH_MENU_TAG_SIZE: f32 = 11.0;
+/// Size of the check box of a toggle row of a rich popup menu.
+pub const RICH_MENU_CHECK_SIZE: f32 = 14.0;
 
 /// Side length of the icon of an `EmptyState`.
 pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;

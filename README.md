@@ -44,7 +44,9 @@ Postino as the reference implementation.
   to a `SyntaxStyle` (color, optional italic), set with `ThemeFamily::syntax(light, dark)`.
   Captures it leaves out show in the text color.
 - **Metrics**: control heights, the radius scale and component sizes (`telaio_ui::metrics`).
-- **Fonts**: Geist and Geist Mono, bundled (SIL Open Font License 1.1).
+- **Fonts**: Geist and Geist Mono, bundled (SIL Open Font License 1.1). The font files are public
+  constants (`fonts::GEIST_REGULAR`, ..., and `fonts::ALL`), for an app that embeds them elsewhere
+  (a PDF export).
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
   `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`, `modal_body`,
   `modal_footer`, `open_confirm_dialog`), `SegmentedControl`, `select_trigger`, `StatusBadge`,
@@ -54,8 +56,11 @@ Postino as the reference implementation.
   optional search box, from a `select_state` the app creates once), `SectionLabel`, the Settings
   dialog pieces (`settings_dialog`, `SettingsLayout` with its `SettingsCategory` list,
   `LabeledRow`, `SectionHeading`), `UnderlineTabs`, `DocumentTabs`,
-  `KeyValueTable`, `EditableTable`, `DataTable`, `TimeSeriesChart` (several series over one x axis,
-  with hover tooltip and range selection), `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
+  `KeyValueTable`, `EditableTable`, `DataTable` (with sortable headers), `VirtualDataTable` (the same
+  table over a virtualized body, for lists of any length), `TimeSeriesChart` (several series over
+  one x axis, with hover tooltip and range selection), `Chip`, rich popup menu rows
+  (`menu_choice_item`, `menu_described_item`, `menu_toggle_item`, `menu_shortcut_item`),
+  `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
   `radio_halo`, `labelled_checkbox`, `labelled_radio` and the keyboard shortcuts cheat sheet
   (`open_shortcuts_dialog`, with the app's own `ShortcutGroup` list).
 - **Strings**: the components' own labels (Close, Cancel, Light, ...) are in
