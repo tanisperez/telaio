@@ -130,6 +130,34 @@ pub const BUTTON_GLOW_OPACITY: f32 = 0.35;
 /// Height of a `ProgressBar`'s track.
 pub const PROGRESS_BAR_HEIGHT: f32 = 6.0;
 
+/// Space above a `TimeSeriesChart`'s plot, so the top gridline and the line at the maximum fit.
+pub const CHART_PAD_TOP: f32 = 8.0;
+/// Space below a `TimeSeriesChart`'s plot, for the x axis labels.
+pub const CHART_PAD_BOTTOM: f32 = 24.0;
+/// Default width of the strip left of a chart's plot, for the left y axis labels.
+pub const CHART_GUTTER_LEFT: f32 = 48.0;
+/// Default width of the strip right of a chart's plot, for the right y axis labels.
+pub const CHART_GUTTER_RIGHT: f32 = 44.0;
+/// Space between a chart's plot and its y axis labels.
+pub const CHART_TICK_GAP: f32 = 6.0;
+/// Space between the bottom of a chart's plot and its x axis labels.
+pub const CHART_X_LABEL_GAP: f32 = 6.0;
+/// Width of one x axis label of a chart, which is centered on its tick.
+pub const CHART_X_LABEL_WIDTH: f32 = 40.0;
+/// Text size of a chart's axis labels and reference line labels, in the monospace family.
+pub const CHART_TICK_TEXT_SIZE: f32 = 10.5;
+/// Width of a chart's hover tooltip.
+pub const CHART_TOOLTIP_WIDTH: f32 = 184.0;
+/// Space between the hover crosshair and the tooltip.
+pub const CHART_TOOLTIP_OFFSET: f32 = 12.0;
+/// Space the tooltip keeps from the right edge of the plot before it flips to the other side of
+/// the crosshair.
+pub const CHART_TOOLTIP_EDGE: f32 = 14.0;
+/// Space between the top of a chart's plot and its tooltip.
+pub const CHART_TOOLTIP_TOP: f32 = 2.0;
+/// Diameter of the dots a chart's hover marks on each series, ring included.
+pub const CHART_DOT_SIZE: f32 = 9.0;
+
 /// Width of a `NumberStepper`'s readout, wide enough for "12.5 px" in the mono font.
 pub const STEPPER_READOUT_WIDTH: f32 = 64.0;
 /// Gap between a `NumberStepper`'s buttons and its readout.
