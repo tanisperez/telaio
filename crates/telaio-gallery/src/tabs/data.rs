@@ -25,6 +25,10 @@ impl Gallery {
             .child(section("Key-value table", self.render_key_value_table(cx)))
             .child(section("Editable table", self.render_editable_table(cx)))
             .child(section("Data table", self.render_data_table(cx)))
+            .child(section(
+                "Virtual data table (100,000 rows)",
+                self.render_virtual_table(cx),
+            ))
     }
 
     /// Key-value table: add, delete, toggle and sort by Key or Value, kept in the view's rows.

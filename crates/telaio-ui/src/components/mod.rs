@@ -41,7 +41,7 @@ pub use code_editor::CodeEditor;
 pub use control_halo::{
     LabelledControl, checkbox_halo, labelled_checkbox, labelled_radio, radio_halo,
 };
-pub use data_table::{DataAlign, DataCell, DataColumn, DataTable};
+pub use data_table::{DataAlign, DataCell, DataColumn, DataSort, DataTable, VirtualDataTable};
 pub use document_tabs::{DocumentTab, DocumentTabs};
 pub use edit_menu::edit_menu;
 pub use editable_table::{EditableCell, EditableColumn, EditableRow, EditableTable};

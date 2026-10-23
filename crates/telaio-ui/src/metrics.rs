@@ -81,6 +81,18 @@ pub const DATA_TABLE_COL_GAP: f32 = 10.0;
 pub const DATA_TABLE_NUMERIC_COL_WIDTH: f32 = 64.0;
 /// Least width of a flexible `DataTable` column before the table scrolls sideways.
 pub const DATA_TABLE_FLEX_MIN_WIDTH: f32 = 60.0;
+/// Height of the header row of a `VirtualDataTable`.
+pub const VIRTUAL_TABLE_HEADER_HEIGHT: f32 = 32.0;
+/// Height of a body row of a `VirtualDataTable`. The list is uniform, so every row has it.
+pub const VIRTUAL_TABLE_ROW_HEIGHT: f32 = 30.0;
+/// Horizontal padding of a `VirtualDataTable` row.
+pub const VIRTUAL_TABLE_PADDING_X: f32 = 14.0;
+/// Space between the cells of a `VirtualDataTable` row.
+pub const VIRTUAL_TABLE_COL_GAP: f32 = 12.0;
+/// Text size of the body rows of a `VirtualDataTable`.
+pub const VIRTUAL_TABLE_TEXT_SIZE: f32 = 12.0;
+/// Size of the sort arrow or the neutral sort icon in a sortable table header.
+pub const TABLE_SORT_ICON_SIZE: f32 = 11.0;
 
 /// Side length of the icon of an `EmptyState`.
 pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;

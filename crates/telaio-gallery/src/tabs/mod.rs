@@ -13,10 +13,12 @@ mod data;
 mod editors;
 
 pub(crate) use editors::EditorsDemo;
+pub(crate) use virtual_table::VirtualTableDemo;
 mod feedback;
 mod inputs;
 mod navigation;
 mod surfaces;
+mod virtual_table;
 
 /// One tab of the gallery, in the order the tab row lists them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
