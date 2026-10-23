@@ -9,9 +9,11 @@ use gpui_kit::*;
 use crate::gallery::Gallery;
 
 mod actions;
+mod charts;
 mod data;
 mod editors;
 
+pub(crate) use charts::ChartsDemo;
 pub(crate) use editors::EditorsDemo;
 mod feedback;
 mod inputs;
@@ -31,6 +33,8 @@ pub enum Tab {
     Data,
     /// The text area and the code editors.
     Editors,
+    /// The time series chart.
+    Charts,
     /// Status badges, inline messages and the empty state.
     Feedback,
     /// Cards, theme cards and modals.
@@ -39,12 +43,13 @@ pub enum Tab {
 
 impl Tab {
     /// Every tab, in the order the tab row lists them.
-    pub const ALL: [Tab; 7] = [
+    pub const ALL: [Tab; 8] = [
         Tab::Actions,
         Tab::Inputs,
         Tab::Navigation,
         Tab::Data,
         Tab::Editors,
+        Tab::Charts,
         Tab::Feedback,
         Tab::Surfaces,
     ];
@@ -57,6 +62,7 @@ impl Tab {
             Tab::Navigation => "Navigation",
             Tab::Data => "Data",
             Tab::Editors => "Editors",
+            Tab::Charts => "Charts",
             Tab::Feedback => "Feedback",
             Tab::Surfaces => "Surfaces",
         }
@@ -87,6 +93,7 @@ impl Gallery {
             Tab::Navigation => self.render_navigation_tab(cx).into_any_element(),
             Tab::Data => self.render_data_tab(cx).into_any_element(),
             Tab::Editors => self.render_editors_tab(cx).into_any_element(),
+            Tab::Charts => self.render_charts_tab(cx).into_any_element(),
             Tab::Feedback => self.render_feedback_tab(cx).into_any_element(),
             Tab::Surfaces => self.render_surfaces_tab(cx).into_any_element(),
         }
