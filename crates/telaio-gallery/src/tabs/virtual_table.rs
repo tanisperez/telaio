@@ -307,3 +307,56 @@ impl Gallery {
             .child(div().h(px(TABLE_HEIGHT)).child(table))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Filter, Request, SortOrder, TOTAL, VirtualTableDemo};
+
+    #[test]
+    fn a_request_is_always_the_same() {
+        let (a, b) = (Request::generate(1234), Request::generate(1234));
+        assert_eq!(
+            (a.status, a.latency_ms, a.size, a.path),
+            (b.status, b.latency_ms, b.size, b.path)
+        );
+    }
+
+    #[test]
+    fn the_demo_starts_with_every_request_in_order() {
+        let demo = VirtualTableDemo::new();
+        assert_eq!(demo.order.len(), TOTAL as usize);
+        assert_eq!(demo.order.first(), Some(&0));
+    }
+
+    #[test]
+    fn clicking_a_header_sorts_ascending_then_flips() {
+        let mut demo = VirtualTableDemo::new();
+        demo.sort_by(5);
+        assert_eq!(demo.sort, Some((5, SortOrder::Ascending)));
+        let latency =
+            |demo: &VirtualTableDemo, index: usize| Request::generate(demo.order[index]).latency_ms;
+        assert!(latency(&demo, 0) <= latency(&demo, TOTAL as usize - 1));
+        demo.sort_by(5);
+        assert_eq!(demo.sort, Some((5, SortOrder::Descending)));
+        assert!(latency(&demo, 0) >= latency(&demo, TOTAL as usize - 1));
+        demo.sort_by(1);
+        assert_eq!(demo.sort, Some((1, SortOrder::Ascending)));
+    }
+
+    #[test]
+    fn the_filters_keep_the_failed_requests_or_nothing() {
+        let mut demo = VirtualTableDemo::new();
+        demo.filter = Filter::Errors;
+        demo.rebuild();
+        assert!(!demo.order.is_empty());
+        assert!(demo.order.len() < TOTAL as usize);
+        assert!(
+            demo.order
+                .iter()
+                .all(|id| Request::generate(*id).is_error())
+        );
+        demo.filter = Filter::Nothing;
+        demo.rebuild();
+        assert!(demo.order.is_empty());
+    }
+}
