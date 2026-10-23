@@ -372,7 +372,7 @@ impl ChartSeries {
         self
     }
 
-    /// Writes the value shown in the tooltip, from the plotted value.
+    /// Writes the value shown in the tooltip, from the series' value at the hovered point.
     pub fn format(mut self, format: impl Fn(f64) -> SharedString + 'static) -> Self {
         self.format = Rc::new(format);
         self
