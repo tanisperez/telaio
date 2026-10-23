@@ -6,6 +6,7 @@
 
 pub mod buttons;
 pub mod card;
+pub mod chip;
 pub mod code_editor;
 pub mod control_halo;
 pub mod data_table;
@@ -37,6 +38,7 @@ pub mod underline_tabs;
 
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
 pub use card::Card;
+pub use chip::Chip;
 pub use code_editor::CodeEditor;
 pub use control_halo::{
     LabelledControl, checkbox_halo, labelled_checkbox, labelled_radio, radio_halo,

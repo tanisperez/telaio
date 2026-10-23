@@ -94,6 +94,21 @@ pub const VIRTUAL_TABLE_TEXT_SIZE: f32 = 12.0;
 /// Size of the sort arrow or the neutral sort icon in a sortable table header.
 pub const TABLE_SORT_ICON_SIZE: f32 = 11.0;
 
+/// Height of a `Chip`.
+pub const CHIP_HEIGHT: f32 = 24.0;
+/// Left padding of a `Chip`, and its right padding when it has no dismiss button.
+pub const CHIP_PADDING_LEFT: f32 = 9.0;
+/// Right padding of a `Chip` with a dismiss button.
+pub const CHIP_PADDING_RIGHT: f32 = 4.0;
+/// Space between the parts of a `Chip`.
+pub const CHIP_GAP: f32 = 6.0;
+/// Text size of a `Chip`.
+pub const CHIP_TEXT_SIZE: f32 = 12.0;
+/// Size of the icons of a `Chip`, the leading one and the dismiss cross.
+pub const CHIP_ICON_SIZE: f32 = 12.0;
+/// Side length of the dismiss button of a `Chip`.
+pub const CHIP_DISMISS_SIZE: f32 = 18.0;
+
 /// Side length of the icon of an `EmptyState`.
 pub const EMPTY_STATE_ICON_SIZE: f32 = 28.0;
 /// Vertical padding of a compact `EmptyState`, which sits in the flow of a page instead of

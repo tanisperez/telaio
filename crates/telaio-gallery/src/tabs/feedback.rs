@@ -9,8 +9,8 @@ use telaio_ui::PaletteExt as _;
 
 use telaio_ui::Tone;
 use telaio_ui::components::{
-    EmptyState, InlineMessage, InlineMessageKind, MODIFIER_KEY, PrimaryButton, ProgressBar,
-    SegmentedItem, StatusBadge,
+    Chip, EmptyState, InlineMessage, InlineMessageKind, MODIFIER_KEY, PrimaryButton, ProgressBar,
+    SecondaryButton, SegmentedItem, StatusBadge,
 };
 use telaio_ui::metrics::RADIUS_LG;
 
@@ -24,9 +24,46 @@ impl Gallery {
             .w_full()
             .gap_6()
             .child(section("Status badges", self.render_status_badges(cx)))
+            .child(section("Chips", self.render_chips(cx)))
             .child(section("Inline messages", self.render_inline_messages(cx)))
             .child(section("Progress bar", self.render_progress_bars(cx)))
             .child(section("Empty state", self.render_empty_state(cx)))
+    }
+
+    /// Chips: with an icon and a dismiss button (which hides it, a button brings it back), with
+    /// only a dismiss button, with only an icon, and a plain label.
+    pub(crate) fn render_chips(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let dismissed = Self::act(cx, |this, _, cx| {
+            this.chip_shown = false;
+            this.record("Chip dismissed", cx);
+        });
+        let dismissed_again = Self::act(cx, |this, _, cx| this.record("Second chip dismissed", cx));
+        h_flex()
+            .flex_wrap()
+            .items_center()
+            .gap_2()
+            .when(self.chip_shown, |row| {
+                row.child(
+                    Chip::new("gallery-chip-range", "Range 34-46 s")
+                        .icon(gpui_kit::assets::IconName::Scan)
+                        .on_dismiss(dismissed),
+                )
+            })
+            .child(Chip::new("gallery-chip-dismiss", "Errors only").on_dismiss(dismissed_again))
+            .child(
+                Chip::new("gallery-chip-icon", "Baseline").icon(gpui_kit::assets::IconName::Flag),
+            )
+            .child(Chip::new("gallery-chip-plain", "Plain"))
+            .when(!self.chip_shown, |row| {
+                row.child(
+                    SecondaryButton::new("gallery-chip-show", "Show the range chip").on_click(
+                        Self::click(cx, |this, _, cx| {
+                            this.chip_shown = true;
+                            this.record("Chip shown again", cx);
+                        }),
+                    ),
+                )
+            })
     }
 
     /// Status badges: every tone, busy (behind a checkbox, see `Gallery::badges_busy`), and

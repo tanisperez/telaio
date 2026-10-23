@@ -272,6 +272,8 @@ pub struct Gallery {
     pub(crate) table_rows: usize,
     /// Whether the "Show line numbers" item of the menus demo is checked.
     pub(crate) menu_checked: bool,
+    /// Whether the dismissible chip demo is shown.
+    pub(crate) chip_shown: bool,
     /// The tree row demo's nodes, see [`demo_tree`].
     pub(crate) tree: Vec<DemoNode>,
     /// The selected node of the tree row demo.
@@ -364,6 +366,7 @@ impl Gallery {
             table_header: true,
             table_rows: 3,
             menu_checked: true,
+            chip_shown: true,
             tree: demo_tree(),
             tree_selected: Some(1),
             tab,
