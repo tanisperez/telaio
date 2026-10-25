@@ -194,7 +194,8 @@ impl Gallery {
     }
 
     /// Data table: the font and header toggles, an "Add row" button, sortable headers, a colored
-    /// cell, an element cell, a missing cell, and a narrow copy that scrolls sideways.
+    /// cell, an element cell, a missing cell, a totals row, and a narrow copy that scrolls
+    /// sideways.
     pub(crate) fn render_data_table(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
         const NAMES: [&str; 5] = [
@@ -271,7 +272,13 @@ impl Gallery {
                 }
                 table = table.row(cells);
             }
-            table
+            let total: usize = (0..self.table_rows).map(|index| 1200 + index * 345).sum();
+            table.total_row([
+                "All requests".to_string(),
+                total.to_string(),
+                String::new(),
+                String::new(),
+            ])
         };
         let toggle = |label: &'static str, on: bool, f: fn(&mut Self) -> &mut bool| {
             SegmentedItem::new(label)

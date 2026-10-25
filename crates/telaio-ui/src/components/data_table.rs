@@ -211,13 +211,15 @@ fn min_width(columns: &[DataColumn], look: Look) -> f32 {
 }
 
 /// A read-only table in a bordered `raised` card: an optional header row in `fg_subtle`, then one
-/// row per [`Self::row`], each line separated by a `border` rule. Cells are 12.5 px, and the
-/// whole table can be set in the monospace font with [`Self::mono`].
+/// row per [`Self::row`], each line separated by a `border` rule, and an optional totals row
+/// ([`Self::total_row`]). Cells are 12.5 px, and the whole table can be set in the monospace font
+/// with [`Self::mono`].
 #[derive(IntoElement)]
 pub struct DataTable {
     id: ElementId,
     columns: Vec<DataColumn>,
     rows: Vec<Vec<DataCell>>,
+    total: Option<Vec<DataCell>>,
     header: bool,
     mono: bool,
     sort: Option<DataSort>,
@@ -231,6 +233,7 @@ impl DataTable {
             id: id.into(),
             columns: Vec::new(),
             rows: Vec::new(),
+            total: None,
             header: true,
             mono: false,
             sort: None,
@@ -248,6 +251,13 @@ impl DataTable {
     /// cell. Missing cells are left empty and extra ones are ignored.
     pub fn row<C: Into<DataCell>>(mut self, cells: impl IntoIterator<Item = C>) -> Self {
         self.rows.push(cells.into_iter().map(Into::into).collect());
+        self
+    }
+
+    /// Sets the totals row, after every other row: semibold, on a `hover` tint, below a
+    /// `border_strong` rule. Like [`Self::row`], one cell per column.
+    pub fn total_row<C: Into<DataCell>>(mut self, cells: impl IntoIterator<Item = C>) -> Self {
+        self.total = Some(cells.into_iter().map(Into::into).collect());
         self
     }
 
@@ -405,6 +415,7 @@ impl RenderOnce for DataTable {
             id,
             columns,
             rows,
+            total,
             header,
             mono,
             sort,
@@ -430,6 +441,20 @@ impl RenderOnce for DataTable {
         // The card's border closes the last row: a border of its own would poke out past the
         // rounded corners, since `overflow_hidden` clips to a plain rectangle.
         let last = rows.len().saturating_sub(1);
+        let total_row = total.map(|cells| {
+            let cells = body_cells(cells, columns.len());
+            line(
+                &columns,
+                cells,
+                TABLE_LOOK,
+                TABLE_LOOK.row_height,
+                TABLE_LOOK.body_text,
+            )
+            .border_t_1()
+            .border_color(palette.border_strong)
+            .bg(palette.hover)
+            .font_weight(FontWeight::SEMIBOLD)
+        });
         let body = rows.into_iter().enumerate().map(|(index, cells)| {
             let cells = body_cells(cells, columns.len());
             line(
@@ -439,6 +464,7 @@ impl RenderOnce for DataTable {
                 TABLE_LOOK.row_height,
                 TABLE_LOOK.body_text,
             )
+            // The totals row draws its own, stronger rule above it.
             .when(index < last, |row| row.border_b_1())
             .border_color(palette.border)
         });
@@ -463,7 +489,8 @@ impl RenderOnce for DataTable {
                         v_flex()
                             .min_w(px(table_min_width))
                             .children(header_row)
-                            .children(body),
+                            .children(body)
+                            .children(total_row),
                     ),
             )
     }
