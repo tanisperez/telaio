@@ -20,7 +20,7 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use gpui_kit::component::scroll::ScrollableElement as _;
+use gpui_kit::component::scroll::{ScrollableElement as _, Scrollbar, ScrollbarAxis};
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -77,7 +77,7 @@ const VIRTUAL_LOOK: Look = Look {
     padding_x: VIRTUAL_TABLE_PADDING_X,
     gap: VIRTUAL_TABLE_COL_GAP,
     body_text: VIRTUAL_TABLE_TEXT_SIZE,
-    flex_min: 0.0,
+    flex_min: DATA_TABLE_FLEX_MIN_WIDTH,
 };
 
 /// A header click handler, called with the index of the column to sort by.
@@ -480,7 +480,8 @@ type RowBackgroundFn = Rc<dyn Fn(usize) -> Option<Hsla>>;
 ///
 /// It fills the space its parent gives it (the parent must have a definite height, for example a
 /// flex column child with `flex_1().min_h_0()`), with the header fixed on top and a vertical
-/// scrollbar. It never scrolls sideways: flexible columns shrink and their cells truncate.
+/// scrollbar. Flexible columns shrink and their cells truncate down to their least width; below
+/// the table's least width the header and the rows scroll sideways together, like [`DataTable`].
 ///
 /// ```ignore
 /// VirtualDataTable::new("requests", rows.len(), move |range, _window, _cx| {
@@ -597,6 +598,7 @@ impl RenderOnce for VirtualDataTable {
             empty_message,
         } = self;
         let look = VIRTUAL_LOOK;
+        let table_min_width = min_width(&columns, look);
 
         // Keyed by the table's id, like the scroll state of the plain table.
         let handle = scroll_handle.unwrap_or_else(|| {
@@ -664,20 +666,28 @@ impl RenderOnce for VirtualDataTable {
             })
             .track_scroll(&handle)
             .size_full();
-            div()
-                .relative()
-                .flex_1()
-                .min_h_0()
-                .child(list)
-                .child(overlay(
-                    &handle,
-                    Some((id.clone(), "scrollbar").into()),
-                    &palette,
-                ))
-                .into_any_element()
+            div().flex_1().min_h_0().child(list).into_any_element()
         };
+        // A plain gpui scroll area, not gpui-kit's `overflow_x_scrollbar`, which turns the vertical
+        // wheel into a sideways scroll and so would scroll both ways at once over the rows.
+        let columns_id = ElementId::from((id.clone(), "columns"));
+        let columns_handle = window
+            .use_keyed_state(columns_id.clone(), cx, |_, _| ScrollHandle::new())
+            .read(cx)
+            .clone();
+        let sideways = div().absolute().inset_0().child(
+            Scrollbar::new(&columns_handle)
+                .axis(ScrollbarAxis::Horizontal)
+                .id((id.clone(), "columns-scrollbar")),
+        );
+        // Over the visible body, not inside the sideways scroll, so it stays in view.
+        let scrollbar = (row_count > 0).then(|| {
+            overlay(&handle, Some((id.clone(), "scrollbar").into()), &palette)
+                .top(px(look.header_height + 1.0))
+        });
 
         v_flex()
+            .relative()
             .size_full()
             .min_h_0()
             .border_1()
@@ -685,8 +695,26 @@ impl RenderOnce for VirtualDataTable {
             .rounded(px(RADIUS_LG))
             .bg(palette.raised)
             .overflow_hidden()
-            .child(header_row)
-            .child(body)
+            .child(
+                div()
+                    .id(columns_id)
+                    .flex_1()
+                    .min_h_0()
+                    .w_full()
+                    .restrict_scroll_to_axis()
+                    .overflow_x_scroll()
+                    .track_scroll(&columns_handle)
+                    .child(
+                        v_flex()
+                            .h_full()
+                            .w_full()
+                            .min_w(px(table_min_width))
+                            .child(header_row)
+                            .child(body),
+                    ),
+            )
+            .children(scrollbar)
+            .child(sideways)
     }
 }
 
@@ -732,7 +760,8 @@ mod tests {
 
     #[test]
     fn the_virtual_look_matches_the_design_column_template() {
-        // `84px 92px 56px minmax(0,1fr) 72px 200px 72px`, gap 12, padding 14.
+        // `84px 92px 56px minmax(0,1fr) 72px 200px 72px`, gap 12, padding 14, except that the
+        // flexible column keeps the plain table's least width before the table scrolls sideways.
         let columns = [
             DataColumn::new("#").width(84.0),
             DataColumn::new("t").width(92.0),
@@ -744,7 +773,15 @@ mod tests {
         ];
         assert_eq!(
             min_width(&columns, VIRTUAL_LOOK),
-            2.0 * 14.0 + 84.0 + 92.0 + 56.0 + 0.0 + 72.0 + 200.0 + 72.0 + 6.0 * 12.0
+            2.0 * 14.0
+                + 84.0
+                + 92.0
+                + 56.0
+                + DATA_TABLE_FLEX_MIN_WIDTH
+                + 72.0
+                + 200.0
+                + 72.0
+                + 6.0 * 12.0
         );
     }
 }
