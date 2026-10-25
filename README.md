@@ -56,9 +56,9 @@ Postino as the reference implementation.
   optional search box, from a `select_state` the app creates once), `SectionLabel`, the Settings
   dialog pieces (`settings_dialog`, `SettingsLayout` with its `SettingsCategory` list,
   `LabeledRow`, `SectionHeading`), `UnderlineTabs`, `DocumentTabs`,
-  `KeyValueTable`, `EditableTable`, `DataTable` (with sortable headers), `VirtualDataTable` (the same
+  `KeyValueTable`, `EditableTable`, `DataTable` (with sortable headers and a totals row), `VirtualDataTable` (the same
   table over a virtualized body, for lists of any length), `TimeSeriesChart` (several series over
-  one x axis, with hover tooltip and range selection), `Chip`, rich popup menu rows
+  one x axis, with hover tooltip, range selection, axis titles and point labels), `Chip`, rich popup menu rows
   (`menu_choice_item`, `menu_described_item`, `menu_toggle_item`, `menu_shortcut_item`),
   `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
   `radio_halo`, `labelled_checkbox`, `labelled_radio` and the keyboard shortcuts cheat sheet
@@ -172,9 +172,9 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.5.1" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.5.1" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.5.1" }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.6.0" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.6.0" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.6.0" }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
