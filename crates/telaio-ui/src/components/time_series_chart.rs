@@ -4,7 +4,9 @@
 //! The x axis has `N` evenly spaced points (one per second, say). Each series sits on the left or
 //! the right y axis, and each axis has its own maximum (the bottom is always 0) and its own tick
 //! labels, which the app passes as strings. Series are lines, dashed lines or filled areas, drawn
-//! in the order they were added, and `f64::NAN` values are gaps. Reference lines mark a goal.
+//! in the order they were added, and `f64::NAN` values are gaps. Reference lines mark a goal,
+//! an axis can have a title above its labels (its unit, say), and [`ChartLabel`]s write a short
+//! text next to a point (the peak of a series that has no axis of its own).
 //!
 //! Hovering shows a crosshair at the nearest point, a dot per series and a tooltip card. Pressing
 //! and dragging over the plot selects a range of points (a brush), which the app keeps and passes
@@ -30,9 +32,10 @@ use gpui_kit::*;
 use crate::PaletteExt;
 use crate::fonts::MONO_FAMILY;
 use crate::metrics::{
-    CHART_DOT_SIZE, CHART_GUTTER_LEFT, CHART_GUTTER_RIGHT, CHART_PAD_BOTTOM, CHART_PAD_TOP,
-    CHART_TICK_GAP, CHART_TICK_TEXT_SIZE, CHART_TOOLTIP_EDGE, CHART_TOOLTIP_OFFSET,
-    CHART_TOOLTIP_TOP, CHART_TOOLTIP_WIDTH, CHART_X_LABEL_GAP, CHART_X_LABEL_WIDTH, RADIUS_MD,
+    CHART_DOT_SIZE, CHART_GUTTER_LEFT, CHART_GUTTER_RIGHT, CHART_LABEL_GAP, CHART_LABEL_HEIGHT,
+    CHART_PAD_BOTTOM, CHART_PAD_TOP, CHART_PAD_TOP_TITLED, CHART_TICK_GAP, CHART_TICK_TEXT_SIZE,
+    CHART_TOOLTIP_EDGE, CHART_TOOLTIP_OFFSET, CHART_TOOLTIP_TOP, CHART_TOOLTIP_WIDTH,
+    CHART_X_LABEL_GAP, CHART_X_LABEL_WIDTH, RADIUS_MD,
 };
 
 /// Height of one axis label's box, which is vertically centered on its tick.
@@ -244,12 +247,14 @@ pub enum AxisSide {
     Right,
 }
 
-/// A y axis: its maximum, its tick labels and their color. The bottom of the plot is always 0.
+/// A y axis: its maximum, its tick labels, their color and an optional title. The bottom of the
+/// plot is always 0.
 #[derive(Clone)]
 pub struct ChartAxis {
     max: f64,
     labels: Vec<SharedString>,
     label_color: Option<Hsla>,
+    title: Option<SharedString>,
 }
 
 impl ChartAxis {
@@ -261,7 +266,15 @@ impl ChartAxis {
             max,
             labels: labels.into_iter().map(Into::into).collect(),
             label_color: None,
+            title: None,
         }
+    }
+
+    /// A title above the axis' labels, in their color, for example its unit (`req/s`). A chart
+    /// with a titled axis leaves more room above the plot for it.
+    pub fn title(mut self, title: impl Into<SharedString>) -> Self {
+        self.title = Some(title.into());
+        self
     }
 
     /// The color of the tick labels, `fg_muted` by default. An app can use a series' color for
@@ -418,6 +431,88 @@ impl ReferenceLine {
     }
 }
 
+/// Which side of its point a [`ChartLabel`] sits on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LabelPlacement {
+    /// Ending just left of the point and just below it: the end of a plateau, inside its area.
+    #[default]
+    BeforeBelow,
+    /// Ending just left of the point and just above it: the end of a plateau too thin to hold
+    /// the label under it.
+    BeforeAbove,
+    /// Starting just right of the point and just above it: a live edge.
+    AfterAbove,
+    /// Starting just right of the point, its bottom on the bottom of the plot: a caption at the
+    /// foot of a slope, whatever the point's value.
+    AfterOnBase,
+}
+
+/// A short text next to one point of the chart, such as the peak of a series without an axis of
+/// its own (`50 VUs`). The point is a value on an axis, or on a scale of its own like a series'
+/// [`ChartSeries::scale_max`]. Boxed labels sit on a small card in the surface color, so they stay
+/// readable over the series.
+#[derive(Clone)]
+pub struct ChartLabel {
+    index: usize,
+    value: f64,
+    text: SharedString,
+    side: AxisSide,
+    scale_max: Option<f64>,
+    placement: LabelPlacement,
+    boxed: bool,
+}
+
+impl ChartLabel {
+    /// A label for point `index` at `value` on the left axis, before and below it, boxed.
+    pub fn new(index: usize, value: f64, text: impl Into<SharedString>) -> Self {
+        Self {
+            index,
+            value,
+            text: text.into(),
+            side: AxisSide::Left,
+            scale_max: None,
+            placement: LabelPlacement::default(),
+            boxed: true,
+        }
+    }
+
+    /// The axis the value is on, the left one by default.
+    pub fn side(mut self, side: AxisSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    /// A scale of its own from 0 to `max`, like the series it labels.
+    pub fn scale_max(mut self, max: f64) -> Self {
+        self.scale_max = Some(max);
+        self
+    }
+
+    /// Where the label sits around its point.
+    pub fn placement(mut self, placement: LabelPlacement) -> Self {
+        self.placement = placement;
+        self
+    }
+
+    /// Whether the label sits on a small card (the default) or is bare text.
+    pub fn boxed(mut self, boxed: bool) -> Self {
+        self.boxed = boxed;
+        self
+    }
+}
+
+/// The top of a label's box, in pixels from the top of the plot, for a point at `y` of a plot
+/// `plot_height` tall.
+fn label_top(placement: LabelPlacement, y: f32, plot_height: f32) -> f32 {
+    match placement {
+        LabelPlacement::BeforeBelow => y + CHART_LABEL_GAP,
+        LabelPlacement::BeforeAbove | LabelPlacement::AfterAbove => {
+            y - CHART_LABEL_GAP - CHART_LABEL_HEIGHT
+        }
+        LabelPlacement::AfterOnBase => plot_height - CHART_LABEL_GAP - CHART_LABEL_HEIGHT,
+    }
+}
+
 // The element.
 
 /// A chart of several series over one shared x axis, with hover and range selection. See the
@@ -436,6 +531,7 @@ pub struct TimeSeriesChart {
     x_labels: Vec<SharedString>,
     series: Vec<ChartSeries>,
     references: Vec<ReferenceLine>,
+    labels: Vec<ChartLabel>,
     time_label: Option<TimeFormat>,
     selection: ChartSelection,
     surface: Option<Hsla>,
@@ -456,6 +552,7 @@ impl TimeSeriesChart {
             x_labels: Vec::new(),
             series: Vec::new(),
             references: Vec::new(),
+            labels: Vec::new(),
             time_label: None,
             selection: None,
             surface: None,
@@ -463,7 +560,8 @@ impl TimeSeriesChart {
         }
     }
 
-    /// The total height in pixels, x labels included. The plot is that minus 32 px.
+    /// The total height in pixels, x labels included. The plot is that minus 32 px, or minus
+    /// 48 px when an axis has a title.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
         self
@@ -503,6 +601,12 @@ impl TimeSeriesChart {
     /// Adds a reference line.
     pub fn reference_line(mut self, line: ReferenceLine) -> Self {
         self.references.push(line);
+        self
+    }
+
+    /// Adds a label next to a point.
+    pub fn label(mut self, label: ChartLabel) -> Self {
+        self.labels.push(label);
         self
     }
 
@@ -677,7 +781,15 @@ impl RenderOnce for TimeSeriesChart {
         };
 
         let count = self.count;
-        let plot_height = (self.height - CHART_PAD_TOP - CHART_PAD_BOTTOM).max(0.0);
+        let titled = [&self.left, &self.right]
+            .into_iter()
+            .any(|axis| axis.as_ref().is_some_and(|axis| axis.title.is_some()));
+        let pad_top = if titled {
+            CHART_PAD_TOP_TITLED
+        } else {
+            CHART_PAD_TOP
+        };
+        let plot_height = (self.height - pad_top - CHART_PAD_BOTTOM).max(0.0);
         let (gutter_left, gutter_right) = self.gutters;
         let ring = self.surface.unwrap_or(palette.raised);
         let max_of = |side, series: &ChartSeries| series.scale_max.unwrap_or(self.axis_max(side));
@@ -704,20 +816,26 @@ impl RenderOnce for TimeSeriesChart {
         });
 
         // The y axis labels sit in the gutters, centered on their tick.
+        // The title, if any, sits at the very top of the gutter, above the highest label.
         let y_labels = |axis: &Option<ChartAxis>, side: AxisSide| -> Vec<Div> {
             let Some(axis) = axis else {
                 return Vec::new();
             };
             let color = axis.label_color.unwrap_or(palette.fg_muted);
             let ticks = axis.labels.len();
-            axis.labels
-                .iter()
-                .enumerate()
-                .map(|(tick, label)| {
-                    let y = CHART_PAD_TOP + plot_height - tick_fraction(tick, ticks) * plot_height;
+            let title = axis.title.as_ref().map(|title| (0.0, title, true));
+            let tick_labels = axis.labels.iter().enumerate().map(|(tick, label)| {
+                let y = pad_top + plot_height - tick_fraction(tick, ticks) * plot_height;
+                (y - TICK_LABEL_HEIGHT / 2.0, label, false)
+            });
+            title
+                .into_iter()
+                .chain(tick_labels)
+                .map(|(top, label, is_title)| {
                     let base = div()
                         .absolute()
-                        .top(px(y - TICK_LABEL_HEIGHT / 2.0))
+                        .top(px(top))
+                        .when(is_title, |title| title.font_weight(FontWeight::SEMIBOLD))
                         .h(px(TICK_LABEL_HEIGHT))
                         .line_height(px(TICK_LABEL_HEIGHT))
                         .text_size(px(CHART_TICK_TEXT_SIZE))
@@ -773,6 +891,36 @@ impl RenderOnce for TimeSeriesChart {
                 color: line.color.opacity(REFERENCE_LINE_OPACITY),
             })
             .collect();
+
+        // Labels next to points, drawn over the series and under the hover.
+        let point_labels = self.labels.iter().filter(|_| count > 0).map(|label| {
+            let max = label.scale_max.unwrap_or(self.axis_max(label.side));
+            let y = value_y(label.value, max, plot_height);
+            let fraction = x_fraction(label.index, count);
+            let base = h_flex()
+                .absolute()
+                .top(px(label_top(label.placement, y, plot_height)))
+                .h(px(CHART_LABEL_HEIGHT))
+                .px(px(6.0))
+                .items_center()
+                .rounded(px(4.0))
+                .text_size(px(CHART_TICK_TEXT_SIZE))
+                .font_family(MONO_FAMILY)
+                .text_color(palette.fg_muted)
+                .whitespace_nowrap()
+                .when(label.boxed, |boxed| {
+                    boxed.bg(ring).border_1().border_color(palette.border)
+                });
+            match label.placement {
+                LabelPlacement::BeforeBelow | LabelPlacement::BeforeAbove => {
+                    base.right(relative(1.0 - fraction)).mr(px(CHART_LABEL_GAP))
+                }
+                LabelPlacement::AfterAbove | LabelPlacement::AfterOnBase => {
+                    base.left(relative(fraction)).ml(px(CHART_LABEL_GAP))
+                }
+            }
+            .child(label.text.clone())
+        });
 
         // The band: the drag in progress, or else the committed selection.
         let band = drag.or(self.selection).filter(|_| count > 0);
@@ -986,7 +1134,7 @@ impl RenderOnce for TimeSeriesChart {
                     .absolute()
                     .left(px(gutter_left))
                     .right(px(gutter_right))
-                    .top(px(CHART_PAD_TOP + plot_height + CHART_X_LABEL_GAP))
+                    .top(px(pad_top + plot_height + CHART_X_LABEL_GAP))
                     .h(px(TICK_LABEL_HEIGHT))
                     .line_height(px(TICK_LABEL_HEIGHT))
                     .text_size(px(CHART_TICK_TEXT_SIZE))
@@ -1000,12 +1148,13 @@ impl RenderOnce for TimeSeriesChart {
                     .absolute()
                     .left(px(gutter_left))
                     .right(px(gutter_right))
-                    .top(px(CHART_PAD_TOP))
+                    .top(px(pad_top))
                     .h(px(plot_height))
                     .children(grid)
                     .children(reference_labels)
                     .children(band)
                     .child(canvas)
+                    .children(point_labels)
                     .children(hover_layer)
                     .child(pointer),
             )
@@ -1020,9 +1169,10 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{
-        AxisSide, ChartAxis, ChartSeries, ChartState, SeriesStyle, TimeSeriesChart, band_fractions,
-        default_format, drag_selection, finite_runs, index_x, nearest_index, normalize_selection,
-        tick_fraction, tooltip_left, value_at, value_y, x_fraction,
+        AxisSide, ChartAxis, ChartSeries, ChartState, LabelPlacement, SeriesStyle, TimeSeriesChart,
+        band_fractions, default_format, drag_selection, finite_runs, index_x, label_top,
+        nearest_index, normalize_selection, tick_fraction, tooltip_left, value_at, value_y,
+        x_fraction,
     };
 
     const NAN: f64 = f64::NAN;
@@ -1048,6 +1198,15 @@ mod tests {
         // A scale without a maximum puts everything on the bottom.
         assert_eq!(value_y(5.0, 0.0, 188.0), 188.0);
         assert!(value_y(NAN, 100.0, 188.0).is_nan());
+    }
+
+    #[test]
+    fn labels_sit_beside_their_point_or_on_the_base() {
+        // An 18 px box 5 px from a point at y = 100 of a 200 px plot.
+        assert_eq!(label_top(LabelPlacement::BeforeBelow, 100.0, 200.0), 105.0);
+        assert_eq!(label_top(LabelPlacement::BeforeAbove, 100.0, 200.0), 77.0);
+        assert_eq!(label_top(LabelPlacement::AfterAbove, 100.0, 200.0), 77.0);
+        assert_eq!(label_top(LabelPlacement::AfterOnBase, 100.0, 200.0), 177.0);
     }
 
     #[test]

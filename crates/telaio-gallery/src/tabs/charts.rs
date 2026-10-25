@@ -10,7 +10,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 use telaio_ui::components::{
-    AxisSide, ChartAxis, ChartSelection, ChartSeries, ReferenceLine, SeriesStyle, TimeSeriesChart,
+    AxisSide, ChartAxis, ChartLabel, ChartSelection, ChartSeries, LabelPlacement, ReferenceLine,
+    SeriesStyle, TimeSeriesChart,
 };
 use telaio_ui::metrics::RADIUS_LG;
 use telaio_ui::palette::hex;
@@ -28,7 +29,7 @@ const RPS_MAX: f64 = 2400.0;
 /// The virtual users at the end of the ramp.
 const VUS_MAX: f64 = 50.0;
 /// The virtual users area fills this much of the plot at most, like in the design.
-const VUS_HEIGHT: f64 = 0.9;
+const VUS_HEIGHT: f64 = 0.5;
 
 /// One series the legend can hide.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -287,13 +288,11 @@ impl Gallery {
         let mut chart = TimeSeriesChart::new("gallery-load-test-chart", SECONDS)
             .surface(palette.surface)
             .left_axis(
-                ChartAxis::new(RPS_MAX, ["0", "600", "1,200", "1,800", "2,400/s"])
-                    .label_color(Key::Rps.color(&palette)),
+                ChartAxis::new(RPS_MAX, ["0", "600", "1,200", "1,800", "2,400"])
+                    .label_color(Key::Rps.color(&palette))
+                    .title("req/s"),
             )
-            .right_axis(ChartAxis::new(
-                LATENCY_MAX,
-                ["0", "25", "50", "75", "100 ms"],
-            ))
+            .right_axis(ChartAxis::new(LATENCY_MAX, ["0", "25", "50", "75", "100"]).title("ms"))
             .x_labels(["0s", "10s", "20s", "30s", "40s", "50s", "60s"])
             .time_label(|index| time_range(index).into())
             .selection(demo.selection)
@@ -349,6 +348,17 @@ impl Gallery {
                     .format(|value| thousands(value).into()),
             };
             chart = chart.series(series);
+        }
+        if !demo.is_hidden(Key::Vus) {
+            chart = chart
+                .label(
+                    ChartLabel::new(SECONDS - 1, VUS_MAX, "50 VUs").scale_max(VUS_MAX / VUS_HEIGHT),
+                )
+                .label(
+                    ChartLabel::new(0, 0.0, "ramp-up 10 s")
+                        .placement(LabelPlacement::AfterOnBase)
+                        .boxed(false),
+                );
         }
         chart = chart.reference_line(ReferenceLine::new(
             AxisSide::Right,

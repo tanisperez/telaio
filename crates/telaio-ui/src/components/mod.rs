@@ -82,7 +82,8 @@ pub use text_area::TextArea;
 pub use text_field::{input_line_height, text_field};
 pub use theme_card::ThemeCard;
 pub use time_series_chart::{
-    AxisSide, ChartAxis, ChartSelection, ChartSeries, ReferenceLine, SeriesStyle, TimeSeriesChart,
+    AxisSide, ChartAxis, ChartLabel, ChartSelection, ChartSeries, LabelPlacement, ReferenceLine,
+    SeriesStyle, TimeSeriesChart,
 };
 pub use tree_row::TreeRow;
 pub use underline_tabs::{UnderlineTabItem, UnderlineTabs};

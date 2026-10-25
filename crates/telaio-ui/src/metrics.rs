@@ -170,6 +170,8 @@ pub const PROGRESS_BAR_HEIGHT: f32 = 6.0;
 
 /// Space above a `TimeSeriesChart`'s plot, so the top gridline and the line at the maximum fit.
 pub const CHART_PAD_TOP: f32 = 8.0;
+/// Space above a `TimeSeriesChart`'s plot when an axis has a title, which sits in that space.
+pub const CHART_PAD_TOP_TITLED: f32 = 24.0;
 /// Space below a `TimeSeriesChart`'s plot, for the x axis labels.
 pub const CHART_PAD_BOTTOM: f32 = 24.0;
 /// Default width of the strip left of a chart's plot, for the left y axis labels.
@@ -193,6 +195,10 @@ pub const CHART_TOOLTIP_OFFSET: f32 = 12.0;
 pub const CHART_TOOLTIP_EDGE: f32 = 14.0;
 /// Space between the top of a chart's plot and its tooltip.
 pub const CHART_TOOLTIP_TOP: f32 = 2.0;
+/// Height of a chart label's box.
+pub const CHART_LABEL_HEIGHT: f32 = 18.0;
+/// Space between a chart label and the point it labels.
+pub const CHART_LABEL_GAP: f32 = 5.0;
 /// Diameter of the dots a chart's hover marks on each series, ring included.
 pub const CHART_DOT_SIZE: f32 = 9.0;
 
