@@ -6,8 +6,8 @@ use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
 use telaio_ui::components::{
-    DocumentTab, DocumentTabs, IconButton, SecondaryButton, TreeRow, UnderlineTabItem,
-    UnderlineTabs,
+    CheckState, DocumentTab, DocumentTabs, IconButton, SecondaryButton, TreeRow, TriCheckbox,
+    UnderlineTabItem, UnderlineTabs,
 };
 use telaio_ui::metrics::RADIUS_LG;
 
@@ -22,6 +22,10 @@ impl Gallery {
             .child(section("Underline tabs", self.render_underline_tabs(cx)))
             .child(section("Document tabs", self.render_document_tabs(cx)))
             .child(section("Tree row", self.render_tree_rows(cx)))
+            .child(section(
+                "Tree row with a checkbox, a hover action and a suffix",
+                self.render_checked_tree_rows(cx),
+            ))
     }
 
     /// Underline tabs: counts, a colored count, and a suffix.
@@ -206,6 +210,84 @@ impl Gallery {
             .border_color(palette.border)
             .rounded(px(RADIUS_LG))
             .bg(palette.surface)
+            .children(rows)
+    }
+
+    /// Tree rows as a git panel uses them: a tri-state checkbox in `leading`, a hover action in
+    /// `trailing` and an always visible suffix (a count on the folder, a status letter on a
+    /// file). The folder's box is derived from its files and a click on it sets them all.
+    pub(crate) fn render_checked_tree_rows(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let checks = self.tree_checks;
+        let checked = checks.iter().filter(|c| **c == CheckState::Checked).count();
+        let folder_state = if checked == checks.len() {
+            CheckState::Checked
+        } else if checked == 0 {
+            CheckState::Unchecked
+        } else {
+            CheckState::Mixed
+        };
+        let suffix = |text: &'static str, color| {
+            div()
+                .w(px(16.0))
+                .text_size(px(11.0))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_align(TextAlign::Center)
+                .text_color(color)
+                .child(text)
+        };
+        let folder = TreeRow::new("gallery-checked-tree-folder", "src")
+            .folder(true)
+            .leading(
+                TriCheckbox::new("gallery-checked-tree-folder-box", folder_state).on_click(
+                    Self::click(cx, move |this, _, cx| {
+                        let next = folder_state.toggled();
+                        this.tree_checks = [next; 3];
+                        this.record("Tree row: folder box clicked", cx);
+                    }),
+                ),
+            )
+            .suffix(suffix("3", palette.fg_subtle))
+            .on_click(Self::click_record(cx, "Tree row: folder clicked"));
+        let files = [
+            ("main.rs", "M", palette.warning),
+            ("lib.rs", "A", palette.success),
+            ("util.rs", "M", palette.warning),
+        ];
+        let rows = files
+            .into_iter()
+            .enumerate()
+            .map(|(index, (name, letter, color))| {
+                TreeRow::new(("gallery-checked-tree-file", index), name)
+                    .depth(1)
+                    .leading(
+                        TriCheckbox::new(("gallery-checked-tree-box", index), checks[index])
+                            .on_click(Self::click(cx, move |this, _, cx| {
+                                this.tree_checks[index] = this.tree_checks[index].toggled();
+                                this.record(format!("Tree row: {name} box clicked"), cx);
+                            })),
+                    )
+                    .trailing(
+                        IconButton::new(("gallery-checked-tree-undo", index), IconName::Undo)
+                            .on_click(Self::click(cx, move |this, _, cx| {
+                                cx.stop_propagation();
+                                this.record(format!("Tree row: discard {name}"), cx);
+                            })),
+                    )
+                    .suffix(suffix(letter, color))
+                    .on_click(Self::click(cx, move |this, _, cx| {
+                        this.record(format!("Tree row: {name} clicked"), cx);
+                    }))
+            });
+        v_flex()
+            .w(px(320.0))
+            .p_2()
+            .gap_px()
+            .border_1()
+            .border_color(palette.border)
+            .rounded(px(RADIUS_LG))
+            .bg(palette.surface)
+            .child(folder)
             .children(rows)
     }
 }

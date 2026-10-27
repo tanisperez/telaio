@@ -36,6 +36,7 @@ pub mod text_field;
 pub mod theme_card;
 pub mod time_series_chart;
 pub mod tree_row;
+pub mod tri_checkbox;
 pub mod underline_tabs;
 
 pub use buttons::{DangerButton, GhostButton, NeutralButtonExt, PrimaryButton, SecondaryButton};
@@ -86,4 +87,5 @@ pub use time_series_chart::{
     SeriesStyle, TimeSeriesChart,
 };
 pub use tree_row::TreeRow;
+pub use tri_checkbox::{CheckState, TriCheckbox};
 pub use underline_tabs::{UnderlineTabItem, UnderlineTabs};

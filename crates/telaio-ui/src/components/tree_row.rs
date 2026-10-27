@@ -29,8 +29,8 @@ fn indent(depth: usize) -> f32 {
 }
 
 /// One row of a tree: indentation by depth, a chevron on a folder, an optional leading element,
-/// the label, an optional trailing element visible on hover, and the hover, pressed and selected
-/// backgrounds.
+/// the label, an optional trailing element visible on hover, an optional suffix always visible
+/// at the very end, and the hover, pressed and selected backgrounds.
 ///
 /// A leaf by default; [`Self::folder`] makes it a folder.
 #[derive(IntoElement)]
@@ -42,6 +42,7 @@ pub struct TreeRow {
     selected: bool,
     leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
+    suffix: Option<AnyElement>,
     on_click: Option<ClickHandler>,
 }
 
@@ -56,6 +57,7 @@ impl TreeRow {
             selected: false,
             leading: None,
             trailing: None,
+            suffix: None,
             on_click: None,
         }
     }
@@ -88,6 +90,13 @@ impl TreeRow {
     /// own clicks: call `cx.stop_propagation()` in its handler so the row's click does not fire.
     pub fn trailing(mut self, element: impl IntoElement) -> Self {
         self.trailing = Some(element.into_any_element());
+        self
+    }
+
+    /// Puts `element` at the very end of the row, after the hover-only [`Self::trailing`] slot,
+    /// and always visible (a count, a status letter). It does not take clicks of its own.
+    pub fn suffix(mut self, element: impl IntoElement) -> Self {
+        self.suffix = Some(element.into_any_element());
         self
     }
 
@@ -164,6 +173,7 @@ impl RenderOnce for TreeRow {
                     .group_hover(group, |style| style.opacity(1.0))
                     .child(trailing)
             }))
+            .children(self.suffix.map(|suffix| div().flex_none().child(suffix)))
             .when_some(self.on_click, |this, handler| {
                 this.on_click(move |event, window, cx| handler(event, window, cx))
             })
