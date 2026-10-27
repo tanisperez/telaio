@@ -150,6 +150,8 @@ pub struct DemoTab {
     pub dirty: bool,
     /// Whether it shows a prefix, which follows the tab when it is reordered.
     pub prefixed: bool,
+    /// The detail text after the name, if any.
+    pub detail: Option<&'static str>,
 }
 
 /// The tabs of one document tabs demo.
@@ -171,6 +173,7 @@ impl DemoTabs {
                     name: format!("Request {number}"),
                     dirty: false,
                     prefixed: number <= prefixed,
+                    detail: None,
                 })
                 .collect(),
             selected: 0,
@@ -184,6 +187,7 @@ impl DemoTabs {
             name: format!("Request {}", self.next),
             dirty: false,
             prefixed: false,
+            detail: None,
         });
         self.next += 1;
         self.selected = self.tabs.len() - 1;
@@ -355,7 +359,11 @@ impl Gallery {
             font_size: 13.0,
             last_action: "none yet".into(),
             underline_tab: 2,
-            few_tabs: DemoTabs::new(3, 2),
+            few_tabs: {
+                let mut tabs = DemoTabs::new(3, 2);
+                tabs.tabs[2].detail = Some("Working Tree");
+                tabs
+            },
             many_tabs: DemoTabs::new(20, 0),
             segment: 0,
             select_pick: 0,

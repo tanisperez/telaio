@@ -16,8 +16,8 @@ use gpui_kit::*;
 
 use crate::PaletteExt;
 use crate::metrics::{
-    RADIUS_SM, TREE_ROW_HEIGHT, TREE_ROW_ICON_WIDTH, TREE_ROW_INDENT, TREE_ROW_LEADING_GAP,
-    TREE_ROW_PADDING_LEFT,
+    RADIUS_SM, TREE_ROW_DETAIL_TEXT_SIZE, TREE_ROW_HEIGHT, TREE_ROW_ICON_WIDTH, TREE_ROW_INDENT,
+    TREE_ROW_LEADING_GAP, TREE_ROW_PADDING_LEFT,
 };
 
 /// A click handler, factored out because clippy's `type_complexity` flags the inline form.
@@ -29,14 +29,16 @@ fn indent(depth: usize) -> f32 {
 }
 
 /// One row of a tree: indentation by depth, a chevron on a folder, an optional leading element,
-/// the label, an optional trailing element visible on hover, an optional suffix always visible
-/// at the very end, and the hover, pressed and selected backgrounds.
+/// the label, an optional detail text after it, an optional trailing element visible on hover, an
+/// optional suffix always visible at the very end, and the hover, pressed and selected
+/// backgrounds.
 ///
 /// A leaf by default; [`Self::folder`] makes it a folder.
 #[derive(IntoElement)]
 pub struct TreeRow {
     id: ElementId,
     label: SharedString,
+    detail: Option<SharedString>,
     depth: usize,
     folder: Option<bool>,
     selected: bool,
@@ -53,6 +55,7 @@ impl TreeRow {
         Self {
             id: id.into(),
             label: label.into(),
+            detail: None,
             depth: 0,
             folder: None,
             selected: false,
@@ -62,6 +65,13 @@ impl TreeRow {
             suffix: None,
             on_click: None,
         }
+    }
+
+    /// Shows `detail` right after the label in smaller, subtle text, for example the folder of a
+    /// file in a flat list. It gives up its room before the label does.
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
+        self
     }
 
     /// Indents the row by `depth` levels (the root level is 0).
@@ -170,14 +180,28 @@ impl RenderOnce for TreeRow {
             }))
             .child(
                 div()
-                    .flex_1()
                     .min_w_0()
                     .truncate()
                     .text_sm()
                     .text_color(label_color)
                     .when(self.strikethrough, |label| label.line_through())
+                    // With a detail the label keeps its width and the detail takes what is left.
+                    .map(|label| match self.detail {
+                        Some(_) => label.flex_initial(),
+                        None => label.flex_1(),
+                    })
                     .child(self.label),
             )
+            .children(self.detail.map(|detail| {
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .ml(px(2.0))
+                    .text_size(px(TREE_ROW_DETAIL_TEXT_SIZE))
+                    .text_color(palette.fg_subtle)
+                    .child(detail)
+            }))
             .children(self.trailing.map(|trailing| {
                 div()
                     .flex_none()

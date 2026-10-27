@@ -23,7 +23,7 @@ impl Gallery {
             .child(section("Document tabs", self.render_document_tabs(cx)))
             .child(section("Tree row", self.render_tree_rows(cx)))
             .child(section(
-                "Tree row with a checkbox, a hover action and a suffix",
+                "Tree row with a checkbox, a detail, a hover action and a suffix",
                 self.render_checked_tree_rows(cx),
             ))
     }
@@ -71,7 +71,7 @@ impl Gallery {
             .gap_3()
             .child(caption(
                 "Fits: select, close, drag to reorder, middle click closes. \
-                 The first two tabs have a prefix.",
+                 The first two tabs have a prefix, the third a detail.",
             ))
             .child(
                 self.document_tabs_demo(cx, "gallery-doc-tabs-few", &self.few_tabs, |this| {
@@ -116,6 +116,9 @@ impl Gallery {
                         field(this).close(index);
                         cx.notify();
                     }));
+                if let Some(detail) = tab.detail {
+                    item = item.detail(detail);
+                }
                 if tab.prefixed {
                     let color = palette.success;
                     item = item.prefix(move || {
@@ -213,9 +216,10 @@ impl Gallery {
             .children(rows)
     }
 
-    /// Tree rows as a git panel uses them: a tri-state checkbox in `leading`, a hover action in
-    /// `trailing` and an always visible suffix (a count on the folder, a status letter on a
-    /// file). The folder's box is derived from its files and a click on it sets them all.
+    /// Tree rows as a git panel uses them: a tri-state checkbox in `leading`, a folder `detail`, a
+    /// hover action in `trailing` and an always visible suffix (a count on the folder, a status
+    /// letter on a file). The folder's box is derived from its files and a click on it sets them
+    /// all.
     pub(crate) fn render_checked_tree_rows(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
         let checks = self.tree_checks;
@@ -249,17 +253,27 @@ impl Gallery {
             )
             .suffix(suffix("3", palette.fg_subtle))
             .on_click(Self::click_record(cx, "Tree row: folder clicked"));
+        // The details name a subfolder, as a flat list of changes does; the long one is cut.
         let files = [
-            ("main.rs", "M", palette.warning),
-            ("lib.rs", "A", palette.success),
-            ("util.rs", "D", palette.danger),
+            ("main.rs", "M", palette.warning, Some("bin")),
+            ("lib.rs", "A", palette.success, None),
+            (
+                "util.rs",
+                "D",
+                palette.danger,
+                Some("helpers/text/formatting/unicode"),
+            ),
         ];
-        let rows = files
-            .into_iter()
-            .enumerate()
-            .map(|(index, (name, letter, color))| {
-                TreeRow::new(("gallery-checked-tree-file", index), name)
-                    .depth(1)
+        let rows =
+            files
+                .into_iter()
+                .enumerate()
+                .map(|(index, (name, letter, color, detail))| {
+                    let row = TreeRow::new(("gallery-checked-tree-file", index), name).depth(1);
+                    row.map(|row| match detail {
+                        Some(detail) => row.detail(detail),
+                        None => row,
+                    })
                     .strikethrough(letter == "D")
                     .leading(
                         TriCheckbox::new(("gallery-checked-tree-box", index), checks[index])
@@ -279,7 +293,7 @@ impl Gallery {
                     .on_click(Self::click(cx, move |this, _, cx| {
                         this.record(format!("Tree row: {name} clicked"), cx);
                     }))
-            });
+                });
         v_flex()
             .w(px(320.0))
             .p_2()
