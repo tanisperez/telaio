@@ -252,7 +252,7 @@ impl Gallery {
         let files = [
             ("main.rs", "M", palette.warning),
             ("lib.rs", "A", palette.success),
-            ("util.rs", "M", palette.warning),
+            ("util.rs", "D", palette.danger),
         ];
         let rows = files
             .into_iter()
@@ -260,6 +260,7 @@ impl Gallery {
             .map(|(index, (name, letter, color))| {
                 TreeRow::new(("gallery-checked-tree-file", index), name)
                     .depth(1)
+                    .strikethrough(letter == "D")
                     .leading(
                         TriCheckbox::new(("gallery-checked-tree-box", index), checks[index])
                             .on_click(Self::click(cx, move |this, _, cx| {

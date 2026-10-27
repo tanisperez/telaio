@@ -40,6 +40,7 @@ pub struct TreeRow {
     depth: usize,
     folder: Option<bool>,
     selected: bool,
+    strikethrough: bool,
     leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
     suffix: Option<AnyElement>,
@@ -55,6 +56,7 @@ impl TreeRow {
             depth: 0,
             folder: None,
             selected: false,
+            strikethrough: false,
             leading: None,
             trailing: None,
             suffix: None,
@@ -77,6 +79,13 @@ impl TreeRow {
     /// Marks the row selected: `list_active` background and `accent_text` label.
     pub fn selected(mut self, selected: bool) -> Self {
         self.selected = selected;
+        self
+    }
+
+    /// Strikes the label through, in `fg_muted`: an entry that is gone (a deleted file in a
+    /// list of changes).
+    pub fn strikethrough(mut self, strikethrough: bool) -> Self {
+        self.strikethrough = strikethrough;
         self
     }
 
@@ -133,6 +142,8 @@ impl RenderOnce for TreeRow {
 
         let label_color = if self.selected {
             palette.accent_text
+        } else if self.strikethrough {
+            palette.fg_muted
         } else {
             palette.fg
         };
@@ -164,6 +175,7 @@ impl RenderOnce for TreeRow {
                     .truncate()
                     .text_sm()
                     .text_color(label_color)
+                    .when(self.strikethrough, |label| label.line_through())
                     .child(self.label),
             )
             .children(self.trailing.map(|trailing| {
