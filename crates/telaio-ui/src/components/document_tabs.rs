@@ -36,8 +36,8 @@ use gpui_kit::*;
 use super::IconButton;
 use crate::PaletteExt;
 use crate::metrics::{
-    DOCUMENT_TAB_CLOSE_SHIFT, DOCUMENT_TABS_CONTROLS_WIDTH, DOCUMENT_TABS_HEIGHT,
-    DOCUMENT_TABS_SUFFIX_PADDING, RADIUS_SM,
+    DOCUMENT_TAB_CLOSE_SHIFT, DOCUMENT_TAB_DETAIL_TEXT_SIZE, DOCUMENT_TABS_CONTROLS_WIDTH,
+    DOCUMENT_TABS_HEIGHT, DOCUMENT_TABS_SUFFIX_PADDING, RADIUS_SM,
 };
 
 /// One open tab.
@@ -46,6 +46,7 @@ pub struct DocumentTab {
     icon_color: Option<Hsla>,
     prefix: Option<Prefix>,
     label: SharedString,
+    detail: Option<SharedString>,
     dirty: bool,
     selected: bool,
     tooltip: Option<SharedString>,
@@ -66,6 +67,7 @@ struct DraggedTab {
     index: usize,
     prefix: Option<Prefix>,
     label: SharedString,
+    detail: Option<SharedString>,
 }
 
 impl Render for DraggedTab {
@@ -86,7 +88,20 @@ impl Render for DraggedTab {
             .text_color(palette.fg)
             .children(self.prefix.as_ref().map(|prefix| prefix()))
             .child(self.label.clone())
+            .children(
+                self.detail
+                    .clone()
+                    .map(|detail| tab_detail(detail, palette.fg_subtle)),
+            )
     }
+}
+
+/// The detail text after a tab's label.
+fn tab_detail(detail: SharedString, color: Hsla) -> Div {
+    div()
+        .text_size(px(DOCUMENT_TAB_DETAIL_TEXT_SIZE))
+        .text_color(color)
+        .child(detail)
 }
 
 impl DocumentTab {
@@ -97,6 +112,7 @@ impl DocumentTab {
             icon_color: None,
             prefix: None,
             label: label.into(),
+            detail: None,
             dirty: false,
             selected: false,
             tooltip: None,
@@ -122,6 +138,13 @@ impl DocumentTab {
     /// its own copy of the element.
     pub fn prefix<E: IntoElement>(mut self, build: impl Fn() -> E + 'static) -> Self {
         self.prefix = Some(Rc::new(move || build().into_any_element()));
+        self
+    }
+
+    /// Shows `detail` after the label in smaller, subtle text, for example what a diff compares
+    /// ("Working Tree").
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
         self
     }
 
@@ -367,6 +390,7 @@ impl RenderOnce for DocumentTabs {
                     index,
                     prefix: item.prefix.clone(),
                     label: item.label.clone(),
+                    detail: item.detail.clone(),
                 };
                 let accent = palette.accent;
                 tab = tab
@@ -390,6 +414,9 @@ impl RenderOnce for DocumentTabs {
                 tab = tab.child(prefix());
             }
             tab = tab.child(item.label);
+            if let Some(detail) = item.detail {
+                tab = tab.child(tab_detail(detail, palette.fg_subtle));
+            }
             if let Some(tooltip) = item.tooltip {
                 tab =
                     tab.tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx));

@@ -13,6 +13,8 @@ pub const SEGMENTED_CONTROL_INNER_HEIGHT: f32 = 22.0;
 pub const UNDERLINE_TABS_HEIGHT: f32 = 32.0;
 /// Height of a `DocumentTabs` strip.
 pub const DOCUMENT_TABS_HEIGHT: f32 = 36.0;
+/// Text size of a document tab's detail, after its label.
+pub const DOCUMENT_TAB_DETAIL_TEXT_SIZE: f32 = 12.0;
 /// Width of the overflow controls of a `DocumentTabs` strip (the two arrows and the list button
 /// with their gaps and padding). Fixed, so the strip can tell whether the tabs overflow with and
 /// without them.
@@ -139,6 +141,8 @@ pub const TREE_ROW_INDENT: f32 = 16.0;
 pub const TREE_ROW_PADDING_LEFT: f32 = 8.0;
 /// Extra space after a `TreeRow`'s leading element, on top of the row's 4 px gap.
 pub const TREE_ROW_LEADING_GAP: f32 = 2.0;
+/// Text size of a `TreeRow`'s detail, after its label.
+pub const TREE_ROW_DETAIL_TEXT_SIZE: f32 = 11.5;
 
 /// Height of the header row of an `EditableTable`.
 pub const EDITABLE_TABLE_HEADER_HEIGHT: f32 = 30.0;
