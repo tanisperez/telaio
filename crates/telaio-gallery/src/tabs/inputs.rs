@@ -12,8 +12,9 @@ use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
 use telaio_ui::components::{
-    HoverInput, NumberStepper, SegmentedItem, checkbox_halo, edit_menu, labelled_checkbox,
-    labelled_radio, radio_halo, select_label_row, select_trigger, switch_halo, text_field,
+    CheckState, HoverInput, NumberStepper, SegmentedItem, TriCheckbox, checkbox_halo, edit_menu,
+    labelled_checkbox, labelled_radio, radio_halo, select_label_row, select_trigger, switch_halo,
+    text_field,
 };
 
 use super::{label, on_off};
@@ -32,6 +33,10 @@ impl Gallery {
             .child(section("Select trigger", self.render_select(cx)))
             .child(section("Segmented control", self.render_segmented(cx)))
             .child(section("Controls", self.render_controls(cx)))
+            .child(section(
+                "Tri-state checkbox",
+                self.render_tri_checkboxes(cx),
+            ))
             .child(section("Number stepper", self.render_steppers(cx)))
     }
 
@@ -254,6 +259,93 @@ impl Gallery {
             )
             .child(switch_row(switch_on.into_any_element(), "Switch with halo"))
             .child(switch_row(switch_off.into_any_element(), "Another switch"))
+    }
+
+    /// Tri-state checkboxes: the three states, labelled and bare, enabled (a click cycles them
+    /// the way a git panel would) and disabled, with the stock checkbox beside them to compare.
+    pub(crate) fn render_tri_checkboxes(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let names = ["Checked", "Unchecked", "Mixed"];
+        let labelled = (0..3).map(|index| {
+            TriCheckbox::new(("gallery-tri", index), self.tri_states[index])
+                .label(names[index])
+                .on_click(Self::click(cx, move |this, _, cx| {
+                    this.tri_states[index] = this.tri_states[index].toggled();
+                    this.record(format!("Tri-state {} clicked", names[index]), cx);
+                }))
+        });
+        let bare = (0..3).map(|index| {
+            TriCheckbox::new(("gallery-tri-bare", index), self.tri_states[index]).on_click(
+                Self::click(cx, move |this, _, cx| {
+                    this.tri_states[index] = this.tri_states[index].toggled();
+                    this.record(format!("Bare tri-state {} clicked", names[index]), cx);
+                }),
+            )
+        });
+        let states = [
+            CheckState::Checked,
+            CheckState::Unchecked,
+            CheckState::Mixed,
+        ];
+        let disabled_labelled = states.into_iter().enumerate().map(|(index, state)| {
+            TriCheckbox::new(("gallery-tri-dis", index), state)
+                .label(format!("Disabled, {}", names[index].to_lowercase()))
+                .disabled(true)
+        });
+        let disabled_bare = states.into_iter().enumerate().map(|(index, state)| {
+            TriCheckbox::new(("gallery-tri-dis-bare", index), state).disabled(true)
+        });
+        let stock = |id: &'static str, checked: bool, disabled: bool| {
+            checkbox_halo(
+                Checkbox::new(id).checked(checked).disabled(disabled),
+                disabled,
+                &palette,
+            )
+        };
+        v_flex()
+            .gap_3()
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_6()
+                    .items_center()
+                    .children(labelled),
+            )
+            .child(
+                h_flex()
+                    .flex_wrap()
+                    .gap_6()
+                    .items_center()
+                    .children(disabled_labelled),
+            )
+            .child(
+                h_flex()
+                    .gap_6()
+                    .items_center()
+                    .child(h_flex().gap_3().items_center().children(bare))
+                    .child(h_flex().gap_3().items_center().children(disabled_bare))
+                    .child(
+                        div()
+                            .text_size(px(12.5))
+                            .text_color(palette.fg_subtle)
+                            .child("Bare, enabled then disabled"),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .gap_3()
+                    .items_center()
+                    .child(stock("gallery-tri-stock-on", true, false))
+                    .child(stock("gallery-tri-stock-off", false, false))
+                    .child(stock("gallery-tri-stock-dis-on", true, true))
+                    .child(stock("gallery-tri-stock-dis-off", false, true))
+                    .child(
+                        div()
+                            .text_size(px(12.5))
+                            .text_color(palette.fg_subtle)
+                            .child("The stock checkbox, to compare"),
+                    ),
+            )
     }
 
     /// Number steppers: a font size from 10 to 20 in whole steps, one in half steps, and one

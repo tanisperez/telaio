@@ -29,8 +29,8 @@ fn indent(depth: usize) -> f32 {
 }
 
 /// One row of a tree: indentation by depth, a chevron on a folder, an optional leading element,
-/// the label, an optional trailing element visible on hover, and the hover, pressed and selected
-/// backgrounds.
+/// the label, an optional trailing element visible on hover, an optional suffix always visible
+/// at the very end, and the hover, pressed and selected backgrounds.
 ///
 /// A leaf by default; [`Self::folder`] makes it a folder.
 #[derive(IntoElement)]
@@ -40,8 +40,10 @@ pub struct TreeRow {
     depth: usize,
     folder: Option<bool>,
     selected: bool,
+    strikethrough: bool,
     leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
+    suffix: Option<AnyElement>,
     on_click: Option<ClickHandler>,
 }
 
@@ -54,8 +56,10 @@ impl TreeRow {
             depth: 0,
             folder: None,
             selected: false,
+            strikethrough: false,
             leading: None,
             trailing: None,
+            suffix: None,
             on_click: None,
         }
     }
@@ -78,6 +82,13 @@ impl TreeRow {
         self
     }
 
+    /// Strikes the label through, in `fg_muted`: an entry that is gone (a deleted file in a
+    /// list of changes).
+    pub fn strikethrough(mut self, strikethrough: bool) -> Self {
+        self.strikethrough = strikethrough;
+        self
+    }
+
     /// Puts `element` between the chevron slot and the label (a method badge, an icon).
     pub fn leading(mut self, element: impl IntoElement) -> Self {
         self.leading = Some(element.into_any_element());
@@ -88,6 +99,13 @@ impl TreeRow {
     /// own clicks: call `cx.stop_propagation()` in its handler so the row's click does not fire.
     pub fn trailing(mut self, element: impl IntoElement) -> Self {
         self.trailing = Some(element.into_any_element());
+        self
+    }
+
+    /// Puts `element` at the very end of the row, after the hover-only [`Self::trailing`] slot,
+    /// and always visible (a count, a status letter). It does not take clicks of its own.
+    pub fn suffix(mut self, element: impl IntoElement) -> Self {
+        self.suffix = Some(element.into_any_element());
         self
     }
 
@@ -124,6 +142,8 @@ impl RenderOnce for TreeRow {
 
         let label_color = if self.selected {
             palette.accent_text
+        } else if self.strikethrough {
+            palette.fg_muted
         } else {
             palette.fg
         };
@@ -155,6 +175,7 @@ impl RenderOnce for TreeRow {
                     .truncate()
                     .text_sm()
                     .text_color(label_color)
+                    .when(self.strikethrough, |label| label.line_through())
                     .child(self.label),
             )
             .children(self.trailing.map(|trailing| {
@@ -164,6 +185,7 @@ impl RenderOnce for TreeRow {
                     .group_hover(group, |style| style.opacity(1.0))
                     .child(trailing)
             }))
+            .children(self.suffix.map(|suffix| div().flex_none().child(suffix)))
             .when_some(self.on_click, |this, handler| {
                 this.on_click(move |event, window, cx| handler(event, window, cx))
             })

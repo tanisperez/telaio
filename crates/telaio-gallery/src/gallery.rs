@@ -9,6 +9,7 @@ use gpui_kit::component::menu::{DropdownMenu as _, PopupMenuItem};
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use telaio_ui::components::CheckState;
 use telaio_ui::components::{
     ScrollbarOverlay, SectionLabel, SegmentedControl, SegmentedItem, UnderlineTabItem,
     UnderlineTabs, select_label_row, select_trigger,
@@ -245,6 +246,10 @@ pub struct Gallery {
     pub(crate) select_pick: usize,
     pub(crate) checkbox: bool,
     pub(crate) checkbox_off: bool,
+    /// The three enabled tri-state checkboxes of the Controls section.
+    pub(crate) tri_states: [CheckState; 3],
+    /// The three files of the tree row with a checkbox, the folder above them is derived.
+    pub(crate) tree_checks: [CheckState; 3],
     pub(crate) radio: usize,
     pub(crate) switch_on: bool,
     pub(crate) switch_off: bool,
@@ -356,6 +361,16 @@ impl Gallery {
             select_pick: 0,
             checkbox: true,
             checkbox_off: false,
+            tri_states: [
+                CheckState::Checked,
+                CheckState::Unchecked,
+                CheckState::Mixed,
+            ],
+            tree_checks: [
+                CheckState::Checked,
+                CheckState::Unchecked,
+                CheckState::Checked,
+            ],
             radio: 0,
             switch_on: true,
             switch_off: false,
