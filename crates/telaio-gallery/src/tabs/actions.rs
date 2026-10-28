@@ -56,6 +56,7 @@ impl Gallery {
             .child(section("Icon buttons", self.render_icon_buttons(cx)))
             .child(section("Menus", self.render_menus(cx)))
             .child(section("Rich menu rows", self.render_rich_menus(cx)))
+            .child(section("Searchable menu", self.render_searchable_menu(cx)))
     }
 
     /// Buttons: the four kinds, with an icon, a key hint, disabled, other heights and full width.
