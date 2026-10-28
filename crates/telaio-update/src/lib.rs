@@ -34,17 +34,22 @@ pub enum Platform {
     MacosAarch64,
     /// Windows on x86_64.
     WindowsX86_64,
+    /// Linux on x86_64. It only announces new versions, it never downloads or installs one (see
+    /// [`flow::is_portable`] and [`flow::is_package_managed`]).
+    LinuxX86_64,
 }
 
 impl Platform {
-    /// The platform this binary runs on, or `None` where there is no updater (Linux, macOS
-    /// x86_64, ...).
+    /// The platform this binary runs on, or `None` where there is no updater (macOS x86_64,
+    /// Linux on ARM, ...).
     #[must_use]
     pub fn current() -> Option<Platform> {
         if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
             Some(Platform::MacosAarch64)
         } else if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
             Some(Platform::WindowsX86_64)
+        } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            Some(Platform::LinuxX86_64)
         } else {
             None
         }
@@ -56,6 +61,7 @@ impl Platform {
         match self {
             Platform::MacosAarch64 => "macos-aarch64",
             Platform::WindowsX86_64 => "windows-x86_64",
+            Platform::LinuxX86_64 => "linux-x86_64",
         }
     }
 }

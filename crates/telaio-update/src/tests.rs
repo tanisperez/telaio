@@ -116,6 +116,30 @@ fn newer_version_is_an_update() {
 }
 
 #[test]
+fn linux_reads_its_own_key() {
+    let mut body: serde_json::Value = serde_json::from_slice(&manifest("0.2.0", true)).unwrap();
+    assert!(
+        check_with(
+            body.to_string().into_bytes(),
+            "0.1.0",
+            Platform::LinuxX86_64
+        )
+        .unwrap()
+        .is_none()
+    );
+    body["platforms"]["linux-x86_64"] =
+        serde_json::json!({ "url": "http://x/l.tar.gz", "sha256": "e" });
+    let linux = check_with(
+        body.to_string().into_bytes(),
+        "0.1.0",
+        Platform::LinuxX86_64,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(linux.url, "http://x/l.tar.gz");
+}
+
+#[test]
 fn same_or_older_is_not_an_update() {
     assert_eq!(
         check_with(manifest("0.1.0", true), "0.1.0", Platform::MacosAarch64).unwrap(),

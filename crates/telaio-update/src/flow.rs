@@ -1,5 +1,6 @@
-//! The decisions around an update, free of any UI: the build gate, portable copies, the ready
-//! update, the state of the checks and how an update is installed. Apps render the result.
+//! The decisions around an update, free of any UI: the build gate, portable copies, package
+//! managed Linux installs, the ready update, the state of the checks and how an update is
+//! installed. Apps render the result.
 //!
 //! The blocking work is [`check_and_download`] and [`start_install`]; run them on a background
 //! executor.
@@ -27,6 +28,41 @@ pub fn updater_enabled(build_flag: Option<&str>) -> bool {
     enabled_for(build_flag, Platform::current())
 }
 
+/// Whether a Linux copy is updated by a package manager or a sandbox store, so the app must not
+/// announce new versions at all: a binary under `/usr` but not `/usr/local` (deb, rpm, pacman),
+/// under `/bin`, `/sbin`, `/app` (Flatpak) or `/snap`, or running `sandboxed` (Flatpak or Snap,
+/// see [`is_sandboxed`]). Everything else (the tarball unpacked by hand, a per user install, an
+/// AppImage) is a manual install that only learns about new versions from the app. With an
+/// unknown executable path the copy counts as package managed, the safe side: nothing is shown.
+/// Always `false` on other platforms.
+#[must_use]
+pub fn is_package_managed(platform: Option<Platform>, exe: Option<&Path>, sandboxed: bool) -> bool {
+    if platform != Some(Platform::LinuxX86_64) {
+        return false;
+    }
+    let Some(exe) = exe else {
+        return true;
+    };
+    if sandboxed {
+        return true;
+    }
+    if exe.starts_with("/usr/local") {
+        return false;
+    }
+    ["/usr", "/bin", "/sbin", "/app", "/snap"]
+        .iter()
+        .any(|prefix| exe.starts_with(prefix))
+}
+
+/// Whether this process runs inside a Flatpak or Snap sandbox, told by the variables and the file
+/// they set. Reads the environment, so call it once.
+#[must_use]
+pub fn is_sandboxed() -> bool {
+    std::env::var_os("FLATPAK_ID").is_some()
+        || std::env::var_os("SNAP").is_some()
+        || Path::new("/.flatpak-info").exists()
+}
+
 /// Whether the automatic check at startup runs: the build has an updater and the user left
 /// "Check for updates automatically" on.
 #[must_use]
@@ -34,13 +70,19 @@ pub fn should_check_at_startup(enabled: bool, setting: bool) -> bool {
     enabled && setting
 }
 
-/// Whether this copy is a portable Windows one. The installer leaves its uninstaller next to the
-/// exe, so a copy without it comes from the zip and must not run the installer (that would add a
-/// second, separate copy). With an unknown executable path the copy counts as portable, the safe
-/// side: the user is sent to the release page instead of getting a second install.
+/// Whether this copy only announces new versions instead of downloading them. On Windows, a
+/// portable one: the installer leaves its uninstaller next to the exe, so a copy without it comes
+/// from the zip and must not run the installer (that would add a second, separate copy). With an
+/// unknown executable path the copy counts as portable, the safe side: the user is sent to the
+/// release page instead of getting a second install. On Linux, always: the app never replaces
+/// itself there (a package managed copy announces nothing, see [`is_package_managed`]).
 #[must_use]
 pub fn is_portable(platform: Option<Platform>, exe: Option<&Path>) -> bool {
-    platform == Some(Platform::WindowsX86_64) && !exe.is_some_and(install::windows_is_installed)
+    match platform {
+        Some(Platform::WindowsX86_64) => !exe.is_some_and(install::windows_is_installed),
+        Some(Platform::LinuxX86_64) => true,
+        _ => false,
+    }
 }
 
 /// A newer version the user can act on: downloaded and verified, waiting for a restart into it,
@@ -216,6 +258,8 @@ pub enum InstallMethod {
     WindowsInstaller,
     /// Unpack next to the bundle, swap it after quitting, reopen.
     MacosSwap,
+    /// Nothing to install in place: the user takes the new version from the release page.
+    ReleasePage,
 }
 
 /// The install method of `platform`.
@@ -224,6 +268,7 @@ pub fn install_method(platform: Platform) -> InstallMethod {
     match platform {
         Platform::WindowsX86_64 => InstallMethod::WindowsInstaller,
         Platform::MacosAarch64 => InstallMethod::MacosSwap,
+        Platform::LinuxX86_64 => InstallMethod::ReleasePage,
     }
 }
 
@@ -277,6 +322,7 @@ pub fn start_install(
                 Err(error) => InstallOutcome::Failed(error.to_string()),
             }
         }
+        InstallMethod::ReleasePage => InstallOutcome::Fallback,
     }
 }
 
@@ -349,6 +395,76 @@ mod tests {
         assert!(!is_portable(Some(Platform::MacosAarch64), Some(&exe)));
         assert!(!is_portable(Some(Platform::MacosAarch64), None));
         assert!(!is_portable(None, Some(&exe)));
+    }
+
+    #[test]
+    fn a_linux_copy_is_always_portable() {
+        let linux = Some(Platform::LinuxX86_64);
+        assert!(is_portable(
+            linux,
+            Some(Path::new("/home/me/.local/bin/postino"))
+        ));
+        assert!(is_portable(linux, None));
+    }
+
+    #[test]
+    fn linux_package_managers_own_system_paths() {
+        let linux = Some(Platform::LinuxX86_64);
+        let managed = |path: &str| is_package_managed(linux, Some(Path::new(path)), false);
+        assert!(managed("/usr/bin/postino"));
+        assert!(managed("/usr/lib/postino/postino"));
+        assert!(managed("/bin/postino"));
+        assert!(managed("/app/bin/postino"));
+        assert!(managed("/snap/postino/12/bin/postino"));
+        assert!(!managed("/usr/local/bin/postino"));
+        assert!(!managed("/home/me/.local/bin/postino"));
+        assert!(!managed("/opt/postino/bin/postino"));
+        assert!(!managed("/tmp/.mount_PostinAbc/usr/bin/postino"));
+        assert!(!managed("/usrx/bin/postino"));
+    }
+
+    #[test]
+    fn a_sandbox_or_an_unknown_exe_is_package_managed_on_linux() {
+        let linux = Some(Platform::LinuxX86_64);
+        let home = Path::new("/home/me/.local/bin/postino");
+        assert!(is_package_managed(linux, Some(home), true));
+        assert!(is_package_managed(
+            linux,
+            Some(Path::new("/usr/local/bin/postino")),
+            true
+        ));
+        assert!(is_package_managed(linux, None, false));
+    }
+
+    #[test]
+    fn other_platforms_are_never_package_managed() {
+        let exe = Path::new("/usr/bin/postino");
+        assert!(!is_package_managed(
+            Some(Platform::MacosAarch64),
+            Some(exe),
+            true
+        ));
+        assert!(!is_package_managed(
+            Some(Platform::WindowsX86_64),
+            None,
+            true
+        ));
+        assert!(!is_package_managed(None, Some(exe), true));
+    }
+
+    #[test]
+    fn a_linux_update_falls_back_to_the_release_page() {
+        assert_eq!(
+            install_method(Platform::LinuxX86_64),
+            InstallMethod::ReleasePage
+        );
+        let outcome = start_install(
+            &CONFIG,
+            Platform::LinuxX86_64,
+            &ready("0.2.0"),
+            Path::new("/home/me/.local/bin/postino"),
+        );
+        assert_eq!(outcome, InstallOutcome::Fallback);
     }
 
     #[test]

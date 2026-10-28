@@ -18,7 +18,7 @@ analyzer) and Nastro (a music player), which share one look and one way of being
 | --- | --- |
 | [`telaio-ui`](#telaio-ui) | The design system (palette tokens, theme, metrics, Geist fonts) and the standard components |
 | [`telaio-app`](#telaio-app) | The application shell: logging, command line pieces, languages, numbers, paths, window bootstrap, About header |
-| [`telaio-update`](#telaio-update) | The in-app updater for macOS and Windows, from GitHub releases |
+| [`telaio-update`](#telaio-update) | The in-app updater for macOS and Windows, and new version notices on Linux, from GitHub releases |
 | `telaio-gallery` | Not a dependency: every component in every state, under every sample palette ([Gallery](#gallery)) |
 
 All of them are released together, with one version and one tag. Each crate is independent: an
@@ -126,8 +126,12 @@ The in-app updater (no `gpui`, plain blocking logic, run it on a background exec
 version with `semver`, downloads the asset and verifies its SHA-256, trusting the OS certificate
 store. On macOS it unpacks the `.app.tar.gz` next to the bundle and swaps it after the app quits;
 on Windows it runs the Inno Setup installer silently. A Windows copy without `unins000.exe` next
-to the exe is portable and only gets a link to the release page. Everything app specific is an
-`UpdaterConfig`, and the `flow` module has the decisions an app would otherwise copy (the build
+to the exe is portable and only gets a link to the release page. Linux x86_64 is always portable
+in that sense: it never downloads, it only announces the new version, and only in a manual install
+(`flow::is_package_managed` is `false` for a tarball, a per user install or an AppImage, `true`
+under `/usr`, `/bin`, `/app`, `/snap` or in a Flatpak or Snap sandbox, where the package manager
+owns updates). The manifest needs a `linux-x86_64` entry for the notice to appear. Everything app
+specific is an `UpdaterConfig`, and the `flow` module has the decisions an app would otherwise copy (the build
 gate, `UpdateState`, `check_and_download`, `start_install`).
 
 ```rust
