@@ -23,6 +23,7 @@ pub mod modal;
 pub mod number_stepper;
 pub mod progress_bar;
 pub mod scrollbar;
+pub mod searchable_menu;
 pub mod searchable_select;
 pub mod section_label;
 pub mod segmented_control;
@@ -65,6 +66,10 @@ pub use modal::{
 pub use number_stepper::NumberStepper;
 pub use progress_bar::ProgressBar;
 pub use scrollbar::ScrollbarOverlay;
+pub use searchable_menu::{
+    MenuAction, MenuGroup, MenuRow, SearchableMenu, SearchableMenuEvent, SearchableMenuState,
+    SubmenuEntry, SubmenuItem,
+};
 pub use searchable_select::{
     PaddedOptions, SearchableSelect, SelectHandle, SelectOption, on_pick, pick, select_state,
     set_options,

@@ -15,10 +15,12 @@ mod editors;
 
 pub(crate) use charts::ChartsDemo;
 pub(crate) use editors::EditorsDemo;
+pub(crate) use searchable_menu::SearchableMenuDemo;
 pub(crate) use virtual_table::VirtualTableDemo;
 mod feedback;
 mod inputs;
 mod navigation;
+mod searchable_menu;
 mod surfaces;
 mod virtual_table;
 

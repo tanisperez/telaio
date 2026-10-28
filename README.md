@@ -53,7 +53,9 @@ Postino as the reference implementation.
   `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `TextArea` (multi line plain text),
   `CodeEditor` (gpui-component's `Editor` in the app's box), `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `ProgressBar`, `NumberStepper`, `SearchableSelect` (a select with an
-  optional search box, from a `select_state` the app creates once), `SectionLabel`, the Settings
+  optional search box, from a `select_state` the app creates once), `SearchableMenu` (a popover with a
+  search box, action buttons, grouped rows with a badge, a toggle and a submenu, and a create row,
+  driven by a `SearchableMenuState` the app creates once; Postino's branch menu), `SectionLabel`, the Settings
   dialog pieces (`settings_dialog`, `SettingsLayout` with its `SettingsCategory` list,
   `LabeledRow`, `SectionHeading`), `UnderlineTabs`, `DocumentTabs`,
   `KeyValueTable`, `EditableTable`, `DataTable` (with sortable headers and a totals row), `VirtualDataTable` (the same

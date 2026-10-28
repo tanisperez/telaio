@@ -227,3 +227,32 @@ pub const SETTINGS_WIDTH: f32 = 800.0;
 pub const SETTINGS_HEIGHT: f32 = 720.0;
 /// Width of the Settings modal's category navigation column.
 pub const SETTINGS_NAV_WIDTH: f32 = 188.0;
+
+/// Width of a `SearchableMenu` panel.
+pub const SEARCHABLE_MENU_WIDTH: f32 = 440.0;
+/// Height of the search input strip of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_SEARCH_HEIGHT: f32 = 40.0;
+/// Height of the buttons of the action row of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_ACTION_HEIGHT: f32 = 28.0;
+/// Height of a row of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_ROW_HEIGHT: f32 = 42.0;
+/// Height of a group label of a `SearchableMenu`, without the 4 px above it.
+pub const SEARCHABLE_MENU_LABEL_HEIGHT: f32 = 24.0;
+/// Space above a group label of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_LABEL_GAP: f32 = 4.0;
+/// Height of the key hint bar of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_FOOTER_HEIGHT: f32 = 32.0;
+/// Most the rows of a `SearchableMenu` take in height before they scroll.
+pub const SEARCHABLE_MENU_LIST_MAX_HEIGHT: f32 = 380.0;
+/// Width of the submenu of a row of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_SUBMENU_WIDTH: f32 = 220.0;
+/// Height of an item of the submenu of a `SearchableMenu`.
+pub const SEARCHABLE_MENU_SUBMENU_ROW_HEIGHT: f32 = 26.0;
+/// Text size of the title of a `SearchableMenu` row (monospace).
+pub const SEARCHABLE_MENU_TITLE_TEXT_SIZE: f32 = 12.5;
+/// Text size of the subtitle of a `SearchableMenu` row and of its key hints.
+pub const SEARCHABLE_MENU_SUBTITLE_TEXT_SIZE: f32 = 11.5;
+/// Text size of the badge of a `SearchableMenu` row and of its group labels.
+pub const SEARCHABLE_MENU_BADGE_TEXT_SIZE: f32 = 11.0;
+/// Gap between the trigger of a `SearchableMenu` and its panel.
+pub const SEARCHABLE_MENU_GAP: f32 = 6.0;
