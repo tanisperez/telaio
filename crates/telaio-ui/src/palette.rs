@@ -481,6 +481,10 @@ pub(crate) fn theme_colors_and_highlight(
         "switch.background": tokens.border_strong,
         "switch.thumb.background": tokens.accent_fg,
     });
+    // The focus color of every gpui-component control. Unset, it was gpui-component's blue.
+    // Inserted after the macro, which reaches its recursion limit with one more entry.
+    let mut colors = colors;
+    colors["ring"] = serde_json::Value::from(tokens.accent);
     let highlight = serde_json::json!({
         // The line number column of every code editor, the same `raised` as the box the editors
         // sit in. Unset, it took gpui-component's input background, a lighter strip whose edge
@@ -731,6 +735,10 @@ mod tests {
             assert_eq!(
                 colors["selection.background"],
                 format!("{}4d", tokens.accent)
+            );
+            assert_eq!(
+                colors["ring"], tokens.accent,
+                "the focus color is the accent"
             );
         }
     }

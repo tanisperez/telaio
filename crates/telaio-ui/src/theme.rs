@@ -162,6 +162,9 @@ pub fn install(cx: &mut App, family: &ThemeFamily) {
     let light = registry.themes().get(family.light_name().as_str()).cloned();
     let dark = registry.themes().get(family.dark_name().as_str()).cloned();
     let theme = Theme::global_mut(cx);
+    // No 3 px half alpha band around a focused control: it shows the 1 px `ring` border alone,
+    // the focus look of the design system, which also cannot be clipped by a scroll area.
+    theme.focus_ring = false;
     if let Some(light) = light {
         theme.light_theme = light;
     }
