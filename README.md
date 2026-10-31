@@ -12,17 +12,18 @@ to be used together with AI coding agents. A new app gets a design system, stand
 an application shell and an in-app updater that already work, and writes only its own domain.
 
 It powers [Postino](https://github.com/tanisperez/postino) (an HTTP client), Vano (a disk
-analyzer) and Nastro (a music player), which share one look and one way of being built.
+analyzer), Nastro (a music player) and ted (a text editor), which share one look and one way of being built.
 
 | Crate | What it gives an app |
 | --- | --- |
 | [`telaio-ui`](#telaio-ui) | The design system (palette tokens, theme, metrics, Geist fonts) and the standard components |
 | [`telaio-app`](#telaio-app) | The application shell: logging, command line pieces, languages, numbers, paths, window bootstrap, About header |
 | [`telaio-update`](#telaio-update) | The in-app updater for macOS and Windows, and new version notices on Linux, from GitHub releases |
+| [`telaio-git`](#telaio-git) | A git client that drives the `git` executable: status, staging, diffs, commit, push, pull, fetch, branches, stash, log and the commit graph |
 | `telaio-gallery` | Not a dependency: every component in every state, under every sample palette ([Gallery](#gallery)) |
 
 All of them are released together, with one version and one tag. Each crate is independent: an
-app takes only what it needs, and `telaio-update` has no `gpui` at all.
+app takes only what it needs, and `telaio-update` and `telaio-git` have no `gpui` at all.
 
 **How an app is built with it**, from idea to release, is written down for AI agents (and people)
 in the shared rules that every app's `AGENTS.md` imports (`~/.claude/rust/RULES.md` in the author's
@@ -153,6 +154,28 @@ if flow::updater_enabled(option_env!("POSTINO_UPDATER")) {
 }
 ```
 
+## telaio-git
+
+The git client extracted from Postino (no `gpui`, plain blocking logic, run it on a background
+executor). Git always runs as a child process, never as a library, with a fixed environment:
+English messages, no terminal prompts, no optional locks and unquoted paths. Paths in the results
+are relative to the repository root and use `/` on every platform. Only the logic is shared: each
+app keeps its own Git views.
+
+```rust
+use telaio_git::{Executable, detect};
+
+// On a background executor:
+let git = detect(&Executable::Auto)?; // the git on the PATH, at least `MIN_VERSION`
+if let Some(repo) = git.discover(&folder)? {
+    let status = repo.status()?; // branch, ahead and behind, and one entry per changed file
+}
+```
+
+Nothing app specific is kept: the automatic stash of "stash and check out" takes the app's prefix
+(`auto_stash_message("postino-auto:", branch)`), and rules such as Postino's secret files stay in
+the app.
+
 ## Gallery
 
 ```sh
@@ -181,6 +204,7 @@ repository, all at the same tag:
 telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.9.1" }
 telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.9.1" }
 telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.9.1" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.9.1" }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
@@ -197,6 +221,7 @@ each iteration needs no tag:
 telaio-ui = { path = "../telaio/crates/telaio-ui" }
 telaio-app = { path = "../telaio/crates/telaio-app" }
 telaio-update = { path = "../telaio/crates/telaio-update" }
+telaio-git = { path = "../telaio/crates/telaio-git" }
 ```
 
 Never commit that section: it breaks CI and every other checkout. When the change is ready,

@@ -6405,6 +6405,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "telaio-git"
+version = "0.9.1"
+dependencies = [
+ "dunce",
+ "log",
+ "pretty_assertions",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "telaio-ui"
 version = "0.9.1"
 dependencies = [

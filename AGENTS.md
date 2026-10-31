@@ -4,7 +4,7 @@ Guidance for AI agents working on telaio. See `README.md` for what it is and how
 
 ## Project
 
-telaio is the rapid application development kit shared by Postino, Vano and Nastro (desktop
+telaio is the rapid application development kit shared by Postino, Vano, Nastro and ted (desktop
 apps in Rust on `gpui-kit`), a workspace of crates released together with one version and one
 tag:
 
@@ -13,6 +13,8 @@ tag:
 - `telaio-app`: the application shell (logging, command line pieces, languages, numbers, paths,
   window bootstrap, About header).
 - `telaio-update`: the in-app updater, no gpui.
+- `telaio-git`: the git client (drives the `git` executable), no gpui. Extracted from
+  `postino-git` (telaio issue #38).
 - `telaio-gallery`: the components gallery binary, not published.
 
 It was extracted from Postino (Postino issue #139 and telaio milestone 0.2.0), whose code was the
@@ -38,6 +40,10 @@ building an app with telaio are in `~/.claude/rust/RULES.md` (the author's dotfi
 - `telaio-update` never depends on `gpui` or on any UI crate, and keeps no app constant: names,
   URLs and environment variables come from `UpdaterConfig`. Its tests never touch the internet
   (a local `tiny_http` server).
+- `telaio-git` never depends on `gpui` or on any UI crate, and keeps no app rule or constant
+  (Postino's secret files, the automatic stash prefix): they are passed in or stay in the app. Its
+  tests run a real `git` in temporary folders, skip themselves when git is missing and never touch
+  the network.
 - `telaio-app` keeps no app constant either: names, ids, paths and environment variables come from
   `AppIdentity`. It never reads an app's locale or settings; the app's own translation tables and
   settings structs stay in the app. Its strings are in `crates/telaio-app/locales/telaio_app.yml`
