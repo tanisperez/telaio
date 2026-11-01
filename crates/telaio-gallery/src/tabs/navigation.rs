@@ -115,7 +115,12 @@ impl Gallery {
                     .on_close(Self::act(cx, move |this, _, cx| {
                         field(this).close(index);
                         cx.notify();
-                    }));
+                    }))
+                    // A right-click menu, as an editor gives its tabs (Close, Copy path).
+                    .context_menu(|menu, _, _| {
+                        menu.menu_element(Box::new(gpui_kit::NoAction), |_, _| "Close")
+                            .menu_element(Box::new(gpui_kit::NoAction), |_, _| "Copy path")
+                    });
                 if let Some(detail) = tab.detail {
                     item = item.detail(detail);
                 }

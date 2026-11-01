@@ -25,7 +25,7 @@
 
 use std::rc::Rc;
 
-use gpui_kit::component::menu::{DropdownMenu as _, PopupMenuItem};
+use gpui_kit::component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenu, PopupMenuItem};
 use rust_i18n::t;
 
 use gpui_kit::component::tooltip::Tooltip;
@@ -52,7 +52,11 @@ pub struct DocumentTab {
     tooltip: Option<SharedString>,
     on_click: Option<TabHandler>,
     on_close: Option<TabHandler>,
+    context_menu: Option<MenuBuilder>,
 }
+
+/// Builds a tab's right-click menu, when it opens.
+type MenuBuilder = Rc<dyn Fn(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu>;
 
 /// A tab click handler, factored out because clippy's `type_complexity` flags the inline form.
 type TabHandler = Rc<dyn Fn(&mut Window, &mut App)>;
@@ -118,6 +122,7 @@ impl DocumentTab {
             tooltip: None,
             on_click: None,
             on_close: None,
+            context_menu: None,
         }
     }
 
@@ -171,6 +176,16 @@ impl DocumentTab {
     /// Sets the handler for clicking the tab itself (activates it).
     pub fn on_click(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
         self.on_click = Some(Rc::new(handler));
+        self
+    }
+
+    /// The tab's right-click menu, built by `builder` when it opens (Close, Copy path, ...). The
+    /// tab is not selected by the right click; the caller's items say which tab they act on.
+    pub fn context_menu(
+        mut self,
+        builder: impl Fn(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu + 'static,
+    ) -> Self {
+        self.context_menu = Some(Rc::new(builder));
         self
     }
 
@@ -344,6 +359,7 @@ impl RenderOnce for DocumentTabs {
             let dirty = item.dirty;
             let click_handler = item.on_click;
             let close_handler = item.on_close;
+            let context_menu = item.context_menu;
             let middle_click_close = close_handler.clone();
 
             // The selected tab's `bg` fill is opaque, and a hover style replaces it.
@@ -473,7 +489,13 @@ impl RenderOnce for DocumentTabs {
             if let Some(handler) = close_handler {
                 end = end.on_click(move |_, window, cx| handler(window, cx));
             }
-            tab.child(end)
+            let tab = tab.child(end);
+            match context_menu {
+                Some(builder) => tab
+                    .context_menu(move |menu, window, cx| builder(menu, window, cx))
+                    .into_any_element(),
+                None => tab.into_any_element(),
+            }
         });
 
         let controls = flags.show_controls.then(|| {
