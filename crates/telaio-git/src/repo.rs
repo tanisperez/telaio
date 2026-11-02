@@ -73,6 +73,32 @@ impl Git {
         }))
     }
 
+    /// Trusts a repository owned by another user: adds `directory` (as
+    /// [`GitError::unsafe_directory`] gives it) to `safe.directory` in the user's global git
+    /// configuration, unless it is there already. Only after the user asked for it.
+    pub fn trust_directory(&self, directory: &str) -> Result<(), GitError> {
+        let listed = run_with(
+            &self.path,
+            None,
+            &["config", "--global", "--get-all", "safe.directory"],
+            None,
+            // 1: the key is not set at all.
+            &[1],
+        )?;
+        if String::from_utf8_lossy(&listed)
+            .lines()
+            .any(|line| line.trim() == directory)
+        {
+            return Ok(());
+        }
+        run(
+            &self.path,
+            None,
+            &["config", "--global", "--add", "safe.directory", directory],
+        )?;
+        Ok(())
+    }
+
     /// Runs `git init` in `dir`.
     pub fn init(&self, dir: &Path) -> Result<(), GitError> {
         run(&self.path, Some(dir), &["init", "--quiet"]).map(|_| ())
