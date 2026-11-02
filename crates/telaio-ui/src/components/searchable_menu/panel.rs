@@ -262,7 +262,7 @@ impl SearchableMenuState {
                 let label = self
                     .groups
                     .get(group)
-                    .map(|g| g.label.to_uppercase())
+                    .map(|g| g.label.clone())
                     .unwrap_or_default();
                 div()
                     .w_full()

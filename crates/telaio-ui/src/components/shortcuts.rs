@@ -154,7 +154,7 @@ fn render_sheet(groups: &[ShortcutGroup], scroll_handle: &ScrollHandle, cx: &App
         .into_any_element()
 }
 
-/// One group: its uppercase title and a row per shortcut.
+/// One group: its title and a row per shortcut.
 fn render_group(group: &ShortcutGroup, cx: &App) -> AnyElement {
     v_flex()
         .gap(px(6.0))

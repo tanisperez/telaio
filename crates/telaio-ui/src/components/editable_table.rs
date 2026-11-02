@@ -1,7 +1,7 @@
 //! [`EditableTable`], [`EditableColumn`], [`EditableRow`] and [`EditableCell`]: a bordered table
 //! of editable rows (in Postino, the environment variables table), telaio #12.
 //!
-//! The table owns the look: a header of uppercase labels, rows with a line between them (none
+//! The table owns the look: a header of small labels, rows with a line between them (none
 //! after the last), borderless monospace inputs, an optional note line under a cell, read only
 //! rows and an empty message. The caller owns the data: a cell holds the caller's
 //! `Entity<InputState>`, a plain text, or any element (a chip, an `IconButton`).
@@ -228,7 +228,7 @@ impl RenderOnce for EditableTable {
                         .truncate()
                         .text_size(px(EDITABLE_TABLE_SMALL_TEXT_SIZE))
                         .text_color(palette.fg_subtle)
-                        .child(column.label.to_uppercase()),
+                        .child(column.label.clone()),
                 )
             },
         );

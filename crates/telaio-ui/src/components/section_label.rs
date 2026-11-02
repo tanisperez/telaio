@@ -1,5 +1,4 @@
-//! [`SectionLabel`]: the uppercase section heading used for "COLLECTIONS" and every gallery section
-//! title.
+//! [`SectionLabel`]: the section heading used for "Collections" and every gallery section title.
 //!
 //! Custom element: a plain styled `div`, since this is just fixed typography with no
 //! interactivity.
@@ -13,15 +12,15 @@ use gpui_kit::*;
 
 use crate::PaletteExt;
 
-/// An uppercase, 11px/600 heading, colored `fg_subtle` (section titles such as
-/// the sidebar's "COLLECTIONS").
+/// An 11px/600 heading in sentence case, colored `fg_subtle` (section titles such as the
+/// sidebar's "Collections").
 #[derive(IntoElement)]
 pub struct SectionLabel {
     text: SharedString,
 }
 
 impl SectionLabel {
-    /// A label showing `text`, uppercased regardless of the case it is given in.
+    /// A label showing `text` as given: write it in sentence case ("Recent files").
     pub fn new(text: impl Into<SharedString>) -> Self {
         Self { text: text.into() }
     }
@@ -34,6 +33,6 @@ impl RenderOnce for SectionLabel {
             .text_size(px(11.0))
             .font_weight(FontWeight::SEMIBOLD)
             .text_color(palette.fg_subtle)
-            .child(self.text.to_string().to_uppercase())
+            .child(self.text)
     }
 }

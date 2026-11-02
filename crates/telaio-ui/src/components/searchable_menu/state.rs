@@ -108,7 +108,7 @@ impl MenuRow {
 /// A labelled group of rows.
 #[derive(Clone)]
 pub struct MenuGroup {
-    /// Shown in uppercase above the rows.
+    /// Shown above the rows, as given (sentence case).
     pub label: SharedString,
     /// The rows. A group that ends up with none (or none matching) shows nothing.
     pub rows: Vec<MenuRow>,
