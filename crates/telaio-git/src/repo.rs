@@ -127,6 +127,32 @@ impl Git {
     pub fn init(&self, dir: &Path) -> Result<(), GitError> {
         run(&self.runner, Some(dir), &["init", "--quiet"]).map(|_| ())
     }
+
+    /// Clones only the last commit of `url` into `dir`, a folder that does not exist yet or is
+    /// empty: `git clone --depth 1 --single-branch`, of `branch` or, when `None`, of the remote's
+    /// default branch. For reading files of a repository without its history (Postino's OpenAPI
+    /// import). `url` is anything git clones: `https://`, `git@host:path`, a local path.
+    pub fn clone_shallow(
+        &self,
+        url: &str,
+        branch: Option<&str>,
+        dir: &Path,
+    ) -> Result<(), GitError> {
+        // Run from the parent with a relative target, so the git of WSL gets no Windows path.
+        let parent = dir
+            .parent()
+            .ok_or_else(|| GitError::Parse(format!("{} has no parent folder", dir.display())))?;
+        let name = dir
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .ok_or_else(|| GitError::Parse(format!("{} has no folder name", dir.display())))?;
+        let mut args = vec!["clone", "--quiet", "--depth", "1", "--single-branch"];
+        if let Some(branch) = branch {
+            args.extend(["--branch", branch]);
+        }
+        args.extend(["--", url, name.as_str()]);
+        run(&self.runner, Some(parent), &args).map(|_| ())
+    }
 }
 
 impl Repo {

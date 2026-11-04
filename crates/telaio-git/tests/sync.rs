@@ -339,3 +339,41 @@ fn gitignore_helper_appends_once() {
     let text = fs::read_to_string(dir.path().join(".gitignore")).expect("read");
     assert_eq!(text, "target\n/x.local.env\n");
 }
+
+#[test]
+fn clone_shallow_copies_the_last_commit_of_a_branch() {
+    let Some(git) = git() else { return };
+    let (dir, repo) = new_repo(&git);
+    commit_file(&repo, &dir, "spec.yaml", "one", "first");
+    commit_file(&repo, &dir, "spec.yaml", "two", "second");
+    raw(&git, dir.path(), &["branch", "other"]);
+    commit_file(&repo, &dir, "spec.yaml", "three", "third");
+    // `--depth` is ignored for a plain path, a file:// URL is a real (local) remote.
+    let url = format!("file://{}", dir.path().display());
+
+    let target = tempfile::tempdir().expect("tempdir");
+    let clone = target.path().join("clone");
+    git.clone_shallow(&url, None, &clone)
+        .expect("clones the default branch");
+    assert_eq!(
+        fs::read_to_string(clone.join("spec.yaml")).expect("read"),
+        "three"
+    );
+    let count = Command::new(git.path())
+        .args(["rev-list", "--count", "HEAD"])
+        .current_dir(&clone)
+        .output()
+        .expect("git runs");
+    assert_eq!(String::from_utf8_lossy(&count.stdout).trim(), "1");
+
+    let branch = target.path().join("branch");
+    git.clone_shallow(&url, Some("other"), &branch)
+        .expect("clones a branch");
+    assert_eq!(
+        fs::read_to_string(branch.join("spec.yaml")).expect("read"),
+        "two"
+    );
+
+    let missing = target.path().join("missing");
+    assert!(git.clone_shallow(&url, Some("nope"), &missing).is_err());
+}
