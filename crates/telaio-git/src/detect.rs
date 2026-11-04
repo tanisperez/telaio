@@ -4,8 +4,8 @@ use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::run::run;
-use crate::{DetectError, Git, GitError};
+use crate::run::{Runner, run};
+use crate::{DetectError, Git, GitError, wsl_location};
 
 /// The oldest git the apps work with.
 pub const MIN_VERSION: Version = Version {
@@ -17,9 +17,11 @@ pub const MIN_VERSION: Version = Version {
 /// Where to look for git, as chosen in the settings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Executable {
-    /// Search the `PATH` (and the usual install folder on Windows).
+    /// Search the `PATH` (and the usual install folder on Windows). On Windows, with a folder
+    /// inside WSL, the git of that distribution instead (see [`detect_for`]).
     Auto,
-    /// Use this executable.
+    /// Use this executable. On Windows, a path inside WSL
+    /// (`\\wsl.localhost\Ubuntu\usr\bin\git`) runs that git through `wsl.exe`.
     Path(PathBuf),
 }
 
@@ -58,16 +60,48 @@ impl Version {
     }
 }
 
-/// Finds a usable git and returns a handle to it.
+/// Finds a usable git and returns a handle to it. Same as [`detect_for`] without a folder, so
+/// never the git of WSL for [`Executable::Auto`].
 pub fn detect(exe: &Executable) -> Result<Git, DetectError> {
-    let path = match exe {
-        Executable::Auto => find_in_path().ok_or(DetectError::NotFound)?,
-        Executable::Path(path) if path.is_file() => path.clone(),
-        Executable::Path(_) => return Err(DetectError::NotFound),
+    detect_for(exe, None)
+}
+
+/// Finds a usable git for the repositories under `folder` (the workspace the app opened) and
+/// returns a handle to it.
+///
+/// On Windows, with [`Executable::Auto`] and a `folder` inside WSL
+/// (`\\wsl.localhost\<distro>\...` or `\\wsl$\<distro>\...`), that is the git of the
+/// distribution, run through `wsl.exe`: it reads the repository on its own file system, with the
+/// user's Linux configuration and keys. Git for Windows is not needed then. A git found this way
+/// belongs to that distribution, so detect again when the folder moves to another one
+/// ([`Git::wsl_distro`] against [`wsl_location`] of the new folder).
+pub fn detect_for(exe: &Executable, folder: Option<&Path>) -> Result<Git, DetectError> {
+    let wsl = |path: &Path| wsl_location(path).filter(|_| cfg!(windows));
+    let (runner, path) = match exe {
+        Executable::Auto => match folder.and_then(wsl) {
+            Some(location) => (Runner::wsl(&location.distro, "git"), PathBuf::from("git")),
+            None => {
+                let path = find_in_path().ok_or(DetectError::NotFound)?;
+                (Runner::Native(path.clone()), path)
+            }
+        },
+        Executable::Path(path) => match wsl(path) {
+            Some(location) => (
+                Runner::wsl(&location.distro, &location.linux_path),
+                path.clone(),
+            ),
+            None if path.is_file() => (Runner::Native(path.clone()), path.clone()),
+            None => return Err(DetectError::NotFound),
+        },
     };
+    detect_with(runner, path)
+}
+
+/// Runs `git --version` with `runner` and checks it.
+pub(crate) fn detect_with(runner: Runner, path: PathBuf) -> Result<Git, DetectError> {
     guard_xcode_shim(&path)?;
 
-    let output = match run(&path, None, &["--version"]) {
+    let output = match run(&runner, None, &["--version"]) {
         Ok(output) => output,
         Err(GitError::Spawn(err)) if err.kind() == std::io::ErrorKind::NotFound => {
             return Err(DetectError::NotFound);
@@ -81,7 +115,7 @@ pub fn detect(exe: &Executable) -> Result<Git, DetectError> {
     if version < MIN_VERSION {
         return Err(DetectError::TooOld { path, version });
     }
-    Ok(Git::new(path, version))
+    Ok(Git::new(runner, path, version))
 }
 
 /// The executable file name of git on this platform.

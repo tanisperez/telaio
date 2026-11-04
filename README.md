@@ -172,6 +172,23 @@ if let Some(repo) = git.discover(&folder)? {
 }
 ```
 
+On Windows it also runs the git of a WSL distribution, through `wsl.exe`, so a project kept in
+WSL is read by its own Linux git (fast, with the Linux configuration and SSH keys) and Git for
+Windows is not needed. Pass the folder the app opened to `detect_for`:
+
+```rust
+use telaio_git::{Executable, detect_for};
+
+// `folder` is `\\wsl.localhost\Ubuntu-24.04\home\me\repo`: the git of Ubuntu-24.04.
+let git = detect_for(&Executable::Auto, Some(&folder))?;
+assert_eq!(git.wsl_distro(), Some("Ubuntu-24.04"));
+```
+
+A path inside WSL given as the executable (`\\wsl.localhost\Ubuntu-24.04\usr\bin\git`) works
+too. `Repo::root()` stays the Windows path, so the app reads files as usual. A git found for one
+distribution is tied to it: detect again when the folder moves to another one (compare
+`git.wsl_distro()` with `wsl_location(&folder)`).
+
 Nothing app specific is kept: the automatic stash of "stash and check out" takes the app's prefix
 (`auto_stash_message("postino-auto:", branch)`), and rules such as Postino's secret files stay in
 the app.

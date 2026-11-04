@@ -3,13 +3,14 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::run::{run, run_with};
+use crate::run::{Runner, run, run_with};
 use crate::status::{Change, Entry, Status, parse_status};
 use crate::{GitError, Version};
 
 /// A usable git executable, found by [`crate::detect`].
 #[derive(Debug, Clone)]
 pub struct Git {
+    runner: Runner,
     path: PathBuf,
     version: Version,
 }
@@ -32,13 +33,28 @@ pub struct Repo {
 }
 
 impl Git {
-    pub(crate) fn new(path: PathBuf, version: Version) -> Git {
-        Git { path, version }
+    pub(crate) fn new(runner: Runner, path: PathBuf, version: Version) -> Git {
+        Git {
+            runner,
+            path,
+            version,
+        }
     }
 
-    /// The executable in use.
+    /// The executable in use. For the git of WSL, the path the settings gave
+    /// (`\\wsl.localhost\Ubuntu\usr\bin\git`), or just `git` when it was found
+    /// automatically; see [`Git::wsl_distro`].
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// The WSL distribution whose git runs every command (through `wsl.exe`), `None` for a git
+    /// of this machine.
+    pub fn wsl_distro(&self) -> Option<&str> {
+        match &self.runner {
+            Runner::Native(_) => None,
+            Runner::Wsl { distro, .. } => Some(distro),
+        }
     }
 
     /// Its version.
@@ -50,7 +66,7 @@ impl Git {
     /// includes the inside of a `.git` folder and bare repositories).
     pub fn discover(&self, dir: &Path) -> Result<Option<Repo>, GitError> {
         let args = ["rev-parse", "--show-toplevel", "--show-prefix"];
-        let output = match run(&self.path, Some(dir), &args) {
+        let output = match run(&self.runner, Some(dir), &args) {
             Ok(output) => output,
             Err(GitError::Failed { stderr, .. })
                 if stderr.contains("not a git repository")
@@ -65,7 +81,15 @@ impl Git {
         let root = lines.next().filter(|l| !l.is_empty());
         let root = root.ok_or_else(|| GitError::Parse("rev-parse printed no root".to_string()))?;
         let prefix = lines.next().unwrap_or("").trim_end_matches('/').to_string();
-        let root = dunce::canonicalize(root)?;
+        let root = match &self.runner {
+            Runner::Native(_) => dunce::canonicalize(root)?,
+            // A Linux path: back to the Windows path the app reads files through, on the same
+            // share as `dir`.
+            Runner::Wsl { distro, .. } => {
+                let host = crate::wsl_location(dir).map(|location| location.host);
+                crate::wsl::to_windows(root, distro, host.as_deref().unwrap_or("wsl.localhost"))
+            }
+        };
         Ok(Some(Repo {
             git: self.clone(),
             root,
@@ -78,7 +102,7 @@ impl Git {
     /// configuration, unless it is there already. Only after the user asked for it.
     pub fn trust_directory(&self, directory: &str) -> Result<(), GitError> {
         let listed = run_with(
-            &self.path,
+            &self.runner,
             None,
             &["config", "--global", "--get-all", "safe.directory"],
             None,
@@ -92,7 +116,7 @@ impl Git {
             return Ok(());
         }
         run(
-            &self.path,
+            &self.runner,
             None,
             &["config", "--global", "--add", "safe.directory", directory],
         )?;
@@ -101,7 +125,7 @@ impl Git {
 
     /// Runs `git init` in `dir`.
     pub fn init(&self, dir: &Path) -> Result<(), GitError> {
-        run(&self.path, Some(dir), &["init", "--quiet"]).map(|_| ())
+        run(&self.runner, Some(dir), &["init", "--quiet"]).map(|_| ())
     }
 }
 
@@ -118,7 +142,7 @@ impl Repo {
     }
 
     pub(crate) fn run(&self, args: &[&str]) -> Result<Vec<u8>, GitError> {
-        run(&self.git.path, Some(&self.root), args)
+        run(&self.git.runner, Some(&self.root), args)
     }
 
     /// Runs git with `stdin` as its input and `ok_codes` accepted as success.
@@ -128,7 +152,7 @@ impl Repo {
         stdin: Option<&[u8]>,
         ok_codes: &[i32],
     ) -> Result<Vec<u8>, GitError> {
-        run_with(&self.git.path, Some(&self.root), args, stdin, ok_codes)
+        run_with(&self.git.runner, Some(&self.root), args, stdin, ok_codes)
     }
 
     /// Runs `git <command...> -- <paths>`.
