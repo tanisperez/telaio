@@ -19,7 +19,7 @@ analyzer), Nastro (a music player) and ted (a text editor), which share one look
 | [`telaio-ui`](#telaio-ui) | The design system (palette tokens, theme, metrics, Geist fonts) and the standard components |
 | [`telaio-app`](#telaio-app) | The application shell: logging, command line pieces, languages, numbers, paths, window bootstrap, About header |
 | [`telaio-update`](#telaio-update) | The in-app updater for macOS and Windows, and new version notices on Linux, from GitHub releases |
-| [`telaio-git`](#telaio-git) | A git client that drives the `git` executable: status, staging, diffs, commit, push, pull, fetch, branches, stash, log and the commit graph |
+| [`telaio-git`](#telaio-git) | A git client that drives the `git` executable: status, staging, diffs, commit, push, pull, fetch, branches, stash, log, the commit graph and shallow clones |
 | `telaio-gallery` | Not a dependency: every component in every state, under every sample palette ([Gallery](#gallery)) |
 
 All of them are released together, with one version and one tag. Each crate is independent: an
@@ -189,6 +189,9 @@ too. `Repo::root()` stays the Windows path, so the app reads files as usual. A g
 distribution is tied to it: detect again when the folder moves to another one (compare
 `git.wsl_distro()` with `wsl_location(&folder)`).
 
+To read the files of a repository without keeping it, `git.clone_shallow(url, branch, &dir)`
+clones only the last commit of one branch (`None`: the default branch) into a new folder.
+
 Nothing app specific is kept: the automatic stash of "stash and check out" takes the app's prefix
 (`auto_stash_message("postino-auto:", branch)`), and rules such as Postino's secret files stay in
 the app.
@@ -218,10 +221,10 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.14.0" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.14.0" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.14.0" }
-telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.14.0" }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.15.0" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.15.0" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.15.0" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.15.0" }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
