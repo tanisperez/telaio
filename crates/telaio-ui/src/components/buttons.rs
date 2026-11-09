@@ -215,6 +215,12 @@ impl SecondaryButton {
         }
     }
 
+    /// Sets a trailing mono key hint (for example `"F4"`), like [`PrimaryButton::key_hint`].
+    pub fn key_hint(mut self, hint: impl Into<SharedString>) -> Self {
+        self.spec.key_hint = Some(hint.into());
+        self
+    }
+
     /// Sets a leading icon.
     pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
         self.spec.icon = Some(icon.into());

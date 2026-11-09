@@ -94,6 +94,7 @@ impl Gallery {
                     .child(
                         SecondaryButton::new("btn-secondary-icon", "Open")
                             .icon(IconName::FolderOpen)
+                            .key_hint("F4")
                             .on_click(click(cx, "Open clicked")),
                     )
                     .child(
