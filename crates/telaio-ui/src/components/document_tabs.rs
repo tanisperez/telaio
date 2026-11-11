@@ -189,7 +189,8 @@ impl DocumentTab {
         self
     }
 
-    /// Sets the handler for the close button (or the dirty dot, once hovered).
+    /// Sets the handler for the close button (or the dirty dot, once hovered). A tab without one
+    /// cannot be closed: it has no close button, and a middle click does nothing.
     pub fn on_close(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
         self.on_close = Some(Rc::new(handler));
         self
@@ -447,6 +448,8 @@ impl RenderOnce for DocumentTabs {
                 });
             }
 
+            // Without a close handler the tab cannot be closed: no button, only the dirty dot.
+            let closable = close_handler.is_some();
             let mut end = div()
                 .id(("doc-tab-end", index))
                 .relative()
@@ -455,10 +458,12 @@ impl RenderOnce for DocumentTabs {
                 .flex()
                 .items_center()
                 .justify_center()
-                .cursor_pointer()
-                .rounded(px(4.0))
-                .hover(|style| style.bg(palette.hover))
-                .active(|style| style.bg(palette.pressed));
+                .when(closable, |end| {
+                    end.cursor_pointer()
+                        .rounded(px(4.0))
+                        .hover(|style| style.bg(palette.hover))
+                        .active(|style| style.bg(palette.pressed))
+                });
             if dirty {
                 end = end
                     .child(
@@ -466,20 +471,24 @@ impl RenderOnce for DocumentTabs {
                             .size(px(8.0))
                             .rounded_full()
                             .bg(palette.fg_subtle)
-                            .group_hover(group.clone(), |style| style.opacity(0.0)),
+                            .when(closable, |dot| {
+                                dot.group_hover(group.clone(), |style| style.opacity(0.0))
+                            }),
                     )
-                    .child(
-                        div()
-                            .absolute()
-                            .opacity(0.0)
-                            .group_hover(group.clone(), |style| style.opacity(1.0))
-                            .child(
-                                Icon::new(IconName::Close)
-                                    .small()
-                                    .text_color(palette.fg_subtle),
-                            ),
-                    );
-            } else {
+                    .when(closable, |end| {
+                        end.child(
+                            div()
+                                .absolute()
+                                .opacity(0.0)
+                                .group_hover(group.clone(), |style| style.opacity(1.0))
+                                .child(
+                                    Icon::new(IconName::Close)
+                                        .small()
+                                        .text_color(palette.fg_subtle),
+                                ),
+                        )
+                    });
+            } else if closable {
                 end = end.child(
                     Icon::new(IconName::Close)
                         .small()
@@ -489,7 +498,11 @@ impl RenderOnce for DocumentTabs {
             if let Some(handler) = close_handler {
                 end = end.on_click(move |_, window, cx| handler(window, cx));
             }
-            let tab = tab.child(end);
+            let tab = if closable || dirty {
+                tab.child(end)
+            } else {
+                tab
+            };
             match context_menu {
                 Some(builder) => tab
                     .context_menu(move |menu, window, cx| builder(menu, window, cx))

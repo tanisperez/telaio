@@ -92,6 +92,22 @@ impl Gallery {
                 &self.many_tabs,
                 |this| &mut this.many_tabs,
             )))
+            .child(caption(
+                "Without a close handler: no close button, only the dirty dot (Postino's welcome \
+                 tab, the only one while no workspace is open).",
+            ))
+            .child(
+                div().w(px(560.0)).child(
+                    DocumentTabs::new("gallery-doc-tabs-fixed")
+                        .item(
+                            DocumentTab::new("Welcome")
+                                .icon(gpui_kit::assets::IconName::House)
+                                .icon_color(palette.accent_text)
+                                .selected(true),
+                        )
+                        .item(DocumentTab::new("Draft").dirty(true)),
+                ),
+            )
     }
 
     /// One document tabs demo with its "toggle dirty" button. `state` is what `field` picks.
