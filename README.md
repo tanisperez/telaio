@@ -63,6 +63,8 @@ Postino as the reference implementation.
   table over a virtualized body, for lists of any length), `TimeSeriesChart` (several series over
   one x axis, with hover tooltip, range selection, axis titles and point labels), `Chip`, rich popup menu rows
   (`menu_choice_item`, `menu_described_item`, `menu_toggle_item`, `menu_shortcut_item`),
+  the standard context menu of document tabs (`tab_close_items` with `CloseScope` and
+  `close_targets`, `path_items`, `open_unsaved_dialog`),
   `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
   `radio_halo`, `labelled_checkbox`, `labelled_radio` and the keyboard shortcuts cheat sheet
   (`open_shortcuts_dialog`, with the app's own `ShortcutGroup` list).

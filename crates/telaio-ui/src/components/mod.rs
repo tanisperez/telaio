@@ -32,6 +32,7 @@ pub mod settings;
 pub mod shortcuts;
 pub mod status_badge;
 pub mod switch_halo;
+pub mod tab_menu;
 pub mod text_area;
 pub mod text_field;
 pub mod theme_card;
@@ -84,6 +85,10 @@ pub use shortcuts::{
 };
 pub use status_badge::StatusBadge;
 pub use switch_halo::switch_halo;
+pub use tab_menu::{
+    CloseScope, PathItems, TabMenuTarget, UnsavedChoice, close_item, close_targets, copy_path,
+    open_unsaved_dialog, path_items, reveal_path, tab_close_items,
+};
 pub use text_area::TextArea;
 pub use text_field::{input_line_height, text_field};
 pub use theme_card::ThemeCard;

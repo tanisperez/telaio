@@ -106,3 +106,73 @@ _version: 2
   es: "Sin resultados"
   gl: "Sen resultados"
   it: "Nessun risultato"
+"telaio.tabs.close_others":
+  en: "Close others"
+  es: "Cerrar las demás"
+  gl: "Pechar as demais"
+  it: "Chiudi le altre"
+"telaio.tabs.close_right":
+  en: "Close to the right"
+  es: "Cerrar las de la derecha"
+  gl: "Pechar as da dereita"
+  it: "Chiudi a destra"
+"telaio.tabs.close_left":
+  en: "Close to the left"
+  es: "Cerrar las de la izquierda"
+  gl: "Pechar as da esquerda"
+  it: "Chiudi a sinistra"
+"telaio.tabs.close_saved":
+  en: "Close saved"
+  es: "Cerrar las guardadas"
+  gl: "Pechar as gardadas"
+  it: "Chiudi le salvate"
+"telaio.tabs.close_all":
+  en: "Close all"
+  es: "Cerrar todas"
+  gl: "Pechar todas"
+  it: "Chiudi tutte"
+"telaio.path.copy":
+  en: "Copy path"
+  es: "Copiar ruta"
+  gl: "Copiar ruta"
+  it: "Copia percorso"
+"telaio.path.copy_relative":
+  en: "Copy relative path"
+  es: "Copiar ruta relativa"
+  gl: "Copiar ruta relativa"
+  it: "Copia percorso relativo"
+"telaio.path.reveal":
+  en: "Show in file manager"
+  es: "Mostrar en el gestor de archivos"
+  gl: "Mostrar no xestor de ficheiros"
+  it: "Mostra nel gestore file"
+"telaio.path.copied":
+  en: "Path copied"
+  es: "Ruta copiada"
+  gl: "Ruta copiada"
+  it: "Percorso copiato"
+"telaio.unsaved.title.one":
+  en: "1 tab has unsaved changes"
+  es: "1 pestaña tiene cambios sin guardar"
+  gl: "1 lapela ten cambios sen gardar"
+  it: "1 scheda ha modifiche non salvate"
+"telaio.unsaved.title.other":
+  en: "%{count} tabs have unsaved changes"
+  es: "%{count} pestañas tienen cambios sin guardar"
+  gl: "%{count} lapelas teñen cambios sen gardar"
+  it: "%{count} schede hanno modifiche non salvate"
+"telaio.unsaved.text":
+  en: "Closing them discards those changes unless they are saved first."
+  es: "Al cerrarlas se pierden esos cambios, salvo que se guarden antes."
+  gl: "Ao pechalas pérdense eses cambios, salvo que se garden antes."
+  it: "Chiudendole queste modifiche andranno perse, a meno di salvarle prima."
+"telaio.unsaved.save_all":
+  en: "Save all"
+  es: "Guardar todo"
+  gl: "Gardar todo"
+  it: "Salva tutto"
+"telaio.unsaved.discard":
+  en: "Don't save"
+  es: "No guardar"
+  gl: "Non gardar"
+  it: "Non salvare"

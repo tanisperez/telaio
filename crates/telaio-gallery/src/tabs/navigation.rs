@@ -5,9 +5,13 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
+use std::rc::Rc;
+
+use gpui_kit::component::menu::PopupMenu;
 use telaio_ui::components::{
-    CheckState, DocumentTab, DocumentTabs, IconButton, SecondaryButton, TreeRow, TriCheckbox,
-    UnderlineTabItem, UnderlineTabs,
+    CheckState, DocumentTab, DocumentTabs, IconButton, PathItems, SecondaryButton, TabMenuTarget,
+    TreeRow, TriCheckbox, UnderlineTabItem, UnderlineTabs, close_targets, open_unsaved_dialog,
+    path_items, tab_close_items,
 };
 use telaio_ui::metrics::RADIUS_LG;
 
@@ -99,6 +103,12 @@ impl Gallery {
         field: fn(&mut Self) -> &mut DemoTabs,
     ) -> impl IntoElement {
         let palette = cx.palette();
+        let dirty: Rc<[bool]> = state.tabs.iter().map(|tab| tab.dirty).collect();
+        let names: Rc<[SharedString]> = state
+            .tabs
+            .iter()
+            .map(|tab| SharedString::from(tab.name.clone()))
+            .collect();
         let bar = state
             .tabs
             .iter()
@@ -116,10 +126,13 @@ impl Gallery {
                         field(this).close(index);
                         cx.notify();
                     }))
-                    // A right-click menu, as an editor gives its tabs (Close, Copy path).
-                    .context_menu(|menu, _, _| {
-                        menu.menu_element(Box::new(gpui_kit::NoAction), |_, _| "Close")
-                            .menu_element(Box::new(gpui_kit::NoAction), |_, _| "Copy path")
+                    // The standard right-click menu: the Close items and the path items.
+                    .context_menu({
+                        let (dirty, names) = (dirty.clone(), names.clone());
+                        let weak = cx.weak_entity();
+                        move |menu, _, _| {
+                            demo_tab_menu(menu, index, &dirty, &names, weak.clone(), field)
+                        }
                     });
                 if let Some(detail) = tab.detail {
                     item = item.detail(detail);
@@ -310,4 +323,47 @@ impl Gallery {
             .child(folder)
             .children(rows)
     }
+}
+
+/// The menu of the demo tab at `index`: the Close items, which ask first when some of the tabs
+/// they close are dirty, and the path items of a made up file.
+fn demo_tab_menu(
+    menu: PopupMenu,
+    index: usize,
+    dirty: &Rc<[bool]>,
+    names: &Rc<[SharedString]>,
+    weak: WeakEntity<Gallery>,
+    field: fn(&mut Gallery) -> &mut DemoTabs,
+) -> PopupMenu {
+    let target = TabMenuTarget::new(index, dirty);
+    let (all_dirty, all_names) = (dirty.clone(), names.clone());
+    let menu = tab_close_items(menu, &target, None, move |scope, window, cx| {
+        let targets: Rc<[usize]> = close_targets(&all_dirty, index, scope).into();
+        let weak = weak.clone();
+        let close = move |cx: &mut App| {
+            let _ = weak.update(cx, |this, cx| {
+                // From the last one, so the indices left are still right.
+                for index in targets.iter().rev() {
+                    field(this).close(*index);
+                }
+                cx.notify();
+            });
+        };
+        let unsaved: Vec<SharedString> = close_targets(&all_dirty, index, scope)
+            .into_iter()
+            .filter(|index| all_dirty[*index])
+            .map(|index| all_names[index].clone())
+            .collect();
+        if unsaved.is_empty() {
+            close(cx);
+        } else {
+            open_unsaved_dialog(window, cx, unsaved, move |_, _, cx| close(cx));
+        }
+    });
+    let name = names.get(index).cloned().unwrap_or_default();
+    path_items(
+        menu.separator(),
+        PathItems::new(format!("/home/user/workspace/{name}"))
+            .relative(format!("workspace/{name}")),
+    )
 }
