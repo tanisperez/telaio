@@ -160,6 +160,155 @@ pub fn spawn_detached_script(script: &str) -> io::Result<()> {
     command.spawn().map(drop)
 }
 
+/// Linux: the name of the install script inside the release tarball, in its top folder
+/// (`postino-1.2.0-linux-x86_64/install.sh`). It is the same script the app's website serves.
+pub const LINUX_INSTALL_SCRIPT: &str = "install.sh";
+
+/// Linux: the prefix an app's install script installed `exe` into, or `None` when it did not.
+///
+/// The script is expected to put the binary in `<prefix>/bin/` and the list of the files it
+/// installed in `<prefix>/share/<app>/installed-files`, `<app>` being the lowercase
+/// [`app_name`](UpdaterConfig::app_name). Reads the filesystem, so call it once.
+#[must_use]
+pub fn linux_script_prefix(config: &UpdaterConfig, exe: &Path) -> Option<PathBuf> {
+    let prefix = exe
+        .parent()
+        .filter(|bin| bin.ends_with("bin"))
+        .and_then(Path::parent)?;
+    prefix
+        .join("share")
+        .join(config.app_name.to_lowercase())
+        .join("installed-files")
+        .is_file()
+        .then(|| prefix.to_path_buf())
+}
+
+/// Whether the user can write in `dir`: a file can be created there and removed again. A missing
+/// folder counts as not writable.
+#[must_use]
+pub fn is_writable_dir(dir: &Path) -> bool {
+    let probe = dir.join(format!(".telaio-update-probe-{}", std::process::id()));
+    match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe)
+    {
+        Ok(file) => {
+            drop(file);
+            let _ = std::fs::remove_file(&probe);
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+/// Linux: whether the update of `prefix` can be installed by the user, without root: its `bin`
+/// and `share` folders are writable.
+#[must_use]
+pub fn linux_prefix_is_writable(prefix: &Path) -> bool {
+    is_writable_dir(&prefix.join("bin")) && is_writable_dir(&prefix.join("share"))
+}
+
+/// Linux: installs the verified `tarball` into `prefix` with the install script the tarball ships
+/// ([`LINUX_INSTALL_SCRIPT`]), run as `bash install.sh --tarball <tarball> --prefix <prefix>`.
+/// The script lays the files out, rewrites its list of installed files and refreshes the desktop
+/// caches, exactly as when the user runs it. Linux lets a running executable be replaced, so the
+/// app keeps running until it restarts. Blocking.
+///
+/// # Errors
+///
+/// An IO failure, `tar` failing, a tarball without the script, or the script failing, with the
+/// last line it wrote to standard error.
+pub fn linux_run_install_script(
+    config: &UpdaterConfig,
+    tarball: &Path,
+    prefix: &Path,
+) -> Result<(), UpdateError> {
+    let parent = tarball
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "the tarball has no parent"))?;
+    let staging = parent.join(config.staging_dir());
+    match std::fs::remove_dir_all(&staging) {
+        Ok(()) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    std::fs::create_dir_all(&staging)?;
+    let result = stage_and_run(tarball, prefix, &staging);
+    let _ = std::fs::remove_dir_all(&staging);
+    result
+}
+
+/// [`linux_run_install_script`] once `staging` exists: unpacks the script and runs it.
+fn stage_and_run(tarball: &Path, prefix: &Path, staging: &Path) -> Result<(), UpdateError> {
+    let output = Command::new("tar")
+        .arg("-xzf")
+        .arg(tarball)
+        .arg("-C")
+        .arg(staging)
+        .arg("--wildcards")
+        .arg(format!("*/{LINUX_INSTALL_SCRIPT}"))
+        .stdin(Stdio::null())
+        .output()?;
+    if !output.status.success() {
+        return Err(failure("tar", &output.stderr));
+    }
+    let script = std::fs::read_dir(staging)?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join(LINUX_INSTALL_SCRIPT))
+        .find(|script| script.is_file())
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("the tarball does not contain {LINUX_INSTALL_SCRIPT}"),
+            )
+        })?;
+    log::info!("installing the update into {}", prefix.display());
+    let output = Command::new("bash")
+        .arg(&script)
+        .arg("--tarball")
+        .arg(tarball)
+        .arg("--prefix")
+        .arg(prefix)
+        .stdin(Stdio::null())
+        .output()?;
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        log::info!("{line}");
+    }
+    if !output.status.success() {
+        return Err(failure(LINUX_INSTALL_SCRIPT, &output.stderr));
+    }
+    Ok(())
+}
+
+/// An error for a command that failed, with the last line of its standard error.
+fn failure(command: &str, stderr: &[u8]) -> UpdateError {
+    let stderr = String::from_utf8_lossy(stderr);
+    let detail = stderr
+        .lines()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("no output");
+    io::Error::other(format!("{command} failed: {}", detail.trim())).into()
+}
+
+/// Linux: the path of the executable to start after an update, `exe` as the running process sees
+/// it. Once the install replaced the file, the kernel reports the old one as
+/// `<path> (deleted)`; the suffix is dropped so the new file starts.
+#[must_use]
+pub fn linux_restart_path(exe: &Path) -> PathBuf {
+    let text = exe.to_string_lossy();
+    PathBuf::from(text.strip_suffix(" (deleted)").unwrap_or(&text))
+}
+
+/// Linux: the script that starts `exe` again once the app has quit: waits for `pid` to exit, then
+/// runs it. The new files are already in place.
+#[must_use]
+pub fn linux_restart_script(pid: u32, exe: &Path) -> String {
+    let exe = quote(&exe.to_string_lossy());
+    format!("while kill -0 {pid} 2>/dev/null; do sleep 0.2; done\nexec {exe}\n")
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -457,5 +606,143 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
         panic!("the script did not run");
+    }
+
+    /// A tarball with `install.sh` in its top folder, the script being `body`.
+    fn fake_tarball(dir: &Path, body: &str) -> PathBuf {
+        let top = dir.join("src/postino-0.2.0-linux-x86_64");
+        fs::create_dir_all(top.join("bin")).unwrap();
+        fs::write(top.join("bin/postino"), "new binary").unwrap();
+        fs::write(top.join(LINUX_INSTALL_SCRIPT), body).unwrap();
+        let downloads = dir.join("downloads");
+        fs::create_dir_all(&downloads).unwrap();
+        let tarball = downloads.join("postino-0.2.0-linux-x86_64.tar.gz");
+        let status = Command::new("tar")
+            .arg("-czf")
+            .arg(&tarball)
+            .arg("-C")
+            .arg(dir.join("src"))
+            .arg("postino-0.2.0-linux-x86_64")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        tarball
+    }
+
+    #[test]
+    fn a_script_install_is_told_by_its_list_of_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let prefix = dir.path().join("local");
+        let exe = prefix.join("bin/postino");
+        fs::create_dir_all(prefix.join("bin")).unwrap();
+        fs::write(&exe, "binary").unwrap();
+        assert_eq!(linux_script_prefix(&CONFIG, &exe), None);
+        fs::create_dir_all(prefix.join("share/postino")).unwrap();
+        fs::write(
+            prefix.join("share/postino/installed-files"),
+            "# Postino 0.1.0\n",
+        )
+        .unwrap();
+        assert_eq!(linux_script_prefix(&CONFIG, &exe), Some(prefix.clone()));
+        // The binary must be in the prefix's bin folder.
+        assert_eq!(linux_script_prefix(&CONFIG, &prefix.join("postino")), None);
+        assert!(linux_prefix_is_writable(&prefix));
+        assert!(!linux_prefix_is_writable(&dir.path().join("missing")));
+    }
+
+    #[test]
+    fn the_install_script_of_the_tarball_runs_over_the_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        let prefix = dir.path().join("my prefix");
+        fs::create_dir_all(&prefix).unwrap();
+        let tarball = fake_tarball(
+            dir.path(),
+            "#!/usr/bin/env bash\nprintf '%s\\n' \"$@\" > \"$4/args\"\necho installed\n",
+        );
+
+        linux_run_install_script(&CONFIG, &tarball, &prefix).unwrap();
+
+        let args = fs::read_to_string(prefix.join("args")).unwrap();
+        let expected = format!(
+            "--tarball\n{}\n--prefix\n{}\n",
+            tarball.display(),
+            prefix.display()
+        );
+        assert_eq!(args, expected);
+        // The staging folder is gone, the tarball stays for a retry.
+        assert!(
+            !tarball
+                .parent()
+                .unwrap()
+                .join(CONFIG.staging_dir())
+                .exists()
+        );
+        assert!(tarball.is_file());
+    }
+
+    #[test]
+    fn a_failing_install_script_reports_its_last_error_line() {
+        let dir = tempfile::tempdir().unwrap();
+        let tarball = fake_tarball(
+            dir.path(),
+            "echo 'first' >&2\necho 'error: cannot write to /x' >&2\nexit 1\n",
+        );
+        let error = linux_run_install_script(&CONFIG, &tarball, dir.path())
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("install.sh failed: error: cannot write to /x"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn a_tarball_without_the_script_is_an_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src/postino-0.2.0-linux-x86_64");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("README.md"), "readme").unwrap();
+        let tarball = dir.path().join("old.tar.gz");
+        let status = Command::new("tar")
+            .arg("-czf")
+            .arg(&tarball)
+            .arg("-C")
+            .arg(dir.path().join("src"))
+            .arg("postino-0.2.0-linux-x86_64")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        assert!(linux_run_install_script(&CONFIG, &tarball, dir.path()).is_err());
+    }
+
+    #[test]
+    fn the_restart_starts_the_new_file() {
+        assert_eq!(
+            linux_restart_path(Path::new("/home/me/.local/bin/postino (deleted)")),
+            PathBuf::from("/home/me/.local/bin/postino")
+        );
+        assert_eq!(
+            linux_restart_path(Path::new("/home/me/.local/bin/postino")),
+            PathBuf::from("/home/me/.local/bin/postino")
+        );
+
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("started");
+        let exe = dir.path().join("new postino");
+        fs::write(
+            &exe,
+            format!(
+                "#!/bin/sh\necho yes > {}\n",
+                quote(&marker.to_string_lossy())
+            ),
+        )
+        .unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&exe, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        run_script(&linux_restart_script(exited_pid(), &exe));
+        assert_eq!(fs::read_to_string(marker).unwrap().trim(), "yes");
     }
 }

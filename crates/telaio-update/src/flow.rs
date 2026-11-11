@@ -74,8 +74,9 @@ pub fn should_check_at_startup(enabled: bool, setting: bool) -> bool {
 /// portable one: the installer leaves its uninstaller next to the exe, so a copy without it comes
 /// from the zip and must not run the installer (that would add a second, separate copy). With an
 /// unknown executable path the copy counts as portable, the safe side: the user is sent to the
-/// release page instead of getting a second install. On Linux, always: the app never replaces
-/// itself there (a package managed copy announces nothing, see [`is_package_managed`]).
+/// release page instead of getting a second install. On Linux, always: use [`announces_only`],
+/// which also knows the copies the app's install script installed, the ones that do update
+/// themselves (a package managed copy announces nothing, see [`is_package_managed`]).
 #[must_use]
 pub fn is_portable(platform: Option<Platform>, exe: Option<&Path>) -> bool {
     match platform {
@@ -83,6 +84,31 @@ pub fn is_portable(platform: Option<Platform>, exe: Option<&Path>) -> bool {
         Some(Platform::LinuxX86_64) => true,
         _ => false,
     }
+}
+
+/// Whether this copy only announces new versions instead of downloading and installing them.
+/// The same as [`is_portable`], except on Linux, where a copy the app's install script installed
+/// (see [`install::linux_script_prefix`]) in a prefix the user can write downloads the release
+/// tarball and installs it with the script. Any other Linux copy announces only: the tarball
+/// unpacked by hand, an AppImage, or a script install under a prefix that needs root, such as
+/// `/usr/local`. Reads the filesystem, so call it once.
+#[must_use]
+pub fn announces_only(
+    config: &UpdaterConfig,
+    platform: Option<Platform>,
+    exe: Option<&Path>,
+) -> bool {
+    match (platform, exe) {
+        (Some(Platform::LinuxX86_64), Some(exe)) => !linux_self_updates(config, exe),
+        _ => is_portable(platform, exe),
+    }
+}
+
+/// Whether the Linux copy at `exe` installs its own updates: installed by the app's install
+/// script into a prefix the user can write.
+fn linux_self_updates(config: &UpdaterConfig, exe: &Path) -> bool {
+    install::linux_script_prefix(config, exe)
+        .is_some_and(|prefix| install::linux_prefix_is_writable(&prefix))
 }
 
 /// A newer version the user can act on: downloaded and verified, waiting for a restart into it,
@@ -93,8 +119,9 @@ pub struct ReadyUpdate {
     pub version: String,
     /// The release page with the notes (and, for a portable copy, the zip to download).
     pub notes_url: String,
-    /// The verified installer (Windows) or archive (macOS). `None` for a portable copy, which
-    /// downloads nothing: the user takes the new zip from the release page.
+    /// The verified installer (Windows), archive (macOS) or tarball (Linux). `None` for a copy
+    /// that only announces (see [`announces_only`]), which downloads nothing: the user takes the
+    /// new version from the release page.
     pub path: Option<PathBuf>,
 }
 
@@ -258,6 +285,10 @@ pub enum InstallMethod {
     WindowsInstaller,
     /// Unpack next to the bundle, swap it after quitting, reopen.
     MacosSwap,
+    /// Run the install script of the release tarball over the prefix of the copy the same script
+    /// installed, then restart. Copies installed otherwise download nothing (see
+    /// [`announces_only`]) and fall back to the release page.
+    LinuxScript,
     /// Nothing to install in place: the user takes the new version from the release page.
     ReleasePage,
 }
@@ -268,7 +299,7 @@ pub fn install_method(platform: Platform) -> InstallMethod {
     match platform {
         Platform::WindowsX86_64 => InstallMethod::WindowsInstaller,
         Platform::MacosAarch64 => InstallMethod::MacosSwap,
-        Platform::LinuxX86_64 => InstallMethod::ReleasePage,
+        Platform::LinuxX86_64 => InstallMethod::LinuxScript,
     }
 }
 
@@ -284,9 +315,10 @@ pub enum InstallOutcome {
     Failed(String),
 }
 
-/// Starts the installation of `ready`. Blocking (it unpacks the archive on macOS), so run it on
-/// the background executor. `exe` is the running executable. An update with nothing downloaded
-/// (a portable copy) falls back to the release page.
+/// Starts the installation of `ready`. Blocking (it unpacks the archive on macOS and runs the
+/// install script on Linux), so run it on the background executor. `exe` is the running
+/// executable. An update with nothing downloaded (a portable copy) falls back to the release
+/// page.
 #[must_use]
 pub fn start_install(
     config: &UpdaterConfig,
@@ -317,6 +349,20 @@ pub fn start_install(
             };
             let script =
                 install::macos_swap_script(config, std::process::id(), &bundle, &staged, "open");
+            match install::spawn_detached_script(&script) {
+                Ok(()) => InstallOutcome::Quit,
+                Err(error) => InstallOutcome::Failed(error.to_string()),
+            }
+        }
+        InstallMethod::LinuxScript => {
+            let Some(prefix) = install::linux_script_prefix(config, exe) else {
+                return InstallOutcome::Fallback;
+            };
+            if let Err(error) = install::linux_run_install_script(config, path, &prefix) {
+                return InstallOutcome::Failed(error.to_string());
+            }
+            let restart = install::linux_restart_path(exe);
+            let script = install::linux_restart_script(std::process::id(), &restart);
             match install::spawn_detached_script(&script) {
                 Ok(()) => InstallOutcome::Quit,
                 Err(error) => InstallOutcome::Failed(error.to_string()),
@@ -452,11 +498,73 @@ mod tests {
         assert!(!is_package_managed(None, Some(exe), true));
     }
 
+    /// A prefix laid out as an install script leaves it: `bin/postino` and the list of
+    /// installed files. Returns the binary.
+    fn script_install(prefix: &Path) -> std::path::PathBuf {
+        let exe = prefix.join("bin/postino");
+        std::fs::create_dir_all(prefix.join("bin")).unwrap();
+        std::fs::create_dir_all(prefix.join("share/postino")).unwrap();
+        std::fs::write(&exe, "binary").unwrap();
+        std::fs::write(
+            prefix.join("share/postino/installed-files"),
+            "# Postino 0.1.0\n",
+        )
+        .unwrap();
+        exe
+    }
+
     #[test]
-    fn a_linux_update_falls_back_to_the_release_page() {
+    fn a_linux_script_install_in_a_writable_prefix_updates_itself() {
+        let dir = tempfile::tempdir().unwrap();
+        let exe = script_install(dir.path());
+        let linux = Some(Platform::LinuxX86_64);
+        assert!(!announces_only(&CONFIG, linux, Some(&exe)));
+    }
+
+    #[test]
+    fn other_linux_copies_only_announce() {
+        let linux = Some(Platform::LinuxX86_64);
+        // Unpacked by hand: no list of installed files.
+        let dir = tempfile::tempdir().unwrap();
+        let exe = dir.path().join("bin/postino");
+        std::fs::create_dir_all(dir.path().join("bin")).unwrap();
+        std::fs::write(&exe, "binary").unwrap();
+        assert!(announces_only(&CONFIG, linux, Some(&exe)));
+        // Not in a bin folder (an AppImage mount, a folder of its own).
+        assert!(announces_only(
+            &CONFIG,
+            linux,
+            Some(Path::new("/opt/Postino/postino"))
+        ));
+        // A script install whose prefix needs root.
+        let system = Path::new("/usr/local/bin/postino");
+        if install::linux_script_prefix(&CONFIG, system).is_none() {
+            assert!(announces_only(&CONFIG, linux, Some(system)));
+        }
+        assert!(announces_only(&CONFIG, linux, None));
+    }
+
+    #[test]
+    fn announces_only_is_is_portable_elsewhere() {
+        let dir = tempfile::tempdir().unwrap();
+        let exe = dir.path().join("postino.exe");
+        std::fs::write(&exe, "exe").unwrap();
+        let windows = Some(Platform::WindowsX86_64);
+        assert!(announces_only(&CONFIG, windows, Some(&exe)));
+        std::fs::write(dir.path().join("unins000.exe"), "uninstaller").unwrap();
+        assert!(!announces_only(&CONFIG, windows, Some(&exe)));
+        assert!(!announces_only(
+            &CONFIG,
+            Some(Platform::MacosAarch64),
+            Some(&exe)
+        ));
+    }
+
+    #[test]
+    fn a_linux_update_outside_a_script_install_falls_back_to_the_release_page() {
         assert_eq!(
             install_method(Platform::LinuxX86_64),
-            InstallMethod::ReleasePage
+            InstallMethod::LinuxScript
         );
         let outcome = start_install(
             &CONFIG,

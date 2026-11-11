@@ -34,8 +34,10 @@ pub enum Platform {
     MacosAarch64,
     /// Windows on x86_64.
     WindowsX86_64,
-    /// Linux on x86_64. It only announces new versions, it never downloads or installs one (see
-    /// [`flow::is_portable`] and [`flow::is_package_managed`]).
+    /// Linux on x86_64. A copy installed by the app's install script in a prefix the user can
+    /// write installs its updates with that script; any other copy only announces new versions,
+    /// and a package managed one nothing at all (see [`flow::announces_only`] and
+    /// [`flow::is_package_managed`]).
     LinuxX86_64,
 }
 
