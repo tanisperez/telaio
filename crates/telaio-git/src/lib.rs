@@ -26,6 +26,7 @@ mod stash;
 mod status;
 mod sync;
 mod wsl;
+mod wsl_session;
 
 pub use branch::{BranchInfo, RefKind};
 pub use detect::{Executable, MIN_VERSION, Version, detect, detect_for};

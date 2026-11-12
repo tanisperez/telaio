@@ -6,6 +6,18 @@ use std::time::Instant;
 
 use crate::GitError;
 use crate::wsl;
+use crate::wsl_session::{self, SessionError};
+
+/// What a finished command printed and how it exited.
+#[derive(Debug)]
+pub(crate) struct Output {
+    /// The exit code, `None` when the process was killed by a signal.
+    pub(crate) code: Option<i32>,
+    /// The standard output.
+    pub(crate) stdout: Vec<u8>,
+    /// The standard error.
+    pub(crate) stderr: Vec<u8>,
+}
 
 /// How a git command is started.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,25 +111,61 @@ pub(crate) fn run_with(
     stdin: Option<&[u8]>,
     ok_codes: &[i32],
 ) -> Result<Vec<u8>, GitError> {
-    let mut cmd = git.command(cwd);
-    cmd.args([
+    let mut full_args = vec![
         "-c",
         "core.quotepath=false",
         "--no-optional-locks",
         "--literal-pathspecs",
-    ])
-    .args(args)
-    .env("GIT_TERMINAL_PROMPT", "0")
-    .env("LC_MESSAGES", "C")
-    .env_remove("LC_ALL")
-    .env_remove("LANGUAGE")
-    .stdin(if stdin.is_some() {
-        Stdio::piped()
+    ];
+    full_args.extend_from_slice(args);
+    let command = format!("git {}", args.join(" "));
+    let started = Instant::now();
+    // Under WSL, through a long-lived `wsl.exe` (see `wsl_session`), unless the request never
+    // reached it: then the command did not run, and runs with a one-off `wsl.exe` instead.
+    let output = match wsl_session::run_for(git, cwd, &full_args, stdin) {
+        Some(Ok(output)) => output,
+        Some(Err(SessionError::Lost(error))) => return Err(GitError::Spawn(error)),
+        Some(Err(SessionError::NotSent(error))) => {
+            log::debug!("git: WSL session unavailable ({error}), running {command} on its own");
+            spawn(git, cwd, &full_args, stdin)?
+        }
+        None => spawn(git, cwd, &full_args, stdin)?,
+    };
+    log::debug!("{command} ({} ms)", started.elapsed().as_millis());
+
+    let accepted = output.code.is_some_and(|c| ok_codes.contains(&c));
+    if output.code == Some(0) || accepted {
+        Ok(output.stdout)
     } else {
-        Stdio::null()
-    })
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped());
+        Err(GitError::Failed {
+            command,
+            code: output.code,
+            stderr: git.message(&output.stderr).trim().to_string(),
+            stdout: git.message(&output.stdout).trim().to_string(),
+        })
+    }
+}
+
+/// Starts one git process for `args` (the shared options included) and waits for it.
+fn spawn(
+    git: &Runner,
+    cwd: Option<&Path>,
+    args: &[&str],
+    stdin: Option<&[u8]>,
+) -> Result<Output, GitError> {
+    let mut cmd = git.command(cwd);
+    cmd.args(args)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("LC_MESSAGES", "C")
+        .env_remove("LC_ALL")
+        .env_remove("LANGUAGE")
+        .stdin(if stdin.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -125,8 +173,6 @@ pub(crate) fn run_with(
         cmd.creation_flags(0x0800_0000);
     }
 
-    let command = format!("git {}", args.join(" "));
-    let started = Instant::now();
     let output = match stdin {
         None => cmd.output()?,
         Some(payload) => {
@@ -146,17 +192,9 @@ pub(crate) fn run_with(
             })?
         }
     };
-    log::debug!("{command} ({} ms)", started.elapsed().as_millis());
-
-    let accepted = output.status.code().is_some_and(|c| ok_codes.contains(&c));
-    if output.status.success() || accepted {
-        Ok(output.stdout)
-    } else {
-        Err(GitError::Failed {
-            command,
-            code: output.status.code(),
-            stderr: git.message(&output.stderr).trim().to_string(),
-            stdout: git.message(&output.stdout).trim().to_string(),
-        })
-    }
+    Ok(Output {
+        code: output.status.code(),
+        stdout: output.stdout,
+        stderr: output.stderr,
+    })
 }

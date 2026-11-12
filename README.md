@@ -197,6 +197,11 @@ too. `Repo::root()` stays the Windows path, so the app reads files as usual. A g
 distribution is tied to it: detect again when the folder moves to another one (compare
 `git.wsl_distro()` with `wsl_location(&folder)`).
 
+Starting `wsl.exe` costs far more than a git command, so the commands do not start one each: they
+go to a long-lived `wsl.exe` running a small shell loop in the distribution, one per command
+running at the same time, and only the first command pays the start. Setting
+`TELAIO_GIT_WSL_SESSION=0` goes back to one `wsl.exe` per command, to compare or as a fallback.
+
 To read the files of a repository without keeping it, `git.clone_shallow(url, branch, &dir)`
 clones only the last commit of one branch (`None`: the default branch) into a new folder.
 
