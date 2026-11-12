@@ -23,6 +23,7 @@
 //! change, so a zero sized canvas checks at paint time whether what was drawn still matches and
 //! asks for one more frame only when it does not (no timers, and an idle window stays idle).
 
+use std::cell::Cell;
 use std::rc::Rc;
 
 use gpui_kit::component::menu::{ContextMenuExt as _, DropdownMenu as _, PopupMenu, PopupMenuItem};
@@ -284,6 +285,7 @@ pub struct DocumentTabs {
     items: Vec<DocumentTab>,
     suffix: Option<AnyElement>,
     on_reorder: Option<ReorderHandler>,
+    selected_bounds: Option<Rc<Cell<Option<Bounds<Pixels>>>>>,
 }
 
 impl DocumentTabs {
@@ -294,6 +296,7 @@ impl DocumentTabs {
             items: Vec::new(),
             suffix: None,
             on_reorder: None,
+            selected_bounds: None,
         }
     }
 
@@ -310,6 +313,14 @@ impl DocumentTabs {
         handler: impl Fn(usize, usize, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_reorder = Some(Rc::new(handler));
+        self
+    }
+
+    /// Keeps the window bounds of the selected tab in `cell`, as the frame lays it out (`None`
+    /// with no selected tab): where to show what the keyboard opens on it, such as its context
+    /// menu.
+    pub fn selected_bounds(mut self, cell: Rc<Cell<Option<Bounds<Pixels>>>>) -> Self {
+        self.selected_bounds = Some(cell);
         self
     }
 
@@ -346,6 +357,12 @@ impl RenderOnce for DocumentTabs {
             state.flags = StripFlags::measure(&state.handle, state.flags.show_controls);
             (state.handle.clone(), state.flags)
         });
+        let selected_bounds = self.selected_bounds;
+        if selected_index.is_none()
+            && let Some(cell) = &selected_bounds
+        {
+            cell.set(None);
+        }
 
         // The tab list for the menu: label, whether it is the active one, and its click handler.
         let entries: Vec<_> = self
@@ -398,6 +415,15 @@ impl RenderOnce for DocumentTabs {
                         BoxShadow::new(px(0.0), px(2.0), palette.accent).inset(),
                     ])
                 });
+            // Kept while the frame is laid out, so the bounds are this frame's, after a resize
+            // or a panel that opened or closed.
+            if selected && let Some(cell) = selected_bounds.clone() {
+                tab = tab.relative().child(
+                    canvas(move |bounds, _, _| cell.set(Some(bounds)), |_, _, _, _| {})
+                        .absolute()
+                        .inset_0(),
+                );
+            }
             if let Some(icon) = item.icon {
                 let color = item.icon_color.unwrap_or(palette.fg_subtle);
                 tab = tab.child(Icon::new(icon).small().text_color(color));
