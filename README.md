@@ -49,8 +49,9 @@ Postino as the reference implementation.
   constants (`fonts::GEIST_REGULAR`, ..., and `fonts::ALL`), for an app that embeds them elsewhere
   (a PDF export).
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
-  `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`, `modal_body`,
-  `modal_footer`, `open_confirm_dialog`), `SegmentedControl`, `select_trigger`, `StatusBadge`,
+  `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`,
+  `modal_header_with_icon`, `modal_body`, `modal_footer`, `modal_hints`, `open_confirm_dialog`),
+  `KeyCap`, `SegmentedControl`, `select_trigger`, `StatusBadge`,
   `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `TextArea` (multi line plain text),
   `CodeEditor` (gpui-component's `Editor` in the app's box), `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `ProgressBar`, `NumberStepper`, `SearchableSelect` (a select with an
