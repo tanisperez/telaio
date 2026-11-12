@@ -232,6 +232,48 @@ fn push_target_needs_a_choice_with_several_remotes() {
 }
 
 #[test]
+fn push_target_is_none_on_a_detached_head() {
+    let Some(git) = git() else { return };
+    let (dir, repo, _origin) = with_origin(&git);
+    raw(&git, dir.path(), &["checkout", "--quiet", "--detach"]);
+    assert_eq!(repo.push_target().expect("t"), None);
+}
+
+#[test]
+fn push_target_follows_the_upstream_of_a_branch_with_regex_characters() {
+    let Some(git) = git() else { return };
+    let (dir, repo, _origin) = with_origin(&git);
+    raw(
+        &git,
+        dir.path(),
+        &["checkout", "--quiet", "-b", "feat/a+b.c"],
+    );
+    let target = repo.push_target().expect("t").expect("some");
+    assert_eq!(target.branch, "feat/a+b.c");
+    assert!(target.set_upstream);
+    repo.push(&target).expect("push");
+
+    // A branch whose name the `.` of the regex would also match must not be read instead.
+    raw(
+        &git,
+        dir.path(),
+        &["config", "branch.feat/a+bxc.remote", "nope"],
+    );
+    let target = repo.push_target().expect("t").expect("some");
+    assert_eq!(
+        target,
+        PushTarget {
+            remote: "origin".into(),
+            branch: "feat/a+b.c".into(),
+            set_upstream: false
+        }
+    );
+    commit_file(&repo, &dir, "b.txt", "b\n", "second");
+    let pending = repo.unpushed_commits(&target).expect("log");
+    assert_eq!(pending.len(), 1);
+}
+
+#[test]
 fn fetch_updates_behind_count() {
     let Some(git) = git() else { return };
     let (_dir, repo, origin) = with_origin(&git);
