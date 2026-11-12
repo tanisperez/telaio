@@ -133,6 +133,11 @@ impl Gallery {
                     .full_width()
                     .on_click(click(cx, "Full width clicked")),
             )
+            .child(
+                SecondaryButton::new("btn-secondary-full", "Full width secondary")
+                    .full_width()
+                    .on_click(click(cx, "Full width secondary clicked")),
+            )
     }
 
     /// Icon buttons: small (default), large, a custom box, with a tooltip, disabled.

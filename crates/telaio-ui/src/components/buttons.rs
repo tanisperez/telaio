@@ -233,6 +233,12 @@ impl SecondaryButton {
         self
     }
 
+    /// Makes the button fill the width of its parent.
+    pub fn full_width(mut self) -> Self {
+        self.spec.full_width = true;
+        self
+    }
+
     /// Disables the button (45% opacity, no click).
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.spec.disabled = disabled;
