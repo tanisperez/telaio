@@ -33,10 +33,16 @@ pub const RADIUS_SM: f32 = 6.0;
 pub const RADIUS_MD: f32 = 8.0;
 /// Radius for menus, popovers and dashboard cards.
 pub const RADIUS_LG: f32 = 10.0;
-/// Radius for modals.
-pub const RADIUS_MODAL: f32 = 14.0;
-/// Height of a modal's header strip and of its footer strip (the dialog buttons).
-pub const MODAL_HEADER_HEIGHT: f32 = 52.0;
+/// Radius for modals, the same as menus and popovers ([`RADIUS_LG`]).
+pub const RADIUS_MODAL: f32 = RADIUS_LG;
+/// Height of a modal's header strip (icon, title and close button).
+pub const MODAL_HEADER_HEIGHT: f32 = 46.0;
+/// Height of a modal's footer strip (the dialog buttons).
+pub const MODAL_FOOTER_HEIGHT: f32 = 50.0;
+/// Height of a modal's keyboard hints bar.
+pub const MODAL_HINTS_HEIGHT: f32 = 34.0;
+/// Horizontal padding of a modal's header, body and footer.
+pub const MODAL_PADDING: f32 = 18.0;
 /// Width of a small modal (a confirmation, a name prompt): gpui-component's default dialog width.
 pub const MODAL_WIDTH_DEFAULT: f32 = 448.0;
 
@@ -69,9 +75,13 @@ pub const KEY_VALUE_CELL_GAP: f32 = 4.0;
 /// Width of the keyboard shortcuts cheat sheet.
 pub const SHORTCUTS_WIDTH: f32 = 520.0;
 /// Height of the cheat sheet on a tall enough window.
-pub const SHORTCUTS_HEIGHT: f32 = 620.0;
-/// Height, and least width, of a key chip in the cheat sheet.
-pub const SHORTCUTS_KEY_SIZE: f32 = 22.0;
+pub const SHORTCUTS_HEIGHT: f32 = 600.0;
+/// Height, and least width, of a key cap in the cheat sheet.
+pub const SHORTCUTS_KEY_SIZE: f32 = 20.0;
+/// Height of a row of the cheat sheet.
+pub const SHORTCUTS_ROW_HEIGHT: f32 = 36.0;
+/// Height, and least width, of a key cap in a modal's hints bar.
+pub const HINT_KEY_SIZE: f32 = 18.0;
 
 /// Height of a `DataTable` row, header included.
 pub const DATA_TABLE_ROW_HEIGHT: f32 = 34.0;

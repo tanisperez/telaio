@@ -81,6 +81,36 @@ _version: 2
   es: "Atajos de teclado (%{keys})"
   gl: "Atallos de teclado (%{keys})"
   it: "Scorciatoie da tastiera (%{keys})"
+"telaio.shortcuts.filter":
+  en: "Filter shortcuts"
+  es: "Filtrar atajos"
+  gl: "Filtrar atallos"
+  it: "Filtra le scorciatoie"
+"telaio.shortcuts.no_match":
+  en: "No shortcut matches the filter."
+  es: "Ningún atajo coincide con el filtro."
+  gl: "Ningún atallo coincide co filtro."
+  it: "Nessuna scorciatoia corrisponde al filtro."
+"telaio.hints.scroll":
+  en: "scroll"
+  es: "desplazar"
+  gl: "desprazar"
+  it: "scorri"
+"telaio.hints.navigate":
+  en: "navigate"
+  es: "navegar"
+  gl: "navegar"
+  it: "naviga"
+"telaio.hints.open":
+  en: "open"
+  es: "abrir"
+  gl: "abrir"
+  it: "apri"
+"telaio.hints.close":
+  en: "close"
+  es: "cerrar"
+  gl: "pechar"
+  it: "chiudi"
 "telaio.tabs.previous":
   en: "Scroll tabs left"
   es: "Desplazar las pestañas a la izquierda"

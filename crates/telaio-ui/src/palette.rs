@@ -61,11 +61,18 @@ pub struct Tokens {
     pub info: &'static str,
     /// Info badge background.
     pub info_subtle: &'static str,
-    /// The dimmed backdrop behind a modal (`rgba(10,11,16,.45)` in the default tokens).
+    /// The dimmed backdrop behind a modal (`rgba(8,9,12,.7)` in the default dark tokens).
     pub scrim: &'static str,
-    /// The two elevation shadow layers, in CSS `box-shadow` order. Horizontal offset is always 0
-    /// in this design, so it is not stored.
+    /// The two elevation shadow layers of menus and popovers, in CSS `box-shadow` order.
+    /// Horizontal offset is always 0 in this design, so it is not stored.
     pub shadow: [ShadowLayer; 2],
+    /// A modal card's fill, a step below `overlay`: modals are flat panels with a strong border,
+    /// not floating menus.
+    pub modal: &'static str,
+    /// A modal card's shadow, one short layer.
+    pub modal_shadow: ShadowLayer,
+    /// The fill of a key cap (a shortcut's key in the cheat sheet and the hints bar).
+    pub keycap: &'static str,
 }
 
 /// One layer of the elevation shadow, as CSS values.
@@ -122,6 +129,14 @@ impl Tokens {
                 color: (20, 22, 40, 0.06),
             },
         ],
+        modal: "#ffffff",
+        modal_shadow: ShadowLayer {
+            offset_y: 8.0,
+            blur: 24.0,
+            spread: 0.0,
+            color: (20, 22, 40, 0.16),
+        },
+        keycap: "#eceef2",
     };
 
     /// The default dark tokens, Postino's indigo palette.
@@ -151,7 +166,7 @@ impl Tokens {
         danger_subtle: "#3b1e21",
         info: "#62b3f0",
         info_subtle: "#162a3b",
-        scrim: "#0a0b1073",
+        scrim: "#08090cb3",
         shadow: [
             ShadowLayer {
                 offset_y: 12.0,
@@ -166,6 +181,14 @@ impl Tokens {
                 color: (255, 255, 255, 0.04),
             },
         ],
+        modal: "#1d1e23",
+        modal_shadow: ShadowLayer {
+            offset_y: 8.0,
+            blur: 24.0,
+            spread: 0.0,
+            color: (0, 0, 0, 0.35),
+        },
+        keycap: "#2f313a",
     };
 }
 
@@ -247,9 +270,20 @@ pub struct Palette {
     pub info: Hsla,
     /// Info badge background.
     pub info_subtle: Hsla,
-    /// The elevation shadow for `overlay`-level surfaces (menus, popovers, modals). There is no
+    /// The elevation shadow for `overlay`-level surfaces (menus, popovers). There is no
     /// `ThemeConfigColors` field for it, so components apply it with gpui's own `.shadow(...)`.
     pub shadow: Vec<BoxShadow>,
+    /// A modal card's fill.
+    pub modal: Hsla,
+    /// A modal card's shadow, see [`Self::shadow`].
+    pub modal_shadow: Vec<BoxShadow>,
+    /// The background of a modal's footer and hints bar: a translucent dark layer over
+    /// [`Self::modal`], so the strip reads as a step below the card.
+    pub modal_footer: Hsla,
+    /// The fill of a key cap.
+    pub keycap: Hsla,
+    /// A key cap's bottom edge, the darker line that makes it read as a key.
+    pub keycap_edge: Hsla,
 }
 
 /// A semantic color pair: what [`Palette::tone_colors`] maps to a foreground and a subtle
@@ -312,6 +346,19 @@ impl Palette {
             info: hex(tokens.info),
             info_subtle: hex(tokens.info_subtle),
             shadow: tokens.shadow.iter().map(shadow_layer).collect(),
+            modal: hex(tokens.modal),
+            modal_shadow: vec![shadow_layer(&tokens.modal_shadow)],
+            modal_footer: if dark {
+                rgba(0, 0, 0, 0.14)
+            } else {
+                rgba(20, 22, 40, 0.03)
+            },
+            keycap: hex(tokens.keycap),
+            keycap_edge: if dark {
+                rgba(0, 0, 0, 0.45)
+            } else {
+                rgba(20, 22, 40, 0.18)
+            },
         }
     }
 

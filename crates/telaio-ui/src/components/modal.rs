@@ -1,5 +1,6 @@
-//! The frame every modal shares: an `overlay` card with the modal radius, a 1 px `border` and the
-//! design's shadow token (`docs/design-system.md`, "Modals"), inside gpui-component's `Dialog`.
+//! The frame every modal shares: a `modal` card with the modal radius, a 1 px `border_strong`
+//! border and the `modal_shadow` token (`docs/design-system.md`, "Modals"), inside
+//! gpui-component's `Dialog`.
 //!
 //! `Dialog` paints a surface and a shadow of its own. That shadow is fixed (black at 10%, set
 //! inside the open animation, so a `.shadow(..)` on the dialog is overwritten on every frame) and
@@ -7,29 +8,35 @@
 //! larger than the card by the room the card's shadow needs, and draws the card inside it, so the
 //! shadow fits in the dialog's content clip and slides and fades in with the dialog.
 //!
-//! The card's parts are shared too: [`modal_header`] (title and close button), [`modal_body`] and
-//! [`modal_footer`] (the dialog buttons), and [`open_confirm_dialog`] for the small confirmations.
+//! The card's parts are shared too: [`modal_header`] and [`modal_header_with_icon`] (icon, title
+//! and close button), [`modal_body`], [`modal_footer`] (the dialog buttons), [`modal_hints`] (the
+//! keyboard hints bar of a navigable modal), and [`open_confirm_dialog`] for the small
+//! confirmations.
 
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::dialog::Dialog;
-use gpui_kit::component::{WindowExt as _, h_flex, v_flex, window_paddings};
+use gpui_kit::component::{Icon, WindowExt as _, h_flex, v_flex, window_paddings};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use rust_i18n::t;
 
 use crate::PaletteExt;
-use crate::metrics::{MODAL_HEADER_HEIGHT, MODAL_WIDTH_DEFAULT, RADIUS_MODAL};
+use crate::metrics::{
+    MODAL_FOOTER_HEIGHT, MODAL_HEADER_HEIGHT, MODAL_HINTS_HEIGHT, MODAL_PADDING,
+    MODAL_WIDTH_DEFAULT, RADIUS_MODAL, RADIUS_SM,
+};
 
 use super::buttons::{DangerButton, PrimaryButton, SecondaryButton};
 use super::icon_button::IconButton;
+use super::key_cap::KeyCap;
 
-/// Room kept around the card for its shadow (offset y 12, blur 32): the shadow fades out about
-/// 1.5 times the blur past the card's edges, shifted down by the offset.
-const SHADOW_ROOM_TOP: f32 = 28.0;
-const SHADOW_ROOM_BOTTOM: f32 = 52.0;
-const SHADOW_ROOM_X: f32 = 40.0;
+/// Room kept around the card for its shadow (offset y 8, blur 24): the shadow fades out about
+/// 1.25 times the blur past the card's edges, shifted down by the offset.
+const SHADOW_ROOM_TOP: f32 = 22.0;
+const SHADOW_ROOM_BOTTOM: f32 = 38.0;
+const SHADOW_ROOM_X: f32 = 30.0;
 
 /// The radius for a card's child that paints its own background into the card's corners (the
 /// Settings nav column, the command palette's list): the modal radius minus the card's border.
@@ -170,63 +177,108 @@ where
                 v_flex()
                     .flex_1()
                     .min_h_0()
-                    .bg(palette.overlay)
+                    .bg(palette.modal)
                     .rounded(px(RADIUS_MODAL))
                     .border_1()
-                    .border_color(palette.border)
-                    .shadow(palette.shadow.clone())
+                    .border_color(palette.border_strong)
+                    .shadow(palette.modal_shadow.clone())
                     .child(build(window, cx)),
             )
     })
 }
 
-/// Horizontal padding of a modal's header and footer, and all around its body.
-const MODAL_PADDING: f32 = 20.0;
 /// Gap between the children of a modal's body.
 const MODAL_BODY_GAP: f32 = 12.0;
+/// Space under a modal's body, above the footer or the card's edge. There is none above it: the
+/// header has no bottom border, so its own height is the room between the title and the body.
+const MODAL_BODY_BOTTOM: f32 = 16.0;
 /// Gap between the buttons of a modal's footer.
 const MODAL_FOOTER_GAP: f32 = 8.0;
+/// Gap between the icon, the title and the close button of a modal's header.
+const MODAL_HEADER_GAP: f32 = 10.0;
+/// Size of a modal header's icon.
+const MODAL_HEADER_ICON: f32 = 15.0;
+/// Title size of a modal's header.
+const MODAL_TITLE_SIZE: f32 = 14.0;
+/// Gap between the hints of a modal's hints bar.
+const MODAL_HINTS_GAP: f32 = 16.0;
+/// Horizontal padding of a modal's hints bar.
+const MODAL_HINTS_PADDING: f32 = 14.0;
 
 /// A modal's header strip: `title` at the left and a close button at the right that closes the
-/// dialog, over a bottom border. The frame removes gpui-component's own close button.
+/// dialog. No bottom border: the body starts right under it. The frame removes gpui-component's
+/// own close button.
 pub fn modal_header(title: impl Into<SharedString>, cx: &App) -> Div {
+    header(None, title.into(), cx)
+}
+
+/// A [`modal_header`] with `icon` in `color` before the title: `accent_text` for most modals,
+/// `danger` for a destructive confirmation.
+pub fn modal_header_with_icon(
+    icon: IconName,
+    color: Hsla,
+    title: impl Into<SharedString>,
+    cx: &App,
+) -> Div {
+    header(Some((icon, color)), title.into(), cx)
+}
+
+/// The header of [`modal_header`] and [`modal_header_with_icon`].
+fn header(icon: Option<(IconName, Hsla)>, title: SharedString, cx: &App) -> Div {
     let palette = cx.palette();
     h_flex()
         .h(px(MODAL_HEADER_HEIGHT))
         .flex_none()
         .items_center()
-        .justify_between()
+        .gap(px(MODAL_HEADER_GAP))
         .px(px(MODAL_PADDING))
-        .border_b_1()
-        .border_color(palette.border)
+        .when_some(icon, |row, (icon, color)| {
+            row.child(
+                Icon::new(icon)
+                    .size(px(MODAL_HEADER_ICON))
+                    .text_color(color),
+            )
+        })
         .child(
             div()
-                .text_size(px(15.0))
+                .flex_1()
+                .min_w_0()
+                .truncate()
+                .text_size(px(MODAL_TITLE_SIZE))
                 .font_weight(FontWeight::SEMIBOLD)
-                .child(title.into()),
+                .child(title),
         )
         .child(
-            IconButton::new("modal-close", IconName::Close)
-                .large()
-                .tooltip(t!("telaio.close"))
-                .on_click(move |_, window, cx| {
-                    window.close_dialog(cx);
-                }),
+            // The close button sits on a faint fill of its own, so it reads as a button at rest.
+            div()
+                .flex_none()
+                .rounded(px(RADIUS_SM))
+                .bg(palette.hover)
+                .child(
+                    IconButton::new("modal-close", IconName::Close)
+                        .tooltip(t!("telaio.close"))
+                        .on_click(move |_, window, cx| {
+                            window.close_dialog(cx);
+                        }),
+                ),
         )
 }
 
-/// A modal's body: a column padded on every side, for the content between the header and the
-/// footer.
+/// A modal's body: a column padded at the sides and the bottom, for the content between the
+/// header and the footer.
 pub fn modal_body() -> Div {
-    v_flex().p(px(MODAL_PADDING)).gap(px(MODAL_BODY_GAP))
+    v_flex()
+        .px(px(MODAL_PADDING))
+        .pb(px(MODAL_BODY_BOTTOM))
+        .gap(px(MODAL_BODY_GAP))
 }
 
-/// A modal's footer strip, as tall as the header, under a top border: its children (the dialog
-/// buttons) sit at the end of the row.
+/// A modal's footer strip, under a top border and on the `modal_footer` fill: its children (the
+/// dialog buttons) sit at the end of the row. Its bottom corners follow the card's.
 pub fn modal_footer(cx: &App) -> Div {
     let palette = cx.palette();
     h_flex()
-        .h(px(MODAL_HEADER_HEIGHT))
+        .h(px(MODAL_FOOTER_HEIGHT))
         .flex_none()
         .items_center()
         .justify_end()
@@ -234,6 +286,35 @@ pub fn modal_footer(cx: &App) -> Div {
         .px(px(MODAL_PADDING))
         .border_t_1()
         .border_color(palette.border)
+        .bg(palette.modal_footer)
+        .rounded_b(px(MODAL_INNER_RADIUS))
+}
+
+/// The keyboard hints bar at the foot of a navigable modal (the command palette, the shortcuts
+/// sheet): each hint is a key cap and what the key does, such as `("Esc", "close")`.
+pub fn modal_hints<K, L>(hints: impl IntoIterator<Item = (K, L)>, cx: &App) -> Div
+where
+    K: Into<SharedString>,
+    L: Into<SharedString>,
+{
+    let palette = cx.palette();
+    h_flex()
+        .h(px(MODAL_HINTS_HEIGHT))
+        .flex_none()
+        .items_center()
+        .gap(px(MODAL_HINTS_GAP))
+        .px(px(MODAL_HINTS_PADDING))
+        .bg(palette.modal_footer)
+        .rounded_b(px(MODAL_INNER_RADIUS))
+        .text_size(px(12.0))
+        .text_color(palette.fg_subtle)
+        .children(hints.into_iter().map(|(key, label)| {
+            h_flex()
+                .items_center()
+                .gap(px(6.0))
+                .child(KeyCap::new(key).small())
+                .child(label.into())
+        }))
 }
 
 /// What a [`ConfirmDialog`] runs on confirm, factored out because clippy's `type_complexity`
@@ -254,6 +335,9 @@ pub struct ConfirmDialog {
     pub destructive: bool,
     /// Whether the footer has a Cancel button before the confirm one.
     pub show_cancel: bool,
+    /// The header's icon. `None` shows a warning triangle on a destructive dialog and no icon on
+    /// any other.
+    pub icon: Option<IconName>,
     /// Runs when the user confirms, by the button or with Enter, right before the dialog closes.
     pub on_confirm: ConfirmHandler,
 }
@@ -297,8 +381,20 @@ fn render_confirm(confirm: &ConfirmDialog, cx: &App) -> AnyElement {
             .on_click(on_click)
             .into_any_element()
     };
+    let icon = match (confirm.icon, confirm.destructive) {
+        (Some(icon), destructive) => Some((
+            icon,
+            if destructive {
+                palette.danger
+            } else {
+                palette.accent_text
+            },
+        )),
+        (None, true) => Some((IconName::TriangleAlert, palette.danger)),
+        (None, false) => None,
+    };
     v_flex()
-        .child(modal_header(confirm.title.clone(), cx))
+        .child(header(icon, confirm.title.clone(), cx))
         .child(
             modal_body().child(
                 div()
@@ -364,9 +460,9 @@ mod tests {
 
     #[test]
     fn a_narrow_window_shrinks_the_side_room_then_the_card() {
-        let roomy = ModalGeometry::new(900.0, 1000.0, 800.0, None, ModalPlacement::DEFAULT);
-        assert_eq!(roomy.room_x, (900.0 - 2.0 * WINDOW_EDGE - 800.0) / 2.0);
-        assert_eq!(roomy.width, 900.0 - 2.0 * WINDOW_EDGE);
+        let roomy = ModalGeometry::new(860.0, 1000.0, 800.0, None, ModalPlacement::DEFAULT);
+        assert_eq!(roomy.room_x, (860.0 - 2.0 * WINDOW_EDGE - 800.0) / 2.0);
+        assert_eq!(roomy.width, 860.0 - 2.0 * WINDOW_EDGE);
 
         let narrow = ModalGeometry::new(700.0, 1000.0, 800.0, None, ModalPlacement::DEFAULT);
         assert_eq!(narrow.room_x, 0.0);

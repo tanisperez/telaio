@@ -5,14 +5,14 @@ use std::rc::Rc;
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use telaio_ui::ThemeChoice;
 use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
     Card, DangerButton, GhostButton, IconButton, MODIFIER_KEY, ModalPlacement, PrimaryButton,
     SecondaryButton, SectionLabel, Shortcut, ShortcutGroup, ThemeCard, framed_dialog, modal_body,
-    modal_footer, modal_header, open_confirm_dialog, open_shortcuts_dialog, open_tooltip,
+    modal_footer, modal_header_with_icon, open_confirm_dialog, open_shortcuts_dialog, open_tooltip,
 };
 use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
+use telaio_ui::{PaletteExt, ThemeChoice};
 
 use crate::gallery::{Gallery, section};
 
@@ -179,7 +179,12 @@ impl Gallery {
                     v_flex()
                         .flex_1()
                         .min_h_0()
-                        .child(modal_header(spec.title, cx))
+                        .child(modal_header_with_icon(
+                            gpui_kit::assets::IconName::AppWindow,
+                            cx.palette().accent_text,
+                            spec.title,
+                            cx,
+                        ))
                         .child(
                             div()
                                 .id("modal-scroll")
@@ -243,6 +248,7 @@ impl Gallery {
                 confirm_label: confirm_label.into(),
                 destructive,
                 show_cancel,
+                icon: None,
                 on_confirm: Rc::new(move |_, cx| {
                     let _ = weak.update(cx, |this, cx| {
                         this.record(format!("Confirmed: {confirm_label}"), cx);

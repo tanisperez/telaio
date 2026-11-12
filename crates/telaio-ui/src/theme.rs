@@ -21,7 +21,7 @@ use crate::syntax::SyntaxTheme;
 const GENERAL_RADIUS: u64 = 8;
 /// Large-element radius (dialogs, notifications), matching the design's modal radius
 /// ([`crate::metrics::RADIUS_MODAL`]).
-const LARGE_RADIUS: u64 = 14;
+const LARGE_RADIUS: u64 = 10;
 
 /// The UI and monospace fonts of a theme family.
 #[derive(Debug, Clone, PartialEq)]

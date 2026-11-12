@@ -19,6 +19,7 @@
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::WindowExt as _;
 use gpui_kit::component::menu::{PopupMenu, PopupMenuItem};
 use gpui_kit::component::notification::Notification;
@@ -30,7 +31,7 @@ use rust_i18n::t;
 use crate::PaletteExt;
 use crate::components::{
     ModalPlacement, PrimaryButton, SecondaryButton, framed_dialog, modal_body, modal_footer,
-    modal_header,
+    modal_header_with_icon,
 };
 use crate::fonts::MONO_FAMILY;
 use crate::metrics::{MODAL_WIDTH_DEFAULT, RADIUS_MD};
@@ -337,7 +338,12 @@ fn render_unsaved(
     let palette = cx.palette();
     let (discard, save) = (on_choice.clone(), on_choice.clone());
     v_flex()
-        .child(modal_header(title.clone(), cx))
+        .child(modal_header_with_icon(
+            IconName::TriangleAlert,
+            palette.warning,
+            title.clone(),
+            cx,
+        ))
         .child(
             modal_body()
                 .child(

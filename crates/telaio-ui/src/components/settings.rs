@@ -215,6 +215,8 @@ impl RenderOnce for SettingsLayout {
             .when_some(self.footer, |column, (start, end)| {
                 column.child(
                     modal_footer(cx)
+                        // The nav column is on its left: only the card's corner is rounded.
+                        .rounded_bl(px(0.0))
                         .justify_between()
                         .child(
                             div()
