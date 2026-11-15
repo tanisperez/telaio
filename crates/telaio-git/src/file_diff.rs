@@ -195,8 +195,8 @@ fn build_blocks(diff: &mut FileDiff) {
         for (old, new) in removed.iter().zip(&added) {
             emphasize(diff, *old, *new);
         }
-        for n in start..end {
-            diff.lines[n].block = Some(index);
+        for line in &mut diff.lines[start..end] {
+            line.block = Some(index);
         }
         let before = start.checked_sub(1).map(|n| &diff.lines[n]);
         let following = |old: bool| {

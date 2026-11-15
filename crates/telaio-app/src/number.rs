@@ -127,7 +127,14 @@ mod tests {
             ),
             (
                 Language::Galician,
-                ["0", "999", "1.234", "17.304", "1.234.567"],
+                // A no-break space since CLDR 48 (icu 2.4), a dot before.
+                [
+                    "0",
+                    "999",
+                    "1\u{a0}234",
+                    "17\u{a0}304",
+                    "1\u{a0}234\u{a0}567",
+                ],
             ),
             (
                 Language::Italian,
@@ -154,7 +161,10 @@ mod tests {
         assert_eq!(format_decimal_in(1234.5, 1, Language::Spanish), "1234,5");
         assert_eq!(format_decimal_in(12345.5, 1, Language::Spanish), "12.345,5");
         assert_eq!(format_decimal_in(12345.5, 1, Language::Italian), "12.345,5");
-        assert_eq!(format_decimal_in(1234.5, 1, Language::Galician), "1.234,5");
+        assert_eq!(
+            format_decimal_in(1234.5, 1, Language::Galician),
+            "1\u{a0}234,5"
+        );
     }
 
     #[test]

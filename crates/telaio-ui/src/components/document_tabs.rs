@@ -623,7 +623,7 @@ impl RenderOnce for DocumentTabs {
             // tabs have scrolled it (their listener is inner, so it runs first), stop it here so
             // a scrolled page around the strip does not move as well.
             .when(flags.show_controls, |bar| {
-                bar.on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                bar.on_scroll(|_, _, cx| cx.stop_propagation())
             })
             .child(
                 h_flex()
