@@ -32,7 +32,7 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::edit_menu::edit_menu;
+use super::edit_menu::{edit_menu_area, no_input_menu};
 use super::scrollbar::overlay;
 use super::text_field::input_line_height;
 use crate::PaletteExt;
@@ -286,7 +286,7 @@ impl RenderOnce for EditableTable {
             for width in widths.iter().copied() {
                 // A missing trailing cell still takes its column, so the others stay aligned.
                 line = line.child(match cells.next() {
-                    Some(cell) => render_cell(cell, width, line_height, &mono_font, &palette, cx),
+                    Some(cell) => render_cell(cell, width, line_height, &mono_font, &palette),
                     None => sized(div(), width),
                 });
             }
@@ -345,7 +345,6 @@ fn render_cell(
     line_height: Pixels,
     mono_font: &SharedString,
     palette: &crate::Palette,
-    cx: &mut App,
 ) -> Div {
     let is_input = matches!(cell.content, Content::Input(_));
     let is_text = matches!(cell.content, Content::Text(_));
@@ -361,18 +360,20 @@ fn render_cell(
             .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
             .text_color(color)
             .child(
-                // Exactly one line tall, see the module documentation.
-                Input::new(&state)
-                    .context_menu(edit_menu(&state, cx))
-                    // Its own padding is pinned (the default is 10 px) so its text starts where a
-                    // text cell's, a note's and the header's do.
-                    .px(px(INPUT_TEXT_INSET))
-                    .py_0()
-                    .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
-                    .h(line_height)
-                    .line_height(line_height)
-                    .appearance(false)
-                    .bordered(false),
+                edit_menu_area(&state).w_full().child(
+                    // Exactly one line tall, see the module documentation.
+                    Input::new(&state)
+                        .context_menu(no_input_menu())
+                        // Its own padding is pinned (the default is 10 px) so its text starts where a
+                        // text cell's, a note's and the header's do.
+                        .px(px(INPUT_TEXT_INSET))
+                        .py_0()
+                        .text_size(px(EDITABLE_TABLE_TEXT_SIZE))
+                        .h(line_height)
+                        .line_height(line_height)
+                        .appearance(false)
+                        .bordered(false),
+                ),
             )
             .into_any_element(),
         Content::Text(text) => div()

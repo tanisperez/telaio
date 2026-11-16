@@ -12,9 +12,9 @@ use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
 use telaio_ui::components::{
-    CheckState, HoverInput, NumberStepper, SegmentedItem, TriCheckbox, checkbox_halo, edit_menu,
-    labelled_checkbox, labelled_radio, radio_halo, select_label_row, select_trigger, switch_halo,
-    text_field,
+    CheckState, HoverInput, NumberStepper, SegmentedItem, TriCheckbox, checkbox_halo,
+    edit_menu_area, labelled_checkbox, labelled_radio, no_input_menu, radio_halo, select_label_row,
+    select_trigger, switch_halo, text_field,
 };
 
 use super::{label, on_off};
@@ -43,13 +43,13 @@ impl Gallery {
     /// Inputs: a `text_field` and a bare `HoverInput`, both with the edit menu on right click.
     pub(crate) fn render_inputs(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
-        let hover = HoverInput::new(
+        let hover = edit_menu_area(&self.hover_input).child(HoverInput::new(
             "gallery-hover-input",
             &self.hover_input,
             Input::new(&self.hover_input)
-                .context_menu(edit_menu(&self.hover_input, cx))
+                .context_menu(no_input_menu())
                 .h(px(telaio_ui::metrics::CONTROL_HEIGHT)),
-        );
+        ));
         v_flex()
             .gap_3()
             .child(

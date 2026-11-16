@@ -19,6 +19,7 @@ pub mod icon_button;
 pub mod inline_message;
 pub mod key_cap;
 pub mod key_value_table;
+pub mod menu_entries;
 pub mod menu_rows;
 pub mod modal;
 pub mod number_stepper;
@@ -51,7 +52,10 @@ pub use control_halo::{
 };
 pub use data_table::{DataAlign, DataCell, DataColumn, DataSort, DataTable, VirtualDataTable};
 pub use document_tabs::{DocumentTab, DocumentTabs};
-pub use edit_menu::edit_menu;
+pub use edit_menu::{
+    EditActions, EditState, edit_entries, edit_menu_area, edit_menu_area_with, input_edit_state,
+    no_input_menu,
+};
 pub use editable_table::{EditableCell, EditableColumn, EditableRow, EditableTable};
 pub use empty_state::EmptyState;
 pub use hover_input::HoverInput;
@@ -59,6 +63,7 @@ pub use icon_button::IconButton;
 pub use inline_message::{InlineMessage, InlineMessageKind};
 pub use key_cap::KeyCap;
 pub use key_value_table::{KeyValueRow, KeyValueTable, SortColumn, SortOrder};
+pub use menu_entries::{MenuEntries, MenuEntry, MenuItem};
 pub use menu_rows::{
     menu_choice_item, menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width,
 };

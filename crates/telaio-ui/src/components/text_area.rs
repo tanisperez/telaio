@@ -17,7 +17,7 @@ use gpui_kit::component::input::{Textarea, TextareaState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::edit_menu::edit_menu;
+use super::edit_menu::{edit_menu_area, no_input_menu};
 use crate::PaletteExt as _;
 
 /// A multi line plain text input for `state`. Its height follows the state's auto grow rows
@@ -86,13 +86,15 @@ impl RenderOnce for TextArea {
                 });
             })
             .child(
-                Textarea::new(&state)
-                    .context_menu(edit_menu(&state, cx))
-                    .readonly(self.readonly)
-                    .disabled(self.disabled)
-                    .when_some(self.height, |area, height| area.h(height))
-                    // A focused area keeps the border of its own focus style.
-                    .when(!focused, |area| area.border_color(border)),
+                edit_menu_area(&state).w_full().child(
+                    Textarea::new(&state)
+                        .context_menu(no_input_menu())
+                        .readonly(self.readonly)
+                        .disabled(self.disabled)
+                        .when_some(self.height, |area, height| area.h(height))
+                        // A focused area keeps the border of its own focus style.
+                        .when(!focused, |area| area.border_color(border)),
+                ),
             )
     }
 }

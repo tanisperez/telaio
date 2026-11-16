@@ -1,5 +1,6 @@
 //! The drawing and the key handling of a [`SearchableMenuState`]: the panel the popover shows.
 
+use crate::components::edit_menu::{edit_menu_area, no_input_menu};
 use gpui_kit::assets::IconName;
 use gpui_kit::base::POPUP_PRIORITY;
 use gpui_kit::base::actions::{Cancel, Confirm, SelectDown, SelectLeft, SelectRight, SelectUp};
@@ -113,15 +114,18 @@ impl SearchableMenuState {
             .border_b_1()
             .border_color(palette.border)
             .child(
-                Input::new(&self.input)
-                    .prefix(
-                        Icon::new(IconName::Search)
-                            .with_size(px(SEARCH_ICON_SIZE))
-                            .text_color(palette.fg_subtle),
-                    )
-                    .cleanable(true)
-                    .p_0()
-                    .appearance(false),
+                edit_menu_area(&self.input).flex_1().child(
+                    Input::new(&self.input)
+                        .context_menu(no_input_menu())
+                        .prefix(
+                            Icon::new(IconName::Search)
+                                .with_size(px(SEARCH_ICON_SIZE))
+                                .text_color(palette.fg_subtle),
+                        )
+                        .cleanable(true)
+                        .p_0()
+                        .appearance(false),
+                ),
             )
     }
 

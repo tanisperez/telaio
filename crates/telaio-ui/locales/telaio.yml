@@ -31,6 +31,16 @@ _version: 2
   es: "Valor"
   gl: "Valor"
   it: "Valore"
+"telaio.edit_menu.undo":
+  en: "Undo"
+  es: "Deshacer"
+  gl: "Desfacer"
+  it: "Annulla"
+"telaio.edit_menu.redo":
+  en: "Redo"
+  es: "Rehacer"
+  gl: "Refacer"
+  it: "Ripeti"
 "telaio.edit_menu.cut":
   en: "Cut"
   es: "Cortar"

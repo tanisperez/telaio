@@ -20,7 +20,7 @@ use gpui_kit::component::input::{Editor, EditorState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::edit_menu::edit_menu;
+use super::edit_menu::{edit_menu_area, no_input_menu};
 use crate::PaletteExt as _;
 use crate::metrics::RADIUS_MD;
 
@@ -62,13 +62,15 @@ impl CodeEditor {
 impl RenderOnce for CodeEditor {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let palette = cx.palette();
-        Editor::new(&self.state)
-            .context_menu(edit_menu(&self.state, cx))
-            .readonly(self.readonly)
-            .border_1()
-            .border_color(palette.border)
-            .rounded(px(RADIUS_MD))
-            .bg(palette.raised)
-            .h(self.height)
+        edit_menu_area(&self.state).w_full().h(self.height).child(
+            Editor::new(&self.state)
+                .context_menu(no_input_menu())
+                .readonly(self.readonly)
+                .border_1()
+                .border_color(palette.border)
+                .rounded(px(RADIUS_MD))
+                .bg(palette.raised)
+                .h_full(),
+        )
     }
 }

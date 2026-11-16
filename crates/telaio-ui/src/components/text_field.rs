@@ -9,7 +9,7 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::edit_menu::edit_menu;
+use super::edit_menu::{edit_menu_area, no_input_menu};
 use super::hover_input::HoverInput;
 use crate::metrics::INPUT_PADDING_X;
 
@@ -40,20 +40,22 @@ pub fn text_field(state: &Entity<InputState>, _cx: &App) -> Div {
 struct TextFieldInput(Entity<InputState>);
 
 impl RenderOnce for TextFieldInput {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let state = self.0;
         let line_height = px(input_line_height(FIELD_LINE_HEIGHT, window.scale_factor()));
-        HoverInput::new(
-            ("text-field", state.entity_id()),
-            &state,
-            Input::new(&state)
-                .context_menu(edit_menu(&state, cx))
-                .px(px(INPUT_PADDING_X))
-                .h_full()
-                .py_0()
-                .line_height(line_height),
+        edit_menu_area(&state).size_full().child(
+            HoverInput::new(
+                ("text-field", state.entity_id()),
+                &state,
+                Input::new(&state)
+                    .context_menu(no_input_menu())
+                    .px(px(INPUT_PADDING_X))
+                    .h_full()
+                    .py_0()
+                    .line_height(line_height),
+            )
+            .h_full(),
         )
-        .h_full()
     }
 }
 
