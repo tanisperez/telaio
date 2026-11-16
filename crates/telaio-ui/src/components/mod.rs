@@ -63,7 +63,7 @@ pub use icon_button::IconButton;
 pub use inline_message::{InlineMessage, InlineMessageKind};
 pub use key_cap::KeyCap;
 pub use key_value_table::{KeyValueRow, KeyValueTable, SortColumn, SortOrder};
-pub use menu_entries::{MenuEntries, MenuEntry, MenuItem};
+pub use menu_entries::{MenuArea, MenuEntries, MenuEntry, MenuItem};
 pub use menu_rows::{
     menu_choice_item, menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width,
 };

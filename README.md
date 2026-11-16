@@ -105,6 +105,9 @@ edit_menu_area(&state)
 ```
 
 `edit_menu_area_with(&state, |entries, edit, window, cx| ...)` adds the place's own entries.
+For any other box, `MenuArea::new(id, builder)` is `context_menu` with the menu always in the
+interface's font: gpui-component draws a context menu inside its element, so in a monospace cell
+it would inherit the monospace font.
 `text_field`, `TextArea`, `CodeEditor`, `EditableTable` and the searchable menu already do it.
 
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
@@ -306,12 +309,12 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0" }
-telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0" }
-telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0" }
-telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.0", features = ["javascript"] }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1" }
+telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1" }
+telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.1", features = ["javascript"] }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same

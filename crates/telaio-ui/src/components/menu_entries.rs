@@ -23,7 +23,9 @@
 
 use std::rc::Rc;
 
-use gpui_kit::component::menu::{PopupMenu, PopupMenuItem};
+use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::component::menu::{ContextMenuExt as _, PopupMenu, PopupMenuItem};
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 /// The closure of an item.
@@ -238,6 +240,91 @@ impl MenuEntries {
             };
         }
         menu
+    }
+}
+
+/// The builder of a [`MenuArea`]'s menu, the same as a `context_menu` builder.
+type MenuBuilder = Rc<dyn Fn(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu>;
+
+/// A box that opens a right-click menu, like gpui-component's `context_menu`, but whose menu is
+/// always drawn in the interface's font.
+///
+/// gpui-component draws a context menu inside the element it belongs to, so the menu inherits
+/// that element's text style: in a monospace table cell, the menu came out monospace. This box
+/// gives the menu the interface's text style and gives its children back the one they inherited
+/// (with any text style set on the box itself), so the content looks as before.
+///
+/// ```ignore
+/// MenuArea::new("row-menu", move |menu, window, cx| entries(cx).render(menu, window, cx))
+///     .flex_1()
+///     .child(row)
+/// ```
+#[derive(IntoElement)]
+pub struct MenuArea {
+    id: ElementId,
+    builder: MenuBuilder,
+    style: StyleRefinement,
+    children: Vec<AnyElement>,
+}
+
+impl MenuArea {
+    /// A box with id `id` (stable across frames: it keeps the open menu) whose right-click menu
+    /// `builder` fills.
+    pub fn new(
+        id: impl Into<ElementId>,
+        builder: impl Fn(PopupMenu, &mut Window, &mut Context<PopupMenu>) -> PopupMenu + 'static,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            builder: Rc::new(builder),
+            style: StyleRefinement::default(),
+            children: Vec::new(),
+        }
+    }
+}
+
+impl Styled for MenuArea {
+    fn style(&mut self) -> &mut StyleRefinement {
+        &mut self.style
+    }
+}
+
+impl ParentElement for MenuArea {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.children.extend(elements);
+    }
+}
+
+impl RenderOnce for MenuArea {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        // What the children would have inherited, with the box's own text style on top.
+        let mut content = window.text_style();
+        content.refine(&self.style.text);
+        // The menu's: the interface font at the root size, as gpui-component's `Root` sets it.
+        let base = TextStyle::default();
+        let mut style = self.style;
+        style.text = TextStyleRefinement {
+            font_family: Some(cx.theme().font_family.clone()),
+            font_size: Some(base.font_size),
+            line_height: Some(base.line_height),
+            font_weight: Some(base.font_weight),
+            font_style: Some(base.font_style),
+            ..TextStyleRefinement::default()
+        };
+        let mut area = div().id(self.id);
+        *area.style() = style;
+        let builder = self.builder;
+        area.context_menu(move |menu, window, cx| builder(menu, window, cx))
+            .child(
+                div()
+                    .size_full()
+                    .font_family(content.font_family)
+                    .text_size(content.font_size)
+                    .line_height(content.line_height)
+                    .font_weight(content.font_weight)
+                    .text_color(content.color)
+                    .children(self.children),
+            )
     }
 }
 

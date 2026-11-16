@@ -18,12 +18,11 @@
 
 use gpui_kit::base::input::{InputBaseState, InputModeKind};
 use gpui_kit::component::input::{Copy, Cut, Paste, Redo, SelectAll, Undo};
-use gpui_kit::component::menu::{ContextMenu, ContextMenuExt as _};
 use gpui_kit::component::native_menu::NativeMenu;
 use gpui_kit::*;
 use rust_i18n::t;
 
-use super::menu_entries::{MenuEntries, MenuItem};
+use super::menu_entries::{MenuArea, MenuEntries, MenuItem};
 
 /// What a text allows when its menu opens.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -129,9 +128,7 @@ pub fn no_input_menu() -> impl Fn(NativeMenu, &mut Window, &mut App) -> NativeMe
 
 /// A box that opens the standard edit menu of the field backed by `state` on a right click. Put
 /// the field inside, with [`no_input_menu`], and give the box the size the field had.
-pub fn edit_menu_area<M: InputModeKind>(
-    state: &Entity<InputBaseState<M>>,
-) -> ContextMenu<Stateful<Div>> {
+pub fn edit_menu_area<M: InputModeKind>(state: &Entity<InputBaseState<M>>) -> MenuArea {
     edit_menu_area_with(state, |entries, _, _, _| entries)
 }
 
@@ -141,16 +138,17 @@ pub fn edit_menu_area<M: InputModeKind>(
 pub fn edit_menu_area_with<M: InputModeKind>(
     state: &Entity<InputBaseState<M>>,
     extend: impl Fn(MenuEntries, EditState, &mut Window, &mut App) -> MenuEntries + 'static,
-) -> ContextMenu<Stateful<Div>> {
+) -> MenuArea {
     let state = state.clone();
-    div()
-        .id(("telaio-edit-menu", state.entity_id()))
-        .context_menu(move |menu, window, cx| {
+    MenuArea::new(
+        ("telaio-edit-menu", state.entity_id()),
+        move |menu, window, cx| {
             let edit = input_edit_state(&state, cx);
             let focus = state.read(cx).focus_handle(cx);
             let entries = extend(edit_entries(edit, EditActions::input()), edit, window, cx);
             entries.render(menu.action_context(focus), window, cx)
-        })
+        },
+    )
 }
 
 #[cfg(test)]
