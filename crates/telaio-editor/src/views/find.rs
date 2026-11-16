@@ -158,9 +158,15 @@ impl EditorView {
             )
     }
 
-    /// Opens the bar with the selected text (when it is on one line) and focuses its field. A
-    /// selection over several lines turns on find in selection instead.
-    fn open_find(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Opens the find bar, as Ctrl+F does, for a button of the app: with the selected text (when
+    /// it is on one line) and its field focused. A selection over several lines turns on find in
+    /// selection instead. Does nothing when the editor's [`EditorDisplay`] turns find off.
+    ///
+    /// [`EditorDisplay`]: super::editor::EditorDisplay
+    pub fn open_find(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.display(cx).find {
+            return;
+        }
         self.goto_open = false;
         let selected = self.state.selected_text();
         let (one_line, several) = match selected {
@@ -536,7 +542,13 @@ impl EditorView {
         let find_row = h_flex()
             .items_center()
             .gap(px(6.0))
-            .child(chevron)
+            // A read only text has nothing to replace: the chevron's room stays, empty, so the
+            // field does not move.
+            .child(if self.state.read_only {
+                div().flex_none().w(px(24.0)).into_any_element()
+            } else {
+                chevron.into_any_element()
+            })
             .child(h_flex().w(px(FIND_BAR_FIELD_WIDTH)).child(field))
             .child(
                 div()

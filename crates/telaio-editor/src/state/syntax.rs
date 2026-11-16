@@ -55,9 +55,15 @@ pub struct Syntax {
     parsing: bool,
 }
 
+/// Plain text, highlighted up to [`DEFAULT_HIGHLIGHT_MAX_BYTES`] once its language is set.
+///
+/// [`DEFAULT_HIGHLIGHT_MAX_BYTES`]: super::editor::DEFAULT_HIGHLIGHT_MAX_BYTES
 impl Default for Syntax {
     fn default() -> Self {
-        Self::new(Language::PlainText, 0)
+        Self::new(
+            Language::PlainText,
+            super::editor::DEFAULT_HIGHLIGHT_MAX_BYTES,
+        )
     }
 }
 
