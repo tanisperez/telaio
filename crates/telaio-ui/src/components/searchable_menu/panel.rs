@@ -1,6 +1,6 @@
 //! The drawing and the key handling of a [`SearchableMenuState`]: the panel the popover shows.
 
-use crate::components::edit_menu::{edit_menu_area, no_input_menu};
+use crate::components::edit_menu::no_input_menu;
 use gpui_kit::assets::IconName;
 use gpui_kit::base::POPUP_PRIORITY;
 use gpui_kit::base::actions::{Cancel, Confirm, SelectDown, SelectLeft, SelectRight, SelectUp};
@@ -114,7 +114,9 @@ impl SearchableMenuState {
             .border_b_1()
             .border_color(palette.border)
             .child(
-                edit_menu_area(&self.input).flex_1().child(
+                // No right-click menu: it would take the focus from this popover and close it.
+                // The empty one keeps gpui-component's own menu away too.
+                div().flex_1().child(
                     Input::new(&self.input)
                         .context_menu(no_input_menu())
                         .prefix(

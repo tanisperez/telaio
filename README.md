@@ -108,7 +108,9 @@ edit_menu_area(&state)
 For any other box, `MenuArea::new(id, builder)` is `context_menu` with the menu always in the
 interface's font: gpui-component draws a context menu inside its element, so in a monospace cell
 it would inherit the monospace font.
-`text_field`, `TextArea`, `CodeEditor`, `EditableTable` and the searchable menu already do it.
+`text_field`, `TextArea`, `CodeEditor` and `EditableTable` already do it. A field inside a popover,
+such as the searchable menu's search box, gets only `no_input_menu()`: a menu would take the
+focus from the popover and close it.
 
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
 treemap), and so do domain colors, as an extension trait on `Palette`.

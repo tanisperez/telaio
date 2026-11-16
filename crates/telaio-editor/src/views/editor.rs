@@ -495,6 +495,10 @@ impl EditorView {
     pub fn set_text(&mut self, text: &str, cx: &mut Context<Self>) {
         self.state.set_text(text);
         self.painted.clear();
+        // A find in selection searched a range of the old text: search the whole new one. An
+        // open find bar searches again on the next frame (its version no longer matches).
+        self.find.scope = None;
+        self.goto_open = false;
         cx.notify();
     }
 
