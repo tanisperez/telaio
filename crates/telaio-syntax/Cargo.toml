@@ -1,0 +1,65 @@
+[package]
+name = "telaio-syntax"
+description = "Language detection and syntax highlighting for telaio's editor, off the main thread. No gpui. From ted's ted-syntax"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+# Every grammar is a feature, so an app builds only the ones it highlights: a language whose
+# grammar is off shows as plain text. JSON is always on. `all-languages` turns every grammar on,
+# `markdown-preview` the Markdown preview parser (`parse_markdown`, with pulldown-cmark).
+[features]
+default = []
+all-languages = [
+    "rust", "javascript", "typescript", "toml", "markdown", "html", "make", "bash", "python",
+    "powershell", "css", "yaml", "java", "kotlin", "sql", "dockerfile",
+]
+rust = ["dep:tree-sitter-rust"]
+javascript = ["dep:tree-sitter-javascript"]
+typescript = ["javascript", "dep:tree-sitter-typescript"]
+toml = ["dep:tree-sitter-toml-ng"]
+markdown = ["dep:tree-sitter-md"]
+html = ["dep:tree-sitter-html"]
+make = ["dep:tree-sitter-make"]
+bash = ["dep:tree-sitter-bash"]
+python = ["dep:tree-sitter-python"]
+powershell = ["dep:tree-sitter-powershell"]
+css = ["dep:tree-sitter-css"]
+yaml = ["dep:tree-sitter-yaml"]
+java = ["dep:tree-sitter-java"]
+kotlin = ["dep:tree-sitter-kotlin-sg"]
+sql = ["dep:tree-sitter-sequel"]
+dockerfile = ["dep:tree-sitter-containerfile"]
+markdown-preview = ["dep:pulldown-cmark"]
+
+[dependencies]
+telaio-text = { path = "../telaio-text" }
+ropey = { workspace = true }
+tree-sitter = { workspace = true }
+tree-sitter-json = { workspace = true }
+tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-javascript = { workspace = true, optional = true }
+tree-sitter-typescript = { workspace = true, optional = true }
+tree-sitter-toml-ng = { workspace = true, optional = true }
+tree-sitter-md = { workspace = true, optional = true }
+tree-sitter-html = { workspace = true, optional = true }
+tree-sitter-make = { workspace = true, optional = true }
+tree-sitter-bash = { workspace = true, optional = true }
+tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-powershell = { workspace = true, optional = true }
+tree-sitter-css = { workspace = true, optional = true }
+tree-sitter-yaml = { workspace = true, optional = true }
+tree-sitter-java = { workspace = true, optional = true }
+tree-sitter-kotlin-sg = { workspace = true, optional = true }
+tree-sitter-sequel = { workspace = true, optional = true }
+tree-sitter-containerfile = { workspace = true, optional = true }
+pulldown-cmark = { workspace = true, optional = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lints]
+workspace = true

@@ -16,7 +16,11 @@ path = "src/main.rs"
 # base "tree-sitter" feature, XML uses the HTML grammar).
 gpui-kit = { workspace = true, features = ["tree-sitter-javascript", "tree-sitter-html"] }
 rust-i18n = { workspace = true }
+log = { workspace = true }
 telaio-ui = { path = "../telaio-ui" }
+telaio-editor = { path = "../telaio-editor" }
+# The grammars of the editor demos.
+telaio-syntax = { path = "../telaio-syntax", features = ["javascript", "html", "markdown"] }
 
 [lints]
 workspace = true

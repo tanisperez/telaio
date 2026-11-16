@@ -62,6 +62,7 @@ fn main() {
     app.run(move |cx| {
         cx.set_app_identity(APP_ID, APP_NAME);
         gpui_kit::init(cx);
+        telaio_editor::init(cx);
         telaio_ui::install(cx, &gallery::family(sample, 13.0));
 
         let mut options = WindowOptions {

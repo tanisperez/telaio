@@ -1,0 +1,26 @@
+[package]
+name = "telaio-editor"
+description = "The text editor component: a rope buffer painted by its own gpui element, with syntax colors, folding, soft wrap, minimap, gutter marks, find and Go to line. From ted's ted-editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+gpui-kit = { workspace = true }
+log = { workspace = true }
+rust-i18n = { workspace = true }
+telaio-ui = { path = "../telaio-ui" }
+telaio-text = { path = "../telaio-text" }
+telaio-syntax = { path = "../telaio-syntax" }
+
+[dev-dependencies]
+# The tests highlight Rust and Markdown.
+telaio-syntax = { path = "../telaio-syntax", features = ["all-languages"] }
+fastrand = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[lints]
+workspace = true

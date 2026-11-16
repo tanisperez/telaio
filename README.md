@@ -19,11 +19,14 @@ analyzer), Nastro (a music player) and ted (a text editor), which share one look
 | [`telaio-ui`](#telaio-ui) | The design system (palette tokens, theme, metrics, Geist fonts) and the standard components |
 | [`telaio-app`](#telaio-app) | The application shell: logging, command line pieces, languages, numbers, paths, window bootstrap, About header |
 | [`telaio-update`](#telaio-update) | The in-app updater for macOS, Windows and Linux script installs, and new version notices for other Linux copies, from GitHub releases |
+| [`telaio-editor`](#telaio-editor) | The text editor: a rope buffer painted by its own element (only the visible lines), syntax colors, folding, soft wrap, minimap, gutter marks, find and replace, Go to line and a right-click menu the app fills |
+| [`telaio-text`](#telaio-editor) and [`telaio-syntax`](#telaio-editor) | The editor's buffer and undo history, and its language detection and tree-sitter highlighting, with no `gpui` |
 | [`telaio-git`](#telaio-git) | A git client that drives the `git` executable: status, staging, diffs, commit, push, pull, fetch, branches, stash, log, the commit graph and shallow clones |
 | `telaio-gallery` | Not a dependency: every component in every state, under every sample palette ([Gallery](#gallery)) |
 
 All of them are released together, with one version and one tag. Each crate is independent: an
-app takes only what it needs, and `telaio-update` and `telaio-git` have no `gpui` at all.
+app takes only what it needs, and `telaio-update`, `telaio-git`, `telaio-text` and `telaio-syntax`
+have no `gpui` at all.
 
 **How an app is built with it**, from idea to release, is written down for AI agents (and people)
 in the shared rules that every app's `AGENTS.md` imports (`~/.claude/rust/RULES.md` in the author's
@@ -52,7 +55,7 @@ Postino as the reference implementation.
   `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`,
   `modal_header_with_icon`, `modal_body`, `modal_footer`, `modal_hints`, `open_confirm_dialog`),
   `KeyCap`, `SegmentedControl`, `select_trigger`, `StatusBadge`,
-  `ThemeCard`, `HoverInput`, `text_field` with `edit_menu`, `TextArea` (multi line plain text),
+  `ThemeCard`, `HoverInput`, `text_field`, `TextArea` (multi line plain text),
   `CodeEditor` (gpui-component's `Editor` in the app's box), `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `ProgressBar`, `NumberStepper`, `SearchableSelect` (a select with an
   optional search box, from a `select_state` the app creates once), `SearchableMenu` (a popover with a
@@ -66,13 +69,43 @@ Postino as the reference implementation.
   (`menu_choice_item`, `menu_described_item`, `menu_toggle_item`, `menu_shortcut_item`),
   the standard context menu of document tabs (`tab_close_items` with `CloseScope` and
   `close_targets`, `path_items`, `open_unsaved_dialog`),
-  `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
+  the right-click menus (`MenuEntries`, below), `EmptyState`, `TreeRow`, `switch_halo`, `checkbox_halo`,
   `radio_halo`, `labelled_checkbox`, `labelled_radio` and the keyboard shortcuts cheat sheet
   (`open_shortcuts_dialog`, with the app's own `ShortcutGroup` list).
 - **Strings**: the components' own labels (Close, Cancel, Light, ...) are in
   `crates/telaio-ui/locales/telaio.yml`, in English, Spanish, Galician and Italian. They follow the
   locale the app sets with `rust_i18n::set_locale`.
 - `telaio_ui::VERSION` and `telaio_ui::REPOSITORY`, for the app's About screen.
+
+**Right-click menus.** Every menu is gpui-component's `PopupMenu` with telaio's style, on every
+platform, and the app fills it in code with `MenuEntries`: items with an action (its shortcut
+shows) or a handler, separators and submenus. An entry that never applies in a place is left out;
+one that depends on the moment is disabled. Separators at the start, at the end or next to another
+one are dropped.
+
+```rust
+div().context_menu(move |menu, window, cx| {
+    MenuEntries::new()
+        .action(t!("app.rename"), Box::new(Rename))
+        .separator()
+        .submenu(t!("app.color"), MenuEntries::new().handler("Blue", |_, _| {}))
+        .render(menu, window, cx)
+})
+```
+
+Text gets the standard entries from `edit_entries` (Undo, Redo, Cut, Copy, Paste, Select all;
+Copy and Select all when read only). gpui-kit's `Input`, `Textarea` and `Editor` only take a
+`NativeMenu`, which macOS and Windows draw themselves, so a field opens telaio's menu from a box
+around it, `edit_menu_area`, and the field itself gets `no_input_menu()`:
+
+```rust
+edit_menu_area(&state)
+    .flex_1()
+    .child(Input::new(&state).context_menu(no_input_menu()))
+```
+
+`edit_menu_area_with(&state, |entries, edit, window, cx| ...)` adds the place's own entries.
+`text_field`, `TextArea`, `CodeEditor`, `EditableTable` and the searchable menu already do it.
 
 Domain widgets stay in each app (Postino's method badge and URL bar, Nastro's skins, Vano's
 treemap), and so do domain colors, as an extension trait on `Palette`.
@@ -162,6 +195,45 @@ if flow::updater_enabled(option_env!("POSTINO_UPDATER")) {
 }
 ```
 
+## telaio-editor
+
+The text editor of ted, moved here for Postino (Postino #258). It never uses gpui-kit's
+`InputState`: `telaio-text` keeps the text in a rope with its undo history, and the editor's own
+gpui element lays out and paints only the visible lines, so a 100 MB log costs about its size in
+memory and scrolls as fast as a small file. Highlighting runs off the main thread, one
+tree-sitter parse at a time, and only the visible range is queried per frame; documents above
+`DEFAULT_HIGHLIGHT_MAX_BYTES` (4 MB) show as plain text, since a full parse of a 15 MB JSON
+peaked at 473 MB.
+
+```rust
+// At startup, after gpui_kit::init:
+telaio_editor::init(cx); // the key bindings of the editor, its find bar and Go to line
+
+let body = cx.new(|cx| {
+    let mut view = EditorView::new(EditorState::with_text(&text, Language::Json), cx);
+    view.set_display(EditorDisplay { minimap: false, ..EditorDisplay::default() }, cx);
+    view.set_context_menu(|entries, edit, _, _| {
+        entries.section(MenuEntries::new().action(t!("app.format"), Box::new(Format)))
+    });
+    view
+});
+// Later: body.update(cx, |view, cx| view.set_text(&new_text, cx)), view.text(), set_read_only.
+```
+
+- **Extras per editor**: `EditorDisplay` turns the line numbers, the current line, the minimap,
+  soft wrap by default, folding, the find bar and Go to line on or off. The app sets the default
+  of every editor with `cx.set_global` and gives one editor its own with `set_display`.
+- **Menu**: `set_context_menu` gets the standard entries and the editor's `EditState` and returns
+  the whole menu; `line_entries` adds Duplicate line and Delete line.
+- **Gutter marks**: `EditorState::git_marks` takes the marks (added, modified, deleted lines) the
+  app computes, from git or anything else.
+- **Languages**: `telaio-syntax` has every grammar but JSON behind a Cargo feature of its name
+  (`rust`, `javascript`, `typescript`, `html` for HTML and XML, `markdown`, `bash`, `python`,
+  ...), so an app builds only the grammars it highlights; `all-languages` turns them all on and
+  `markdown-preview` adds the Markdown preview parser. A language whose grammar is off shows as
+  plain text.
+- **Strings**: `crates/telaio-editor/locales/telaio_editor.yml` (keys `telaio_editor.*`).
+
 ## telaio-git
 
 The git client extracted from Postino (no `gpui`, plain blocking logic, run it on a background
@@ -238,6 +310,8 @@ telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4" }
 telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4" }
 telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4" }
 telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4" }
+telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4" }
+telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.22.4", features = ["javascript"] }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
@@ -255,6 +329,9 @@ telaio-ui = { path = "../telaio/crates/telaio-ui" }
 telaio-app = { path = "../telaio/crates/telaio-app" }
 telaio-update = { path = "../telaio/crates/telaio-update" }
 telaio-git = { path = "../telaio/crates/telaio-git" }
+telaio-editor = { path = "../telaio/crates/telaio-editor" }
+telaio-syntax = { path = "../telaio/crates/telaio-syntax" }
+telaio-text = { path = "../telaio/crates/telaio-text" }
 ```
 
 Never commit that section: it breaks CI and every other checkout. When the change is ready,

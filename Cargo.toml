@@ -37,6 +37,49 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # The git client (telaio-git). The same requirement as Postino.
 dunce = "1"
 
+# The editor (telaio-text, telaio-syntax, telaio-editor), moved from ted. The same pins as ted.
+# The rope of the text buffer, the exact version and features gpui-component already builds.
+ropey = { version = "=2.0.0-beta.1", features = ["metric_chars", "metric_lines_lf", "metric_utf16"] }
+# Syntax highlighting: the exact tree-sitter and grammar versions gpui-component 0.9.1 pins.
+tree-sitter = "=0.26.13"
+tree-sitter-rust = "=0.24.0"
+tree-sitter-javascript = "=0.23.1"
+tree-sitter-json = "=0.24.8"
+tree-sitter-toml-ng = "=0.7.0"
+tree-sitter-md = "=0.5.1"
+tree-sitter-html = "=0.23.2"
+# Not built by gpui-component by default, but the version it pins behind its `tree-sitter-make`
+# feature.
+tree-sitter-make = "=1.1.1"
+# Shell and Python: the versions gpui-component pins behind its `tree-sitter-bash` and
+# `tree-sitter-python` features.
+tree-sitter-bash = "=0.23.3"
+tree-sitter-python = "=0.23.6"
+# PowerShell: not in gpui-component; the maintained grammar of airbus-cert, built for tree-sitter
+# 0.26.
+tree-sitter-powershell = "=0.26.6"
+# CSS: the version gpui-component pins.
+tree-sitter-css = "=0.23.2"
+# YAML: the version gpui-component pins behind its `tree-sitter-yaml` feature.
+tree-sitter-yaml = "=0.7.1"
+# Java and Kotlin: the versions gpui-component pins behind its `tree-sitter-java` and
+# `tree-sitter-kotlin` features.
+tree-sitter-java = "=0.23.5"
+tree-sitter-kotlin-sg = "=0.4.0"
+# TypeScript (and TSX) and SQL: the versions gpui-component pins behind its `tree-sitter-typescript`
+# and `tree-sitter-sql` features.
+tree-sitter-typescript = "=0.23.2"
+tree-sitter-sequel = "=0.3.8"
+# The Markdown parser of the preview. Not gpui-component's `markdown` 1.0.0: it does not scale
+# with the size of the file (see crates/telaio-syntax/src/markdown.rs).
+pulldown-cmark = { version = "=0.13.0", default-features = false }
+# Dockerfile: not in gpui-component. tree-sitter-dockerfile needs tree-sitter 0.20, this one only
+# tree-sitter-language.
+tree-sitter-containerfile = "=0.9.2"
+# Find in file: a literal searched with the case rules of Unicode. The version gpui already builds.
+regex = "1.13"
+fastrand = "2"
+
 [workspace.lints.clippy]
 all = "warn"
 unwrap_used = "warn"

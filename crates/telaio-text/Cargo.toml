@@ -1,0 +1,20 @@
+[package]
+name = "telaio-text"
+description = "The text buffer of telaio's editor: rope, positions, selections, edits and undo. No IO, no gpui. From ted's ted-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+ropey = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+fastrand = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,5 +1,5 @@
-//! The "Editors" tab: the multi line text area and the code editor, one per language the apps
-//! highlight.
+//! The "Editors" tab: the multi line text area, gpui-kit's code editor, one per language the apps
+//! highlight, and telaio's own editor (`telaio-editor`) with its extras and menus.
 
 use gpui_kit::component::input::{EditorState, TextareaState};
 use gpui_kit::component::*;
@@ -7,7 +7,8 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
-use telaio_ui::components::{CodeEditor, TextArea};
+use telaio_editor::{EditorDisplay, EditorState as TelaioEditorState, EditorView, Language};
+use telaio_ui::components::{CodeEditor, MenuEntries, TextArea};
 
 use super::label;
 use crate::gallery::{Gallery, section};
@@ -43,6 +44,13 @@ const CODE_SAMPLES: [(&str, &str, &str); 4] = [
 /// The sample text of the read only demo, a response body.
 const READONLY_SAMPLE: &str = "{\n  \"status\": \"ok\",\n  \"items\": [1, 2, 3]\n}\n";
 
+/// The request body of the telaio editor demos: every extra on, a menu with Format and an Insert
+/// submenu.
+const BODY_SAMPLE: &str = "{\n  \"customer\": \"{{customerId}}\",\n  \"items\": [\n    { \"sku\": \"A-100\", \"qty\": 2 },\n    { \"sku\": \"B-220\", \"qty\": 1 }\n  ],\n  \"notes\": \"leave at the door\"\n}\n";
+
+/// A post-response script for the telaio editor demos.
+const SCRIPT_SAMPLE: &str = "const body = response.json();\ntest(\"returns the order\", () => {\n  expect(body.id).toBeDefined();\n});\nvars.set(\"orderId\", body.id);\n";
+
 /// The entities behind the tab's demos.
 pub(crate) struct EditorsDemo {
     fixed: Entity<TextareaState>,
@@ -51,6 +59,10 @@ pub(crate) struct EditorsDemo {
     disabled_area: Entity<TextareaState>,
     code: Vec<(&'static str, Entity<EditorState>)>,
     readonly_code: Entity<EditorState>,
+    /// telaio's editor: an editable body, a script and a read only response.
+    body: Entity<EditorView>,
+    script: Entity<EditorView>,
+    response: Entity<EditorView>,
 }
 
 impl EditorsDemo {
@@ -83,6 +95,63 @@ impl EditorsDemo {
             .collect();
         let readonly_code = cx.new(|cx| EditorState::new(window, cx).language("json"));
         readonly_code.update(cx, |state, cx| state.set_value(READONLY_SAMPLE, window, cx));
+        let body = cx.new(|cx| {
+            let mut view = EditorView::new(
+                TelaioEditorState::with_text(BODY_SAMPLE, Language::Json),
+                cx,
+            );
+            view.set_display(
+                EditorDisplay {
+                    minimap: false,
+                    ..EditorDisplay::default()
+                },
+                cx,
+            );
+            view.set_context_menu(|entries, edit, _, _| {
+                let format = MenuEntries::new()
+                    .handler("Format", |_, _| log::info!("Format"))
+                    .handler("Find", |_, _| log::info!("Find"));
+                let entries = entries.section(format);
+                if !edit.editable {
+                    return entries;
+                }
+                entries.section(
+                    MenuEntries::new().submenu(
+                        "Insert",
+                        MenuEntries::new()
+                            .handler("{{customerId}}", |_, _| log::info!("customerId"))
+                            .handler("{{token}}", |_, _| log::info!("token")),
+                    ),
+                )
+            });
+            view
+        });
+        let script = cx.new(|cx| {
+            let mut view = EditorView::new(
+                TelaioEditorState::with_text(SCRIPT_SAMPLE, Language::JavaScript),
+                cx,
+            );
+            view.set_context_menu(|entries, edit, _, _| {
+                entries.section(telaio_editor::line_entries(edit))
+            });
+            view
+        });
+        let response = cx.new(|cx| {
+            let mut view = EditorView::new(
+                TelaioEditorState::with_text(&READONLY_SAMPLE.repeat(40), Language::Json),
+                cx,
+            );
+            view.set_read_only(true, cx);
+            view.set_display(
+                EditorDisplay {
+                    minimap: false,
+                    goto_line: false,
+                    ..EditorDisplay::default()
+                },
+                cx,
+            );
+            view
+        });
         Self {
             fixed,
             auto,
@@ -90,6 +159,9 @@ impl EditorsDemo {
             disabled_area,
             code,
             readonly_code,
+            body,
+            script,
+            response,
         }
     }
 }
@@ -102,6 +174,37 @@ impl Gallery {
             .gap_6()
             .child(section("Text area", self.render_text_areas(cx)))
             .child(section("Code editor", self.render_code_editors(cx)))
+            .child(section("telaio editor", self.render_telaio_editors(cx)))
+    }
+
+    /// telaio's editor: an editable JSON body without the minimap and with its own menu entries,
+    /// a script with the line entries, and a read only response with no minimap and no Go to
+    /// line.
+    fn render_telaio_editors(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let palette = cx.palette();
+        let demo = &self.editors;
+        let item = |caption: &'static str, editor: &Entity<EditorView>| {
+            v_flex().gap_1().child(label(caption, &palette)).child(
+                div()
+                    .h(px(CODE_EDITOR_HEIGHT))
+                    .border_1()
+                    .border_color(palette.border)
+                    .rounded(px(telaio_ui::metrics::RADIUS_MD))
+                    .overflow_hidden()
+                    .child(editor.clone()),
+            )
+        };
+        v_flex()
+            .gap_3()
+            .child(item(
+                "Request body: Format, Find and an Insert submenu",
+                &demo.body,
+            ))
+            .child(item("Script: Duplicate line and Delete line", &demo.script))
+            .child(item(
+                "Read only response: Copy and Select all",
+                &demo.response,
+            ))
     }
 
     /// Text areas: fixed height, auto grow, read only and disabled.

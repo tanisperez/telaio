@@ -1,0 +1,113 @@
+# The editor component: its context menu, the find bar and the Go to line dialog. Keys
+# `telaio_editor.*`, with `en`, `es`, `gl` and `it` together.
+_version: 2
+"telaio_editor.cancel":
+  en: "Cancel"
+  es: "Cancelar"
+  gl: "Cancelar"
+  it: "Annulla"
+"telaio_editor.menu.delete_line":
+  en: "Delete line"
+  es: "Eliminar línea"
+  gl: "Eliminar liña"
+  it: "Elimina riga"
+"telaio_editor.menu.duplicate_line":
+  en: "Duplicate line"
+  es: "Duplicar línea"
+  gl: "Duplicar liña"
+  it: "Duplica riga"
+"telaio_editor.find.case":
+  en: "Match case (Alt+C)"
+  es: "Distinguir mayúsculas (Alt+C)"
+  gl: "Distinguir maiúsculas (Alt+C)"
+  it: "Maiuscole/minuscole (Alt+C)"
+"telaio_editor.find.close":
+  en: "Close (Esc)"
+  es: "Cerrar (Esc)"
+  gl: "Pechar (Esc)"
+  it: "Chiudi (Esc)"
+"telaio_editor.find.in_selection":
+  en: "Find in selection"
+  es: "Buscar en la selección"
+  gl: "Buscar na selección"
+  it: "Cerca nella selezione"
+"telaio_editor.find.invalid":
+  en: "Invalid pattern"
+  es: "Patrón no válido"
+  gl: "Patrón non válido"
+  it: "Modello non valido"
+"telaio_editor.find.next":
+  en: "Next match (Enter)"
+  es: "Coincidencia siguiente (Intro)"
+  gl: "Coincidencia seguinte (Intro)"
+  it: "Risultato successivo (Invio)"
+"telaio_editor.find.no_results":
+  en: "No results"
+  es: "Sin resultados"
+  gl: "Sen resultados"
+  it: "Nessun risultato"
+"telaio_editor.find.placeholder":
+  en: "Find"
+  es: "Buscar"
+  gl: "Buscar"
+  it: "Cerca"
+"telaio_editor.find.position":
+  en: "%{index} of %{total}"
+  es: "%{index} de %{total}"
+  gl: "%{index} de %{total}"
+  it: "%{index} di %{total}"
+"telaio_editor.find.preserve_case":
+  en: "Preserve case"
+  es: "Conservar mayúsculas"
+  gl: "Conservar maiúsculas"
+  it: "Mantieni maiuscole"
+"telaio_editor.find.previous":
+  en: "Previous match (Shift+Enter)"
+  es: "Coincidencia anterior (Mayús+Intro)"
+  gl: "Coincidencia anterior (Maiús+Intro)"
+  it: "Risultato precedente (Maiusc+Invio)"
+"telaio_editor.find.regex":
+  en: "Regular expression (Alt+X)"
+  es: "Expresión regular (Alt+X)"
+  gl: "Expresión regular (Alt+X)"
+  it: "Espressione regolare (Alt+X)"
+"telaio_editor.find.replace":
+  en: "Replace"
+  es: "Reemplazar"
+  gl: "Substituír"
+  it: "Sostituisci"
+"telaio_editor.find.replace_all":
+  en: "Replace all"
+  es: "Reemplazar todo"
+  gl: "Substituír todo"
+  it: "Sostituisci tutto"
+"telaio_editor.find.replace_placeholder":
+  en: "Replace"
+  es: "Reemplazar"
+  gl: "Substituír"
+  it: "Sostituisci"
+"telaio_editor.find.toggle_replace":
+  en: "Show or hide replace"
+  es: "Mostrar u ocultar reemplazar"
+  gl: "Amosar ou agochar substituír"
+  it: "Mostra o nascondi sostituisci"
+"telaio_editor.find.whole_word":
+  en: "Whole words (Alt+W)"
+  es: "Palabra completa (Alt+W)"
+  gl: "Palabra completa (Alt+W)"
+  it: "Parola intera (Alt+W)"
+"telaio_editor.goto.go":
+  en: "Go"
+  es: "Ir"
+  gl: "Ir"
+  it: "Vai"
+"telaio_editor.goto.hint":
+  en: "Line and an optional column, from 1 to %{count}. For example 80 or 80:12."
+  es: "Línea y columna opcional, de 1 a %{count}. Por ejemplo 80 o 80:12."
+  gl: "Liña e columna opcional, de 1 a %{count}. Por exemplo 80 ou 80:12."
+  it: "Riga e colonna facoltativa, da 1 a %{count}. Per esempio 80 o 80:12."
+"telaio_editor.goto.title":
+  en: "Go to line"
+  es: "Ir a línea"
+  gl: "Ir á liña"
+  it: "Vai alla riga"

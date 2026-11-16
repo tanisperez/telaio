@@ -15,6 +15,9 @@ tag:
 - `telaio-update`: the in-app updater, no gpui.
 - `telaio-git`: the git client (drives the `git` executable), no gpui. Extracted from
   `postino-git` (telaio issue #38).
+- `telaio-text`, `telaio-syntax` and `telaio-editor`: the text editor moved from ted (Postino
+  #258). The buffer and undo history, language detection and highlighting (no gpui, each grammar
+  behind a feature), and the editor view and element.
 - `telaio-gallery`: the components gallery binary, not published.
 
 It was extracted from Postino (Postino issue #139 and telaio milestone 0.2.0), whose code was the
@@ -44,6 +47,13 @@ building an app with telaio are in `~/.claude/rust/RULES.md` (the author's dotfi
   (Postino's secret files, the automatic stash prefix): they are passed in or stay in the app. Its
   tests run a real `git` in temporary folders, skip themselves when git is missing and never touch
   the network.
+- `telaio-text` and `telaio-syntax` never depend on `gpui`. `telaio-editor` reads no file and no
+  settings file and runs no git: the app hands it the text, the display options and the gutter
+  marks. Its strings are in `crates/telaio-editor/locales/telaio_editor.yml` (keys
+  `telaio_editor.*`, four languages). Its tests need the grammars: `make lint` and `make test`
+  run with `--all-features`.
+- Every right-click menu is a `PopupMenu` filled with `MenuEntries`, never a `NativeMenu`: text
+  fields go inside an `edit_menu_area` with `no_input_menu()`.
 - `telaio-app` keeps no app constant either: names, ids, paths and environment variables come from
   `AppIdentity`. It never reads an app's locale or settings; the app's own translation tables and
   settings structs stay in the app. Its strings are in `crates/telaio-app/locales/telaio_app.yml`

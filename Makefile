@@ -22,13 +22,13 @@ build:
 	cargo build
 
 check:
-	cargo check --all-targets
+	cargo check --all-targets --all-features
 
 lint:
-	cargo clippy --all-targets -- -D warnings
+	cargo clippy --all-targets --all-features -- -D warnings
 
 lint-fix:
-	cargo clippy --all-targets --fix --allow-dirty --allow-staged
+	cargo clippy --all-targets --all-features --fix --allow-dirty --allow-staged
 
 format:
 	cargo fmt --all
@@ -37,7 +37,7 @@ format-check:
 	cargo fmt --all -- --check
 
 test:
-	cargo test --all-targets
+	cargo test --all-targets --all-features
 
 clean:
 	cargo clean
