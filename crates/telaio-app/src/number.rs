@@ -1,6 +1,11 @@
-//! Numbers written for the active language: decimal and grouping separators from CLDR data through
-//! `icu_decimal`. `1,234.5` in English, `1234,5` and `12.345,5` in Spanish, and so on. Unit symbols
-//! stay as the caller writes them.
+//! Numbers written for the active language: `1,234.5` in English, `1.234,5` in Spanish, Galician
+//! and Italian. Unit symbols stay as the caller writes them.
+//!
+//! English takes its separators from CLDR data through `icu_decimal`. Spanish, Galician and
+//! Italian use a fixed rule instead, a dot every three digits and a comma before the decimals,
+//! from four digits on: CLDR does not group four digit numbers in Spanish and Italian (`1234`),
+//! and since CLDR 48 groups Galician with a no-break space (`1 234`), and the apps want `1.234`
+//! in all three.
 //!
 //! The rounding is Rust's own (`{:.N}`), so the digits are exactly the ones the UI showed
 //! before; the formatted text is then handed to ICU only to place the separators. The formatter
@@ -63,10 +68,41 @@ fn localize(plain: String, language: Language, sign: SignDisplay) -> String {
     let Ok(decimal) = Decimal::try_from_str(&plain) else {
         return plain;
     };
+    if language != Language::English {
+        return dot_grouped(&plain, sign);
+    }
     match formatter(language) {
         Some(formatter) => formatter.format_to_string(&decimal.with_sign_display(sign)),
         None => plain,
     }
+}
+
+/// `plain`, a valid ASCII number such as `-1234.50`, with a dot every three digits of its integer
+/// part and a comma before its decimals: `-1.234,50`. With [`SignDisplay::Always`] a positive
+/// number gets a `+`.
+fn dot_grouped(plain: &str, sign: SignDisplay) -> String {
+    let (negative, digits) = match plain.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, plain.strip_prefix('+').unwrap_or(plain)),
+    };
+    let (integer, fraction) = digits.split_once('.').unwrap_or((digits, ""));
+    let mut out = String::with_capacity(plain.len() + integer.len() / 3 + 1);
+    if negative {
+        out.push('-');
+    } else if sign == SignDisplay::Always {
+        out.push('+');
+    }
+    for (index, digit) in integer.chars().enumerate() {
+        if index > 0 && (integer.len() - index) % 3 == 0 {
+            out.push('.');
+        }
+        out.push(digit);
+    }
+    if !fraction.is_empty() {
+        out.push(',');
+        out.push_str(fraction);
+    }
+    out
 }
 
 /// `value` with the active language's grouping, for example `17,304` or `17.304`.
@@ -123,22 +159,15 @@ mod tests {
             ),
             (
                 Language::Spanish,
-                ["0", "999", "1234", "17.304", "1.234.567"],
+                ["0", "999", "1.234", "17.304", "1.234.567"],
             ),
             (
                 Language::Galician,
-                // A no-break space since CLDR 48 (icu 2.4), a dot before.
-                [
-                    "0",
-                    "999",
-                    "1\u{a0}234",
-                    "17\u{a0}304",
-                    "1\u{a0}234\u{a0}567",
-                ],
+                ["0", "999", "1.234", "17.304", "1.234.567"],
             ),
             (
                 Language::Italian,
-                ["0", "999", "1234", "17.304", "1.234.567"],
+                ["0", "999", "1.234", "17.304", "1.234.567"],
             ),
         ];
         for (language, texts) in expected {
@@ -158,13 +187,10 @@ mod tests {
         assert_eq!(format_decimal_in(2.0, 1, Language::Spanish), "2,0");
         assert_eq!(format_decimal_in(1.2, 2, Language::Italian), "1,20");
         assert_eq!(format_decimal_in(1234.5, 1, Language::English), "1,234.5");
-        assert_eq!(format_decimal_in(1234.5, 1, Language::Spanish), "1234,5");
+        assert_eq!(format_decimal_in(1234.5, 1, Language::Spanish), "1.234,5");
         assert_eq!(format_decimal_in(12345.5, 1, Language::Spanish), "12.345,5");
         assert_eq!(format_decimal_in(12345.5, 1, Language::Italian), "12.345,5");
-        assert_eq!(
-            format_decimal_in(1234.5, 1, Language::Galician),
-            "1\u{a0}234,5"
-        );
+        assert_eq!(format_decimal_in(1234.5, 1, Language::Galician), "1.234,5");
     }
 
     #[test]
