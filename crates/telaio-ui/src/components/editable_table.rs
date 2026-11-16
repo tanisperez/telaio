@@ -38,8 +38,8 @@ use super::text_field::input_line_height;
 use crate::PaletteExt;
 use crate::metrics::{
     EDITABLE_TABLE_HEADER_HEIGHT, EDITABLE_TABLE_INPUT_PADDING_X, EDITABLE_TABLE_LINE_HEIGHT,
-    EDITABLE_TABLE_PADDING_X, EDITABLE_TABLE_ROW_HEIGHT, EDITABLE_TABLE_SMALL_TEXT_SIZE,
-    EDITABLE_TABLE_TEXT_SIZE, RADIUS_MD,
+    EDITABLE_TABLE_PADDING_X, EDITABLE_TABLE_ROW_HEIGHT, EDITABLE_TABLE_SCROLLBAR_GUTTER,
+    EDITABLE_TABLE_SMALL_TEXT_SIZE, EDITABLE_TABLE_TEXT_SIZE, RADIUS_MD,
 };
 
 /// How wide a column is.
@@ -229,10 +229,18 @@ impl RenderOnce for EditableTable {
             window.scale_factor(),
         ));
         let widths: Vec<Width> = self.columns.iter().map(|column| column.width).collect();
+        // A scrolled table keeps the scrollbar's room at the right of the header and the rows,
+        // so the last column (a trash button) stays clear of it and aligned with its label.
+        let gutter = if self.scroll.is_some() {
+            px(EDITABLE_TABLE_SCROLLBAR_GUTTER)
+        } else {
+            px(0.0)
+        };
 
         let header = self.columns.iter().fold(
             h_flex()
                 .flex_none()
+                .pr(gutter)
                 .h(px(EDITABLE_TABLE_HEADER_HEIGHT))
                 .items_center()
                 .bg(palette.surface)
@@ -268,6 +276,7 @@ impl RenderOnce for EditableTable {
             // `flex_none`: in a scrolled body the rows keep their height instead of shrinking.
             let mut line = h_flex()
                 .flex_none()
+                .pr(gutter)
                 .items_center()
                 .when(tall, |line| line.min_h(row_height))
                 .when(!tall, |line| line.h(row_height))

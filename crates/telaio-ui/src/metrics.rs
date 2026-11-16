@@ -160,6 +160,10 @@ pub const EDITABLE_TABLE_HEADER_HEIGHT: f32 = 30.0;
 pub const EDITABLE_TABLE_ROW_HEIGHT: f32 = 34.0;
 /// Horizontal padding of an `EditableTable` header label and of its read only and element cells.
 pub const EDITABLE_TABLE_PADDING_X: f32 = 12.0;
+/// Room kept at the right of an [`EditableTable`](crate::components::EditableTable) that scrolls
+/// its rows, so the overlay scrollbar (12 px wide while dragged, from gpui-kit) never covers the
+/// last column.
+pub const EDITABLE_TABLE_SCROLLBAR_GUTTER: f32 = 12.0;
 /// Horizontal padding of an `EditableTable` input cell, 8 px less than the read only cells: the
 /// input has padding of its own.
 pub const EDITABLE_TABLE_INPUT_PADDING_X: f32 = 4.0;
