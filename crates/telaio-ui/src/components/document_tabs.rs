@@ -268,6 +268,20 @@ fn paged_offset(offset: f32, max: f32, viewport: f32, forward: bool) -> f32 {
     target.clamp(-max.max(0.0), 0.0)
 }
 
+/// Whether the tab at `index` fits the scrolled area but is partly out of view, measured with
+/// this frame's layout.
+fn is_cut(handle: &ScrollHandle, index: usize) -> bool {
+    let Some(tab) = handle.bounds_for_item(index) else {
+        return false;
+    };
+    let viewport = handle.bounds();
+    let offset = handle.offset().x;
+    let epsilon = px(EPSILON);
+    tab.size.width <= viewport.size.width
+        && (tab.left() + offset < viewport.left() - epsilon
+            || tab.right() + offset > viewport.right() + epsilon)
+}
+
 /// The state the strip keeps between frames.
 struct StripState {
     handle: ScrollHandle,
@@ -275,7 +289,16 @@ struct StripState {
     last_selected: Option<usize>,
     /// What the last render drew.
     flags: StripFlags,
+    /// Frames left to check that the newly selected tab is fully in view, see
+    /// [`REVEAL_FRAMES`].
+    reveal_frames: u8,
 }
+
+/// How many frames after a selection change the strip checks that the selected tab is fully in
+/// view. gpui scrolls to an item with the sizes of the frame before, so a tab scrolled into view
+/// right when the arrows appear (and narrow the scrolled area) ends up cut by them. A few frames
+/// are enough for the layout to settle; after that the arrows may scroll the tab out of view.
+const REVEAL_FRAMES: u8 = 3;
 
 /// The open-tabs bar: one [`DocumentTab`] per open document, plus the caller's own
 /// trailing "+" button (added with [`Self::suffix`]).
@@ -343,6 +366,7 @@ impl RenderOnce for DocumentTabs {
                     handle: ScrollHandle::new(),
                     last_selected: None,
                     flags: StripFlags::HIDDEN,
+                    reveal_frames: 0,
                 }
             });
         let selected_index = self.items.iter().position(|item| item.selected);
@@ -351,6 +375,7 @@ impl RenderOnce for DocumentTabs {
             if selected_index != state.last_selected {
                 if let Some(index) = selected_index {
                     state.handle.scroll_to_item(index);
+                    state.reveal_frames = REVEAL_FRAMES;
                 }
                 state.last_selected = selected_index;
             }
@@ -599,7 +624,25 @@ impl RenderOnce for DocumentTabs {
             let handle = handle.clone();
             move |_, _, window, cx| {
                 let drawn = state.read(cx).flags;
-                if StripFlags::measure(&handle, drawn.show_controls) != drawn {
+                let settled = StripFlags::measure(&handle, drawn.show_controls) == drawn;
+                let mut refresh = !settled;
+                if state.read(cx).reveal_frames > 0 {
+                    let cut = selected_index.is_some_and(|index| is_cut(&handle, index));
+                    state.update(cx, |state, _| {
+                        if cut {
+                            if let Some(index) = selected_index {
+                                state.handle.scroll_to_item(index);
+                            }
+                            state.reveal_frames -= 1;
+                        } else if settled {
+                            // In view with the arrows this frame drew: done. Until then the
+                            // arrows are about to appear and may still cut it.
+                            state.reveal_frames = 0;
+                        }
+                    });
+                    refresh |= cut;
+                }
+                if refresh {
                     window.defer(cx, |window, _| window.refresh());
                 }
             }
