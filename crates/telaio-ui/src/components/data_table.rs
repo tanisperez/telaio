@@ -20,7 +20,7 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use gpui_kit::component::scroll::{ScrollableElement as _, Scrollbar, ScrollbarAxis};
+use gpui_kit::component::scroll::{Scrollbar, ScrollbarAxis};
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -335,7 +335,14 @@ fn header_cells(
         .enumerate()
         .map(|(index, column)| {
             if !column.sortable {
-                return Some(column.label.clone().into_any_element());
+                // Truncated like the body's cells, so a narrow flexible column never wraps it.
+                return Some(
+                    div()
+                        .min_w_0()
+                        .truncate()
+                        .child(column.label.clone())
+                        .into_any_element(),
+                );
             }
             let sorted = sort.and_then(|(sorted, order)| (sorted == index).then_some(order));
             Some(sortable_header(
@@ -409,7 +416,7 @@ fn body_cells(cells: Vec<DataCell>, columns: usize) -> Vec<Option<AnyElement>> {
 }
 
 impl RenderOnce for DataTable {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let palette = cx.palette();
         let Self {
             id,
@@ -469,7 +476,24 @@ impl RenderOnce for DataTable {
             .border_color(palette.border)
         });
 
+        // A plain gpui scroll area, not gpui-kit's `overflow_x_scrollbar`, which turns the vertical
+        // wheel into a sideways scroll: a page scrolled with the wheel would stop scrolling, and
+        // the table would slide sideways instead, as soon as the table came under the pointer.
+        // Keyed by the table's id, so every table keeps its own scroll position.
+        let handle = window
+            .use_keyed_state(ElementId::from((id.clone(), "columns")), cx, |_, _| {
+                ScrollHandle::new()
+            })
+            .read(cx)
+            .clone();
+        let sideways = div().absolute().inset_0().child(
+            Scrollbar::new(&handle)
+                .axis(ScrollbarAxis::Horizontal)
+                .id((id.clone(), "scrollbar")),
+        );
+
         v_flex()
+            .relative()
             .border_1()
             .border_color(palette.border)
             .rounded(px(RADIUS_LG))
@@ -478,13 +502,15 @@ impl RenderOnce for DataTable {
             .when(mono, |this| this.font_family(MONO_FAMILY))
             .child(
                 div()
-                    .id(id.clone())
-                    .w_full()
-                    .restrict_scroll_to_axis()
-                    .overflow_x_scrollbar()
-                    // Keyed by the table's id: by default the scroll state is keyed by this call
-                    // site, so every table would share one scroll position.
                     .id(id)
+                    .w_full()
+                    // A row, as gpui-kit's scroll area was: the table keeps its natural width and
+                    // scrolls when it is wider than the card, instead of wrapping its headers.
+                    .flex()
+                    .flex_row()
+                    .restrict_scroll_to_axis()
+                    .overflow_x_scroll()
+                    .track_scroll(&handle)
                     .child(
                         v_flex()
                             .min_w(px(table_min_width))
@@ -493,6 +519,7 @@ impl RenderOnce for DataTable {
                             .children(total_row),
                     ),
             )
+            .child(sideways)
     }
 }
 
