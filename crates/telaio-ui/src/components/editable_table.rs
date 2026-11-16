@@ -20,6 +20,12 @@
 //! exactly that tall, so nothing is centered by a fractional amount or shrunk by a flex parent.
 //! A single line row has a fixed height, so a cell's height never depends on focus, on the text
 //! or on its placeholder.
+//!
+//! # Scrolling
+//!
+//! By default the table is as tall as its rows and the caller scrolls whatever holds it. With
+//! [`EditableTable::scroll`] it fills at most the height of its parent and scrolls its rows
+//! itself, under a header that stays in place, with an overlay scrollbar.
 
 use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::*;
@@ -27,6 +33,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::edit_menu::edit_menu;
+use super::scrollbar::overlay;
 use super::text_field::input_line_height;
 use crate::PaletteExt;
 use crate::metrics::{
@@ -173,6 +180,7 @@ pub struct EditableTable {
     columns: Vec<EditableColumn>,
     rows: Vec<EditableRow>,
     empty: Option<SharedString>,
+    scroll: Option<(ElementId, ScrollHandle)>,
 }
 
 impl EditableTable {
@@ -182,6 +190,7 @@ impl EditableTable {
             columns: columns.into_iter().collect(),
             rows: Vec::new(),
             empty: None,
+            scroll: None,
         }
     }
 
@@ -194,6 +203,13 @@ impl EditableTable {
     /// Adds several rows.
     pub fn rows(mut self, rows: impl IntoIterator<Item = EditableRow>) -> Self {
         self.rows.extend(rows);
+        self
+    }
+
+    /// Makes the table scroll its own rows under a fixed header, through `handle`, filling at most
+    /// the height of its parent (which needs a definite height). `id` names the scrolled area.
+    pub fn scroll(mut self, id: impl Into<ElementId>, handle: &ScrollHandle) -> Self {
+        self.scroll = Some((id.into(), handle.clone()));
         self
     }
 
@@ -216,6 +232,7 @@ impl RenderOnce for EditableTable {
 
         let header = self.columns.iter().fold(
             h_flex()
+                .flex_none()
                 .h(px(EDITABLE_TABLE_HEADER_HEIGHT))
                 .items_center()
                 .bg(palette.surface)
@@ -233,12 +250,14 @@ impl RenderOnce for EditableTable {
             },
         );
 
-        let mut table = v_flex()
+        let table = v_flex()
             .border_1()
             .border_color(palette.border)
             .rounded(px(RADIUS_MD))
             .overflow_hidden()
             .child(header);
+        // The rows and the empty message: in the table itself, or in its own scrolled area.
+        let mut body = v_flex();
 
         let total = self.rows.len();
         for (position, row) in self.rows.into_iter().enumerate() {
@@ -246,7 +265,9 @@ impl RenderOnce for EditableTable {
             // A single line row has a fixed height. Only a note under a cell makes it taller.
             let tall = row.cells.iter().any(EditableCell::has_note);
             let row_height = px(EDITABLE_TABLE_ROW_HEIGHT);
+            // `flex_none`: in a scrolled body the rows keep their height instead of shrinking.
             let mut line = h_flex()
+                .flex_none()
                 .items_center()
                 .when(tall, |line| line.min_h(row_height))
                 .when(!tall, |line| line.h(row_height))
@@ -260,11 +281,11 @@ impl RenderOnce for EditableTable {
                     None => sized(div(), width),
                 });
             }
-            table = table.child(line);
+            body = body.child(line);
         }
 
         if let Some(message) = self.empty.filter(|_| total == 0) {
-            table = table.child(
+            body = body.child(
                 div()
                     .px(px(EDITABLE_TABLE_PADDING_X))
                     .py(px(14.0))
@@ -273,7 +294,25 @@ impl RenderOnce for EditableTable {
                     .child(message),
             );
         }
-        table
+        match self.scroll {
+            None => table.child(body),
+            Some((id, handle)) => table.max_h_full().child(
+                div()
+                    .relative()
+                    .flex_shrink(1.0)
+                    .min_h_0()
+                    .flex()
+                    .flex_col()
+                    .child(
+                        body.id(id.clone())
+                            .flex_shrink(1.0)
+                            .min_h_0()
+                            .overflow_y_scroll()
+                            .track_scroll(&handle),
+                    )
+                    .child(overlay(&handle, Some((id, "scrollbar").into()), &palette)),
+            ),
+        }
     }
 }
 
