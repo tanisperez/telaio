@@ -262,6 +262,8 @@ pub const SEARCHABLE_MENU_SUBMENU_ROW_HEIGHT: f32 = 26.0;
 pub const SEARCHABLE_MENU_TITLE_TEXT_SIZE: f32 = 12.5;
 /// Text size of the subtitle of a `SearchableMenu` row and of its key hints.
 pub const SEARCHABLE_MENU_SUBTITLE_TEXT_SIZE: f32 = 11.5;
+/// Text size of a row's lead text (an HTTP method), as the method of a request row in a tree.
+pub const SEARCHABLE_MENU_LEAD_TEXT_SIZE: f32 = 11.0;
 /// Text size of the badge of a `SearchableMenu` row and of its group labels.
 pub const SEARCHABLE_MENU_BADGE_TEXT_SIZE: f32 = 11.0;
 /// Gap between the trigger of a `SearchableMenu` and its panel.

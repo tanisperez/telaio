@@ -36,6 +36,9 @@ pub struct MenuRow {
     pub icon_color: Option<Hsla>,
     /// Color of the title; `fg` when `None`.
     pub title_color: Option<Hsla>,
+    /// A short monospace text drawn in the leading column instead of the icon, in its color (an
+    /// HTTP method such as `GET` in its method color).
+    pub lead: Option<(SharedString, Hsla)>,
     /// Short text before the chevron, monospace in the accent color (a sync state such as "up 1").
     pub badge: Option<SharedString>,
     /// A trailing toggle (a favourite star): `Some(on)`. Drawn while the row is highlighted or
@@ -61,6 +64,7 @@ impl MenuRow {
             icon,
             icon_color: None,
             title_color: None,
+            lead: None,
             badge: None,
             toggle: None,
         }
@@ -83,6 +87,12 @@ impl MenuRow {
     /// Sets the color of the title.
     pub fn title_color(mut self, color: Hsla) -> Self {
         self.title_color = Some(color);
+        self
+    }
+
+    /// Draws `text` in `color` in the leading column instead of the icon.
+    pub fn lead(mut self, text: impl Into<SharedString>, color: Hsla) -> Self {
+        self.lead = Some((text.into(), color));
         self
     }
 

@@ -15,8 +15,8 @@ use crate::fonts::MONO_FAMILY;
 use crate::metrics::{
     RADIUS_LG, RADIUS_SM, SEARCHABLE_MENU_ACTION_HEIGHT, SEARCHABLE_MENU_BADGE_TEXT_SIZE,
     SEARCHABLE_MENU_FOOTER_HEIGHT, SEARCHABLE_MENU_LABEL_GAP, SEARCHABLE_MENU_LABEL_HEIGHT,
-    SEARCHABLE_MENU_ROW_HEIGHT, SEARCHABLE_MENU_SEARCH_HEIGHT, SEARCHABLE_MENU_SUBTITLE_TEXT_SIZE,
-    SEARCHABLE_MENU_TITLE_TEXT_SIZE, SEARCHABLE_MENU_WIDTH,
+    SEARCHABLE_MENU_LEAD_TEXT_SIZE, SEARCHABLE_MENU_ROW_HEIGHT, SEARCHABLE_MENU_SEARCH_HEIGHT,
+    SEARCHABLE_MENU_SUBTITLE_TEXT_SIZE, SEARCHABLE_MENU_TITLE_TEXT_SIZE, SEARCHABLE_MENU_WIDTH,
 };
 use crate::{Palette, components::scrollbar};
 
@@ -331,13 +331,22 @@ impl SearchableMenuState {
                         cx.listener(move |this, _, window, cx| this.hover(ix, window, cx)),
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.activate(ix, cx)))
-                    .child(
-                        div().w(px(ICON_COLUMN)).flex_none().child(
+                    .child(match &row.lead {
+                        // At its natural width, like the method of a request row in a tree.
+                        Some((text, color)) => div()
+                            .flex_none()
+                            .min_w(px(ICON_COLUMN))
+                            .font_family(MONO_FAMILY)
+                            .text_size(px(SEARCHABLE_MENU_LEAD_TEXT_SIZE))
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(*color)
+                            .child(text.clone()),
+                        None => div().w(px(ICON_COLUMN)).flex_none().child(
                             Icon::new(row.icon)
                                 .with_size(px(ICON_SIZE))
                                 .text_color(row.icon_color.unwrap_or(palette.fg_subtle)),
                         ),
-                    )
+                    })
                     .child(
                         v_flex()
                             .flex_1()

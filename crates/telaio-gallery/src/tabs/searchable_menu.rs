@@ -134,6 +134,14 @@ fn groups(favourites: &HashSet<String>, palette: &telaio_ui::Palette) -> Vec<Men
             ],
         ),
         MenuGroup::new("Remote \u{b7} origin", remote),
+        // Rows with a lead text instead of an icon, as Postino's load test target picker.
+        MenuGroup::new(
+            "Requests \u{b7} auth",
+            [
+                MenuRow::new("auth/login", "login", IconName::File).lead("POST", palette.warning),
+                MenuRow::new("auth/me", "me", IconName::File).lead("GET", palette.success),
+            ],
+        ),
     ]
 }
 
