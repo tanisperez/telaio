@@ -16,6 +16,16 @@ _version: 2
   es: "Duplicar línea"
   gl: "Duplicar liña"
   it: "Duplica riga"
+"telaio_editor.menu.fold_all":
+  en: "Fold all"
+  es: "Plegar todo"
+  gl: "Pregar todo"
+  it: "Comprimi tutto"
+"telaio_editor.menu.unfold_all":
+  en: "Unfold all"
+  es: "Desplegar todo"
+  gl: "Despregar todo"
+  it: "Espandi tutto"
 "telaio_editor.menu.wrap_lines":
   en: "Wrap lines"
   es: "Ajustar líneas"

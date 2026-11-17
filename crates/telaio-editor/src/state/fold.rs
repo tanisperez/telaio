@@ -91,6 +91,24 @@ impl FoldMap {
         );
     }
 
+    /// Folds `blocks`, given as `(header, block)` in order and not overlapping, in place of every
+    /// fold there was.
+    pub fn replace(&mut self, blocks: &[(usize, Block)]) {
+        self.folds = blocks
+            .iter()
+            .map(|&(header, block)| Fold {
+                header,
+                last: block.last,
+                closes: block.closes,
+            })
+            .collect();
+    }
+
+    /// Removes every fold.
+    pub fn clear(&mut self) {
+        self.folds.clear();
+    }
+
     /// Removes the fold whose header is `line`. Returns whether there was one.
     pub fn unfold(&mut self, line: usize) -> bool {
         match self.folds.binary_search_by_key(&line, |fold| fold.header) {

@@ -320,6 +320,55 @@ impl EditorState {
         }
     }
 
+    /// "Fold all": folds every block of the top level, in place of the folds there were. When one
+    /// block holds the whole document, such as the object of a JSON text, the blocks inside it
+    /// are folded instead, so its first level stays on screen. Linear in the document's lines.
+    pub fn fold_all(&mut self) {
+        self.sync_folds();
+        let lines = self.buffer.line_count();
+        let Some(first) =
+            (0..lines).find(|&line| !self.buffer.line(line).chars().all(char::is_whitespace))
+        else {
+            return;
+        };
+        let last_text = (first..lines)
+            .rev()
+            .find(|&line| !self.buffer.line(line).chars().all(char::is_whitespace))
+            .unwrap_or(first);
+        let (mut line, end) = match self.block_at(first) {
+            Some(block) if block.last >= last_text => (first + 1, block.last),
+            _ => (first, lines),
+        };
+        // All the blocks first, then one change: folding them one by one costs the square of
+        // their number (60 000 objects of a JSON array took seconds).
+        let mut blocks = Vec::new();
+        while line < end {
+            match self.block_at(line).filter(|block| block.last < end) {
+                Some(block) => {
+                    blocks.push((line, block));
+                    line = block.last + 1;
+                }
+                None => line += 1,
+            }
+        }
+        if blocks.is_empty() {
+            return;
+        }
+        self.buffer.track_line_edits(true);
+        for &(header, block) in &blocks {
+            self.move_carets_out(header, block);
+        }
+        self.normalize();
+        self.folds.replace(&blocks);
+        self.clamp_scroll();
+    }
+
+    /// "Unfold all": shows every folded line.
+    pub fn unfold_all(&mut self) {
+        self.folds.clear();
+        self.clamp_scroll();
+    }
+
     /// `Ctrl+Shift+]`: unfolds the block whose first line has the cursor.
     pub fn unfold_at_cursor(&mut self) {
         self.sync_folds();
@@ -330,6 +379,14 @@ impl EditorState {
     /// Hides `block`, moving to its first line the cursors it would hide.
     fn fold(&mut self, header: usize, block: Block) {
         self.buffer.track_line_edits(true);
+        self.move_carets_out(header, block);
+        self.normalize();
+        self.folds.fold(header, block);
+        self.clamp_scroll();
+    }
+
+    /// Moves to the end of `header` the cursors that folding `block` would hide.
+    fn move_carets_out(&mut self, header: usize, block: Block) {
         let hidden = header + 1..block.last + 1;
         let end = Position::new(header, self.buffer.line_len(header));
         if hidden.contains(&self.cursor.line) {
@@ -342,9 +399,6 @@ impl EditorState {
                 *caret = Caret::at(end);
             }
         }
-        self.normalize();
-        self.folds.fold(header, block);
-        self.clamp_scroll();
     }
 
     /// The number of lines the gutter makes room for.
@@ -2481,6 +2535,36 @@ mod tests {
             text.push_str(&format!("fn f{index}() {{\n    a\n    b\n}}\n"));
         }
         editor(text.trim_end())
+    }
+
+    #[test]
+    fn fold_all_folds_the_top_level_and_unfold_all_shows_everything() {
+        // Twenty blocks of four lines: each one folds into its header.
+        let mut state = blocks();
+        state.fold_all();
+        assert_eq!(state.display_lines(), 20);
+        state.unfold_all();
+        assert_eq!(state.display_lines(), 80);
+    }
+
+    #[test]
+    fn fold_all_keeps_the_first_level_of_a_single_block_on_screen() {
+        let mut state = editor(
+            "{\n  \"a\": {\n    \"x\": 1\n  },\n  \"b\": 2,\n  \"c\": [\n    1,\n    2\n  ]\n}",
+        );
+        state.fold_all();
+        // `{`, `"a": {` folded, `"b": 2,`, `"c": [` folded, `}`.
+        assert_eq!(state.display_lines(), 5);
+        assert!(state.folds.fold_at(1).is_some());
+        assert!(state.folds.fold_at(5).is_some());
+        assert!(state.folds.fold_at(0).is_none());
+    }
+
+    #[test]
+    fn fold_all_on_a_blank_document_does_nothing() {
+        let mut state = editor("\n  \n");
+        state.fold_all();
+        assert!(state.folds.is_empty());
     }
 
     #[test]

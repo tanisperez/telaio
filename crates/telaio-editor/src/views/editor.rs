@@ -178,6 +178,10 @@ actions!(
         FoldBlock,
         /// Unfolds the block on the cursor's line.
         UnfoldBlock,
+        /// Folds every block of the first level ([`EditorState::fold_all`]).
+        FoldAll,
+        /// Unfolds every block.
+        UnfoldAll,
     ]
 );
 
@@ -875,6 +879,16 @@ impl Render for EditorView {
                     this.edit(cx, EditorState::unfold_at_cursor)
                 }
             }))
+            .on_action(cx.listener(|this, _: &FoldAll, _, cx| {
+                if this.display(cx).folding {
+                    this.edit(cx, EditorState::fold_all)
+                }
+            }))
+            .on_action(cx.listener(|this, _: &UnfoldAll, _, cx| {
+                if this.display(cx).folding {
+                    this.edit(cx, EditorState::unfold_all)
+                }
+            }))
             .on_action(cx.listener(|this, _: &ScrollLineUp, _, cx| {
                 this.state.scroll_lines(-1.0);
                 cx.notify();
@@ -957,6 +971,14 @@ pub fn line_entries(edit: EditState) -> MenuEntries {
             Box::new(DuplicateLine),
         )
         .action(t!("telaio_editor.menu.delete_line"), Box::new(DeleteLine))
+}
+
+/// Fold all and Unfold all, for an app to add to an editor's menu where folding helps, such as
+/// a JSON response. They do nothing while [`EditorDisplay::folding`] is off.
+pub fn fold_entries() -> MenuEntries {
+    MenuEntries::new()
+        .action(t!("telaio_editor.menu.fold_all"), Box::new(FoldAll))
+        .action(t!("telaio_editor.menu.unfold_all"), Box::new(UnfoldAll))
 }
 
 /// The Wrap lines entry every editor's menu ends with: Alt+Z, checked while the lines wrap.
