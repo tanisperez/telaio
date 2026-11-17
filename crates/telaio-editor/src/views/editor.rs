@@ -437,6 +437,8 @@ pub struct EditorView {
     /// The bottom left corner of the primary cursor in the window, as last painted: where the
     /// autocompletion menu opens.
     pub(crate) cursor_anchor: Option<Point<Pixels>>,
+    /// The byte offset of the text under the last right click ([`Self::menu_offset`]).
+    menu_offset: Option<usize>,
 }
 
 /// A style the app lays over a range of the text, on top of the syntax colors: Postino's
@@ -533,6 +535,7 @@ impl EditorView {
             completion_provider: None,
             completion: None,
             cursor_anchor: None,
+            menu_offset: None,
             state,
             focus_handle: cx.focus_handle(),
             painted: Vec::new(),
@@ -675,6 +678,13 @@ impl EditorView {
         self.state.scroll_to_cursor();
         window.focus(&self.focus_handle, cx);
         cx.notify();
+    }
+
+    /// The byte offset of the text under the right click that opened the menu, for an app's
+    /// entries about what was clicked (Postino's `{{variable}}` entries). `None` before any right
+    /// click on the text. Read it while building the menu ([`Self::set_context_menu`]).
+    pub fn menu_offset(&self) -> Option<usize> {
+        self.menu_offset
     }
 
     /// Sends [`EditorEvent::Changed`] when the text changed since the last one. Called after
@@ -2326,6 +2336,10 @@ impl EditorElement {
                 editor.marked = None;
                 let position = editor.position_at(event.position - text.origin);
                 let offset = editor.state.buffer.position_to_offset(position);
+                editor.menu_offset = Some(offset);
+                // The menu opens where the tooltip was.
+                editor.hover = None;
+                editor.close_completion(cx);
                 if !editor.state.is_selected(offset) {
                     editor.state.set_cursor(position, false);
                 }
