@@ -20,6 +20,9 @@ pub use state::editor::EditorState;
 pub use state::gutter;
 pub use syntax_colors::SyntaxColors;
 pub use telaio_syntax::Language;
+pub use views::completion::{
+    CompletionItem, CompletionProvider, CompletionTrigger, ShowCompletion,
+};
 pub use views::editor::{
     Decoration, EditorDisplay, EditorEvent, EditorMenu, EditorView, HoverProvider, KEY_CONTEXT,
     bind_keys, editor_actions, fold_entries, line_entries, wrap_entries,
@@ -31,4 +34,5 @@ pub fn init(cx: &mut gpui_kit::App) {
     views::editor::bind_keys(cx);
     views::find::bind_keys(cx);
     views::goto::bind_keys(cx);
+    views::completion::bind_keys(cx);
 }

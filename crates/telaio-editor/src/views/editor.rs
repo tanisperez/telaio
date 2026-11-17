@@ -27,6 +27,7 @@ use std::rc::Rc;
 
 use telaio_text::{EditKind, Position, Selection};
 
+use super::completion::{CompletionMenu, CompletionProvider, CompletionTrigger, ShowCompletion};
 use crate::metrics::{
     EDITOR_GUTTER_PADDING, EDITOR_GUTTER_RIGHT, EDITOR_SCROLLBAR_WIDTH, EDITOR_TEXT_PADDING,
 };
@@ -429,6 +430,13 @@ pub struct EditorView {
     hover_provider: Option<HoverProvider>,
     /// The tooltip on screen: the range it explains, its text and where it shows.
     hover: Option<(Range<usize>, SharedString, Point<Pixels>)>,
+    /// What the app completes ([`Self::set_completion`]).
+    pub(crate) completion_provider: Option<(CompletionProvider, CompletionTrigger)>,
+    /// The open autocompletion menu.
+    pub(crate) completion: Option<CompletionMenu>,
+    /// The bottom left corner of the primary cursor in the window, as last painted: where the
+    /// autocompletion menu opens.
+    pub(crate) cursor_anchor: Option<Point<Pixels>>,
 }
 
 /// A style the app lays over a range of the text, on top of the syntax colors: Postino's
@@ -522,6 +530,9 @@ impl EditorView {
             decorations: Vec::new(),
             hover_provider: None,
             hover: None,
+            completion_provider: None,
+            completion: None,
+            cursor_anchor: None,
             state,
             focus_handle: cx.focus_handle(),
             painted: Vec::new(),
@@ -729,6 +740,14 @@ impl EditorView {
     }
 
     fn move_cursor(&mut self, movement: Movement, select: bool, cx: &mut Context<Self>) {
+        // The open autocompletion menu takes Up and Down; any other move closes it.
+        if !select
+            && matches!(movement, Movement::Up | Movement::Down)
+            && self.move_completion(movement == Movement::Down, cx)
+        {
+            return;
+        }
+        self.close_completion(cx);
         self.marked = None;
         self.state.move_cursor(movement, select);
         cx.notify();
@@ -737,8 +756,15 @@ impl EditorView {
     /// Runs an edit on the state and repaints.
     fn edit(&mut self, cx: &mut Context<Self>, edit: impl FnOnce(&mut EditorState)) {
         self.marked = None;
+        let version = self.state.buffer.version();
         edit(&mut self.state);
+        let changed = self.state.buffer.version() != version;
         self.emit_if_changed(cx);
+        if changed {
+            self.completion_after_edit(cx);
+        } else {
+            self.close_completion(cx);
+        }
         cx.notify();
     }
 
@@ -874,198 +900,211 @@ impl Render for EditorView {
             )
             .with_priority(1)
         });
-        let editor = div()
-            .id("editor")
-            .key_context(KEY_CONTEXT)
-            .track_focus(&self.focus_handle)
-            .size_full()
-            .on_action(
-                cx.listener(|this, _: &MoveLeft, _, cx| {
+        let editor =
+            div()
+                .id("editor")
+                .key_context(KEY_CONTEXT)
+                .track_focus(&self.focus_handle)
+                .size_full()
+                .on_action(cx.listener(|this, _: &MoveLeft, _, cx| {
                     this.move_cursor(Movement::Left, false, cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &MoveRight, _, cx| {
-                this.move_cursor(Movement::Right, false, cx)
-            }))
-            .on_action(cx.listener(|this, _: &MoveWordLeft, _, cx| {
-                this.move_cursor(Movement::WordLeft, false, cx)
-            }))
-            .on_action(cx.listener(|this, _: &MoveWordRight, _, cx| {
-                this.move_cursor(Movement::WordRight, false, cx)
-            }))
-            .on_action(
-                cx.listener(|this, _: &MoveUp, _, cx| this.move_cursor(Movement::Up, false, cx)),
-            )
-            .on_action(
-                cx.listener(|this, _: &MoveDown, _, cx| {
+                }))
+                .on_action(cx.listener(|this, _: &MoveRight, _, cx| {
+                    this.move_cursor(Movement::Right, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &MoveWordLeft, _, cx| {
+                    this.move_cursor(Movement::WordLeft, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &MoveWordRight, _, cx| {
+                    this.move_cursor(Movement::WordRight, false, cx)
+                }))
+                .on_action(
+                    cx.listener(|this, _: &MoveUp, _, cx| {
+                        this.move_cursor(Movement::Up, false, cx)
+                    }),
+                )
+                .on_action(cx.listener(|this, _: &MoveDown, _, cx| {
                     this.move_cursor(Movement::Down, false, cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &MoveToLineStart, _, cx| {
-                this.move_cursor(Movement::LineStart, false, cx)
-            }))
-            .on_action(cx.listener(|this, _: &MoveToLineEnd, _, cx| {
-                this.move_cursor(Movement::LineEnd, false, cx)
-            }))
-            .on_action(
-                cx.listener(|this, _: &PageUp, _, cx| {
+                }))
+                .on_action(cx.listener(|this, _: &MoveToLineStart, _, cx| {
+                    this.move_cursor(Movement::LineStart, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &MoveToLineEnd, _, cx| {
+                    this.move_cursor(Movement::LineEnd, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &PageUp, _, cx| {
                     this.move_cursor(Movement::PageUp, false, cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &PageDown, _, cx| {
-                this.move_cursor(Movement::PageDown, false, cx)
-            }))
-            .on_action(cx.listener(|this, _: &MoveToDocumentStart, _, cx| {
-                this.move_cursor(Movement::DocumentStart, false, cx)
-            }))
-            .on_action(cx.listener(|this, _: &MoveToDocumentEnd, _, cx| {
-                this.move_cursor(Movement::DocumentEnd, false, cx)
-            }))
-            .on_action(
-                cx.listener(|this, _: &SelectLeft, _, cx| {
+                }))
+                .on_action(cx.listener(|this, _: &PageDown, _, cx| {
+                    this.move_cursor(Movement::PageDown, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &MoveToDocumentStart, _, cx| {
+                    this.move_cursor(Movement::DocumentStart, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &MoveToDocumentEnd, _, cx| {
+                    this.move_cursor(Movement::DocumentEnd, false, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectLeft, _, cx| {
                     this.move_cursor(Movement::Left, true, cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &SelectRight, _, cx| {
-                this.move_cursor(Movement::Right, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectWordLeft, _, cx| {
-                this.move_cursor(Movement::WordLeft, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectWordRight, _, cx| {
-                this.move_cursor(Movement::WordRight, true, cx)
-            }))
-            .on_action(
-                cx.listener(|this, _: &SelectUp, _, cx| this.move_cursor(Movement::Up, true, cx)),
-            )
-            .on_action(
-                cx.listener(|this, _: &SelectDown, _, cx| {
+                }))
+                .on_action(cx.listener(|this, _: &SelectRight, _, cx| {
+                    this.move_cursor(Movement::Right, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectWordLeft, _, cx| {
+                    this.move_cursor(Movement::WordLeft, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectWordRight, _, cx| {
+                    this.move_cursor(Movement::WordRight, true, cx)
+                }))
+                .on_action(
+                    cx.listener(|this, _: &SelectUp, _, cx| {
+                        this.move_cursor(Movement::Up, true, cx)
+                    }),
+                )
+                .on_action(cx.listener(|this, _: &SelectDown, _, cx| {
                     this.move_cursor(Movement::Down, true, cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &SelectToLineStart, _, cx| {
-                this.move_cursor(Movement::LineStart, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectToLineEnd, _, cx| {
-                this.move_cursor(Movement::LineEnd, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectPageUp, _, cx| {
-                this.move_cursor(Movement::PageUp, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectPageDown, _, cx| {
-                this.move_cursor(Movement::PageDown, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectToDocumentStart, _, cx| {
-                this.move_cursor(Movement::DocumentStart, true, cx)
-            }))
-            .on_action(cx.listener(|this, _: &SelectToDocumentEnd, _, cx| {
-                this.move_cursor(Movement::DocumentEnd, true, cx)
-            }))
-            .on_action(
-                cx.listener(|this, _: &SelectAll, _, cx| this.edit(cx, EditorState::select_all)),
-            )
-            .on_action(
-                cx.listener(|this, _: &Backspace, _, cx| this.edit(cx, EditorState::backspace)),
-            )
-            .on_action(cx.listener(|this, _: &Delete, _, cx| this.edit(cx, EditorState::delete)))
-            .on_action(cx.listener(|this, _: &DeleteWordLeft, _, cx| {
-                this.edit(cx, EditorState::delete_word_backward)
-            }))
-            .on_action(cx.listener(|this, _: &DeleteWordRight, _, cx| {
-                this.edit(cx, EditorState::delete_word_forward)
-            }))
-            .on_action(cx.listener(|this, _: &DeleteToLineStart, _, cx| {
-                this.edit(cx, EditorState::delete_to_line_start)
-            }))
-            .on_action(cx.listener(|this, _: &Newline, _, cx| this.edit(cx, EditorState::newline)))
-            .on_action(cx.listener(|this, _: &Indent, _, cx| this.edit(cx, EditorState::indent)))
-            .on_action(cx.listener(|this, _: &Outdent, _, cx| this.edit(cx, EditorState::outdent)))
-            .on_action(cx.listener(|this, _: &Copy, _, cx| this.copy(false, cx)))
-            .on_action(cx.listener(|this, _: &Cut, _, cx| this.copy(true, cx)))
-            .on_action(cx.listener(|this, _: &Paste, _, cx| this.paste(cx)))
-            .on_action(cx.listener(|this, _: &Undo, _, cx| this.edit(cx, EditorState::undo)))
-            .on_action(cx.listener(|this, _: &Redo, _, cx| this.edit(cx, EditorState::redo)))
-            .on_action(
-                cx.listener(|this, _: &SelectNextOccurrence, _, cx| {
+                }))
+                .on_action(cx.listener(|this, _: &SelectToLineStart, _, cx| {
+                    this.move_cursor(Movement::LineStart, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectToLineEnd, _, cx| {
+                    this.move_cursor(Movement::LineEnd, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectPageUp, _, cx| {
+                    this.move_cursor(Movement::PageUp, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectPageDown, _, cx| {
+                    this.move_cursor(Movement::PageDown, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectToDocumentStart, _, cx| {
+                    this.move_cursor(Movement::DocumentStart, true, cx)
+                }))
+                .on_action(cx.listener(|this, _: &SelectToDocumentEnd, _, cx| {
+                    this.move_cursor(Movement::DocumentEnd, true, cx)
+                }))
+                .on_action(
+                    cx.listener(|this, _: &SelectAll, _, cx| {
+                        this.edit(cx, EditorState::select_all)
+                    }),
+                )
+                .on_action(
+                    cx.listener(|this, _: &Backspace, _, cx| this.edit(cx, EditorState::backspace)),
+                )
+                .on_action(
+                    cx.listener(|this, _: &Delete, _, cx| this.edit(cx, EditorState::delete)),
+                )
+                .on_action(cx.listener(|this, _: &DeleteWordLeft, _, cx| {
+                    this.edit(cx, EditorState::delete_word_backward)
+                }))
+                .on_action(cx.listener(|this, _: &DeleteWordRight, _, cx| {
+                    this.edit(cx, EditorState::delete_word_forward)
+                }))
+                .on_action(cx.listener(|this, _: &DeleteToLineStart, _, cx| {
+                    this.edit(cx, EditorState::delete_to_line_start)
+                }))
+                .on_action(cx.listener(|this, _: &Newline, _, cx| {
+                    if !this.confirm_completion(cx) {
+                        this.edit(cx, EditorState::newline)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &Indent, _, cx| {
+                    if !this.confirm_completion(cx) {
+                        this.edit(cx, EditorState::indent)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &ShowCompletion, _, cx| this.show_completion(cx)))
+                .on_action(
+                    cx.listener(|this, _: &Outdent, _, cx| this.edit(cx, EditorState::outdent)),
+                )
+                .on_action(cx.listener(|this, _: &Copy, _, cx| this.copy(false, cx)))
+                .on_action(cx.listener(|this, _: &Cut, _, cx| this.copy(true, cx)))
+                .on_action(cx.listener(|this, _: &Paste, _, cx| this.paste(cx)))
+                .on_action(cx.listener(|this, _: &Undo, _, cx| this.edit(cx, EditorState::undo)))
+                .on_action(cx.listener(|this, _: &Redo, _, cx| this.edit(cx, EditorState::redo)))
+                .on_action(cx.listener(|this, _: &SelectNextOccurrence, _, cx| {
                     this.select_next_occurrence(cx)
-                }),
-            )
-            .on_action(cx.listener(|this, _: &UnselectOccurrence, _, cx| {
-                this.edit(cx, EditorState::unselect_occurrence)
-            }))
-            .on_action(
-                cx.listener(|this, _: &DuplicateLine, _, cx| this.edit(cx, EditorState::duplicate)),
-            )
-            .on_action(
-                cx.listener(|this, _: &DeleteLine, _, cx| this.edit(cx, EditorState::delete_lines)),
-            )
-            .on_action(cx.listener(|this, _: &SelectLine, _, cx| {
-                this.edit(cx, EditorState::select_lines_extending)
-            }))
-            .on_action(cx.listener(|this, _: &InsertLineBelow, _, cx| {
-                this.edit(cx, |state| state.insert_line(false))
-            }))
-            .on_action(cx.listener(|this, _: &InsertLineAbove, _, cx| {
-                this.edit(cx, |state| state.insert_line(true))
-            }))
-            .on_action(
-                cx.listener(|this, _: &IndentLine, _, cx| this.edit(cx, EditorState::indent_lines)),
-            )
-            .on_action(
-                cx.listener(|this, _: &OutdentLine, _, cx| this.edit(cx, EditorState::outdent)),
-            )
-            .on_action(
-                cx.listener(|this, _: &ToggleWrap, _, cx| this.edit(cx, EditorState::toggle_wrap)),
-            )
-            .on_action(cx.listener(|this, _: &ToggleComment, _, cx| {
-                this.edit(cx, EditorState::toggle_comment)
-            }))
-            .on_action(cx.listener(|this, _: &FoldBlock, _, cx| {
-                if this.display(cx).folding {
-                    this.edit(cx, EditorState::fold_at_cursor)
-                }
-            }))
-            .on_action(cx.listener(|this, _: &UnfoldBlock, _, cx| {
-                if this.display(cx).folding {
-                    this.edit(cx, EditorState::unfold_at_cursor)
-                }
-            }))
-            .on_action(cx.listener(|this, _: &FoldAll, _, cx| {
-                if this.display(cx).folding {
-                    this.edit(cx, EditorState::fold_all)
-                }
-            }))
-            .on_action(cx.listener(|this, _: &UnfoldAll, _, cx| {
-                if this.display(cx).folding {
-                    this.edit(cx, EditorState::unfold_all)
-                }
-            }))
-            .on_action(cx.listener(|this, _: &ScrollLineUp, _, cx| {
-                this.state.scroll_lines(-1.0);
-                cx.notify();
-            }))
-            .on_action(cx.listener(|this, _: &ScrollLineDown, _, cx| {
-                this.state.scroll_lines(1.0);
-                cx.notify();
-            }))
-            .on_action(cx.listener(|this, _: &MoveLineUp, _, cx| {
-                this.edit(cx, |state| state.move_lines(true))
-            }))
-            .on_action(cx.listener(|this, _: &MoveLineDown, _, cx| {
-                this.edit(cx, |state| state.move_lines(false))
-            }))
-            .on_action(cx.listener(|this, _: &CollapseCursors, window, cx| {
-                if this.state.collapse_cursors() {
+                }))
+                .on_action(cx.listener(|this, _: &UnselectOccurrence, _, cx| {
+                    this.edit(cx, EditorState::unselect_occurrence)
+                }))
+                .on_action(cx.listener(|this, _: &DuplicateLine, _, cx| {
+                    this.edit(cx, EditorState::duplicate)
+                }))
+                .on_action(cx.listener(|this, _: &DeleteLine, _, cx| {
+                    this.edit(cx, EditorState::delete_lines)
+                }))
+                .on_action(cx.listener(|this, _: &SelectLine, _, cx| {
+                    this.edit(cx, EditorState::select_lines_extending)
+                }))
+                .on_action(cx.listener(|this, _: &InsertLineBelow, _, cx| {
+                    this.edit(cx, |state| state.insert_line(false))
+                }))
+                .on_action(cx.listener(|this, _: &InsertLineAbove, _, cx| {
+                    this.edit(cx, |state| state.insert_line(true))
+                }))
+                .on_action(cx.listener(|this, _: &IndentLine, _, cx| {
+                    this.edit(cx, EditorState::indent_lines)
+                }))
+                .on_action(
+                    cx.listener(|this, _: &OutdentLine, _, cx| this.edit(cx, EditorState::outdent)),
+                )
+                .on_action(cx.listener(|this, _: &ToggleWrap, _, cx| {
+                    this.edit(cx, EditorState::toggle_wrap)
+                }))
+                .on_action(cx.listener(|this, _: &ToggleComment, _, cx| {
+                    this.edit(cx, EditorState::toggle_comment)
+                }))
+                .on_action(cx.listener(|this, _: &FoldBlock, _, cx| {
+                    if this.display(cx).folding {
+                        this.edit(cx, EditorState::fold_at_cursor)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &UnfoldBlock, _, cx| {
+                    if this.display(cx).folding {
+                        this.edit(cx, EditorState::unfold_at_cursor)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &FoldAll, _, cx| {
+                    if this.display(cx).folding {
+                        this.edit(cx, EditorState::fold_all)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &UnfoldAll, _, cx| {
+                    if this.display(cx).folding {
+                        this.edit(cx, EditorState::unfold_all)
+                    }
+                }))
+                .on_action(cx.listener(|this, _: &ScrollLineUp, _, cx| {
+                    this.state.scroll_lines(-1.0);
                     cx.notify();
-                } else if this.find_open {
-                    this.close_find(window, cx);
-                } else {
-                    cx.propagate();
-                }
-            }))
-            .child(EditorElement {
-                editor: cx.entity(),
-            });
+                }))
+                .on_action(cx.listener(|this, _: &ScrollLineDown, _, cx| {
+                    this.state.scroll_lines(1.0);
+                    cx.notify();
+                }))
+                .on_action(cx.listener(|this, _: &MoveLineUp, _, cx| {
+                    this.edit(cx, |state| state.move_lines(true))
+                }))
+                .on_action(cx.listener(|this, _: &MoveLineDown, _, cx| {
+                    this.edit(cx, |state| state.move_lines(false))
+                }))
+                .on_action(cx.listener(|this, _: &CollapseCursors, window, cx| {
+                    // Escape closes, in order: the autocompletion menu, the extra cursors, the
+                    // find bar.
+                    if this.close_completion(cx) {
+                        return;
+                    }
+                    if this.state.collapse_cursors() {
+                        cx.notify();
+                    } else if this.find_open {
+                        this.close_find(window, cx);
+                    } else {
+                        cx.propagate();
+                    }
+                }))
+                .child(EditorElement {
+                    editor: cx.entity(),
+                });
         let this = cx.entity().downgrade();
         let editor = editor.context_menu(move |menu, window, cx| {
             let Some(editor) = this.upgrade() else {
@@ -1089,7 +1128,8 @@ impl Render for EditorView {
             let entries = entries.section(wrap_entries(wrap));
             entries.render(menu.action_context(focus), window, cx)
         });
-        let editor = editor.children(tooltip);
+        let completion = self.render_completion(cx);
+        let editor = editor.children(tooltip).children(completion);
         self.with_find_bar(editor, cx)
     }
 }
@@ -1233,6 +1273,7 @@ impl EntityInputHandler for EditorView {
             Some(range) => self.state.replace(range, text, EditKind::Typing),
         }
         self.emit_if_changed(cx);
+        self.completion_after_typing(text, cx);
         cx.notify();
     }
 
@@ -1666,7 +1707,7 @@ impl Element for EditorElement {
                     Bounds::from_corners(point(bounds.left(), top), point(bounds.right(), bottom))
                 })
                 .collect();
-            let cursors = visible_cursors
+            let cursors: Vec<Bounds<Pixels>> = visible_cursors
                 .iter()
                 .filter(|_| focused)
                 .filter_map(|cursor| {
@@ -1684,6 +1725,16 @@ impl Element for EditorElement {
                     ))
                 })
                 .collect();
+            // Where the autocompletion menu opens; it follows the cursor while it is open.
+            let anchor = cursors
+                .first()
+                .map(|cursor: &Bounds<Pixels>| cursor.bottom_left());
+            if editor.cursor_anchor != anchor {
+                editor.cursor_anchor = anchor;
+                if editor.completion.is_some() {
+                    cx.notify();
+                }
+            }
 
             // The selection, one rectangle per visible line it covers. A line whose break is
             // selected shows one more character's width.
@@ -2310,7 +2361,10 @@ impl EditorElement {
             if !phase.bubble() || event.button != MouseButton::Left || !hitbox.is_hovered(window) {
                 return;
             }
-            editor.update(cx, |editor, _| editor.hover = None);
+            editor.update(cx, |editor, cx| {
+                editor.hover = None;
+                editor.close_completion(cx);
+            });
             if let Some(minimap) = minimap
                 && minimap.area.contains(&event.position)
             {

@@ -12,7 +12,8 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use telaio_editor::{
-    Decoration, EditorDisplay, EditorState as TelaioEditorState, EditorView, Language,
+    CompletionItem, Decoration, EditorDisplay, EditorState as TelaioEditorState, EditorView,
+    Language,
 };
 use telaio_ui::components::{CodeEditor, MenuEntries, TextArea};
 
@@ -66,6 +67,43 @@ fn marker_ranges(text: &str) -> Vec<Range<usize>> {
         from = end;
     }
     ranges
+}
+
+/// The globals the script demo completes, with their detail and documentation.
+const SCRIPT_GLOBALS: &[(&str, &str, &str)] = &[
+    (
+        "response",
+        "object",
+        "The response: status, headers and body.",
+    ),
+    ("request", "object", "The request as it was sent."),
+    ("vars", "object", "Variables for the next requests."),
+    ("test", "(name, fn)", "Declares a test."),
+    ("expect", "(value)", "Starts an assertion."),
+];
+
+/// The script demo's rows: the globals starting with the word before the cursor, or all of them
+/// on Ctrl+Space with nothing typed.
+fn script_completions(text: &str, offset: usize, explicit: bool, _: &App) -> Vec<CompletionItem> {
+    let before = &text[..offset.min(text.len())];
+    let start = before
+        .rfind(|ch: char| !(ch.is_alphanumeric() || ch == '_'))
+        .map_or(0, |index| index + 1);
+    let typed = &before[start..];
+    if typed.is_empty() && !explicit {
+        return Vec::new();
+    }
+    SCRIPT_GLOBALS
+        .iter()
+        .filter(|(name, _, _)| name.starts_with(typed) && *name != typed)
+        .map(|(name, detail, documentation)| CompletionItem {
+            label: (*name).into(),
+            detail: Some((*detail).into()),
+            documentation: Some((*documentation).into()),
+            replace: start..offset,
+            insert: (*name).to_string(),
+        })
+        .collect()
 }
 
 /// A post-response script for the telaio editor demos.
@@ -168,6 +206,10 @@ impl EditorsDemo {
             view.set_context_menu(|entries, edit, _, _| {
                 entries.section(telaio_editor::line_entries(edit))
             });
+            // Autocompletion of a few globals, while typing a name or on Ctrl+Space.
+            view.set_completion(script_completions, |typed| {
+                typed.chars().all(|ch| ch.is_alphanumeric() || ch == '_')
+            });
             view
         });
         let response = cx.new(|cx| {
@@ -250,7 +292,10 @@ impl Gallery {
                 "Request body: decorated variables with a tooltip, Format, Find and an Insert submenu",
                 &demo.body,
             ))
-            .child(item("Script: Duplicate line and Delete line", &demo.script))
+            .child(item(
+                "Script: autocompletion (type or Ctrl+Space), Duplicate line and Delete line",
+                &demo.script,
+            ))
             .child(item(
                 "Read only response: Copy and Select all",
                 &demo.response,
