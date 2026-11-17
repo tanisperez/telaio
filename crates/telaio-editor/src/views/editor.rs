@@ -416,7 +416,20 @@ pub struct EditorView {
     display: Option<EditorDisplay>,
     /// The app's part of the right-click menu ([`Self::set_context_menu`]).
     menu: Option<EditorMenu>,
+    /// The buffer version of the last [`EditorEvent::Changed`], or of the last
+    /// [`Self::set_text`]: a newer version means the user changed the text since.
+    notified_version: u64,
 }
+
+/// What an editor tells the app, through `cx.subscribe`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EditorEvent {
+    /// The user changed the text: typing, paste, cut, undo, a line action, a replace. Not sent
+    /// for [`EditorView::set_text`], which the app calls itself.
+    Changed,
+}
+
+impl EventEmitter<EditorEvent> for EditorView {}
 
 /// A line as painted in the last frame.
 struct PaintedLine {
@@ -461,7 +474,9 @@ impl PaintedLine {
 
 impl EditorView {
     pub fn new(state: EditorState, cx: &mut Context<Self>) -> Self {
+        let notified_version = state.buffer.version();
         Self {
+            notified_version,
             state,
             focus_handle: cx.focus_handle(),
             painted: Vec::new(),
@@ -498,6 +513,7 @@ impl EditorView {
     /// Replaces the whole text, as a new document (see [`EditorState::set_text`]).
     pub fn set_text(&mut self, text: &str, cx: &mut Context<Self>) {
         self.state.set_text(text);
+        self.notified_version = self.state.buffer.version();
         self.painted.clear();
         // A find in selection searched a range of the old text: search the whole new one. An
         // open find bar searches again on the next frame (its version no longer matches).
@@ -535,6 +551,26 @@ impl EditorView {
 
     pub fn focus_handle(&self) -> &FocusHandle {
         &self.focus_handle
+    }
+
+    /// Puts the cursor at the start of `line` (0 based, clamped to the text), scrolls to it and
+    /// focuses the editor.
+    pub fn reveal_line(&mut self, line: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let line = line.min(self.state.buffer.line_count().saturating_sub(1));
+        self.state.set_cursor(Position::new(line, 0), false);
+        self.state.scroll_to_cursor();
+        window.focus(&self.focus_handle, cx);
+        cx.notify();
+    }
+
+    /// Sends [`EditorEvent::Changed`] when the text changed since the last one. Called after
+    /// every path that can change the text.
+    pub(crate) fn emit_if_changed(&mut self, cx: &mut Context<Self>) {
+        let version = self.state.buffer.version();
+        if version != self.notified_version {
+            self.notified_version = version;
+            cx.emit(EditorEvent::Changed);
+        }
     }
 
     /// Runs a parse on the background executor and hands its tree to the state, which may ask
@@ -599,6 +635,7 @@ impl EditorView {
     fn edit(&mut self, cx: &mut Context<Self>, edit: impl FnOnce(&mut EditorState)) {
         self.marked = None;
         edit(&mut self.state);
+        self.emit_if_changed(cx);
         cx.notify();
     }
 
@@ -612,6 +649,7 @@ impl EditorView {
         if let Some(text) = text {
             cx.write_to_clipboard(ClipboardItem::new_string(text));
         }
+        self.emit_if_changed(cx);
         cx.notify();
     }
 
@@ -1080,6 +1118,7 @@ impl EntityInputHandler for EditorView {
             Some(range) if range == primary => self.state.insert(text, EditKind::Typing),
             Some(range) => self.state.replace(range, text, EditKind::Typing),
         }
+        self.emit_if_changed(cx);
         cx.notify();
     }
 
@@ -1097,6 +1136,7 @@ impl EntityInputHandler for EditorView {
             .unwrap_or_else(|| self.state.selection().range());
         let start = range.start;
         self.state.replace(range, new_text, EditKind::Typing);
+        self.emit_if_changed(cx);
         self.marked = (!new_text.is_empty()).then(|| start..start + new_text.len());
         // The selection inside the composition, in UTF-16 units of the new text.
         if let Some(selected) = new_selected_range {

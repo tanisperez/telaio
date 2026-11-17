@@ -305,6 +305,7 @@ impl EditorView {
                 scope.end = (scope.end + text.len()).saturating_sub(matched.len());
             }
             self.state.insert(&text, telaio_text::EditKind::Other);
+            self.emit_if_changed(cx);
             // The edit restarts the search on the next frame; its first match after the
             // cursor gets selected.
             self.find_jump = true;
@@ -350,6 +351,7 @@ impl EditorView {
                     if let Some(scope) = &mut editor.find.scope {
                         scope.end = (scope.end + after).saturating_sub(before);
                     }
+                    editor.emit_if_changed(cx);
                     cx.notify();
                 }
             });
