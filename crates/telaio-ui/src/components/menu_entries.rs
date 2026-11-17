@@ -99,6 +99,11 @@ impl MenuItem {
         &self.label
     }
 
+    /// Whether the item shows a check mark.
+    pub fn is_checked(&self) -> bool {
+        self.checked
+    }
+
     /// Whether the item is disabled.
     pub fn is_disabled(&self) -> bool {
         self.disabled

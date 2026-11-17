@@ -16,6 +16,11 @@ _version: 2
   es: "Duplicar línea"
   gl: "Duplicar liña"
   it: "Duplica riga"
+"telaio_editor.menu.wrap_lines":
+  en: "Wrap lines"
+  es: "Ajustar líneas"
+  gl: "Axustar liñas"
+  it: "A capo automatico"
 "telaio_editor.find.case":
   en: "Match case (Alt+C)"
   es: "Distinguir mayúsculas (Alt+C)"

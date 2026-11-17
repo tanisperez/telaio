@@ -44,7 +44,7 @@ use crate::state::syntax::{ParseRequest, line_runs};
 use crate::state::wrap::wraps_by_default;
 use crate::syntax_colors::SyntaxColors;
 use telaio_ui::PaletteExt;
-use telaio_ui::components::{EditActions, EditState, MenuEntries, edit_entries};
+use telaio_ui::components::{EditActions, EditState, MenuEntries, MenuItem, edit_entries};
 
 /// Lines longer than this, in bytes, are shaped only around the visible columns.
 const LONG_LINE: usize = 2_000;
@@ -906,12 +906,13 @@ impl Render for EditorView {
             let Some(editor) = this.upgrade() else {
                 return menu;
             };
-            let (edit, focus, extend) = {
+            let (edit, focus, extend, wrap) = {
                 let view = editor.read(cx);
                 (
                     view.edit_state(),
                     view.focus_handle.clone(),
                     view.menu.clone(),
+                    view.state.wrap,
                 )
             };
             let entries = edit_entries(edit, editor_actions());
@@ -919,6 +920,8 @@ impl Render for EditorView {
                 Some(extend) => extend(entries, edit, window, cx),
                 None => entries,
             };
+            // Last in every editor's menu, after the app's entries.
+            let entries = entries.section(wrap_entries(wrap));
             entries.render(menu.action_context(focus), window, cx)
         });
         self.with_find_bar(editor, cx)
@@ -956,10 +959,18 @@ pub fn line_entries(edit: EditState) -> MenuEntries {
         .action(t!("telaio_editor.menu.delete_line"), Box::new(DeleteLine))
 }
 
+/// The Wrap lines entry every editor's menu ends with: Alt+Z, checked while the lines wrap.
+pub fn wrap_entries(wrap: bool) -> MenuEntries {
+    MenuEntries::new().item(
+        MenuItem::action(t!("telaio_editor.menu.wrap_lines"), Box::new(ToggleWrap)).checked(wrap),
+    )
+}
+
 impl EditorView {
     /// The editor's right-click menu: `extend` gets the standard entries (Undo, Redo, Cut, Copy,
     /// Paste, Select all, or Copy and Select all when read only) and what the editor allows now,
-    /// and returns the whole menu. Without it the menu has the standard entries only.
+    /// and returns the menu. Without it the menu has the standard entries only. Either way the
+    /// editor adds [`wrap_entries`] at the end.
     ///
     /// ```ignore
     /// editor.set_context_menu(|entries, edit, _, _| {
@@ -2357,4 +2368,24 @@ fn range_rects(
         rects.push(rect(line, left, right));
     }
     rects
+}
+
+#[cfg(test)]
+mod tests {
+    use super::wrap_entries;
+    use telaio_ui::components::MenuEntry;
+
+    #[test]
+    fn the_wrap_entry_is_checked_while_the_lines_wrap() {
+        for wrap in [false, true] {
+            let entries = wrap_entries(wrap);
+            let visible = entries.visible();
+            assert_eq!(visible.len(), 1);
+            let MenuEntry::Item(item) = visible[0] else {
+                panic!("an item");
+            };
+            assert_eq!(item.is_checked(), wrap);
+            assert!(!item.is_disabled());
+        }
+    }
 }
