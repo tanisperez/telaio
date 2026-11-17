@@ -18,6 +18,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::ActiveTheme;
 use gpui_kit::component::input::InputState;
 use gpui_kit::component::menu::ContextMenuExt as _;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use rust_i18n::t;
@@ -40,7 +41,7 @@ use crate::state::minimap::{
     EditorMeasures, LINE_HEIGHT as MINIMAP_LINE, MAX_COLUMNS as MINIMAP_COLUMNS, MinimapLayout,
     line_blocks,
 };
-use crate::state::syntax::{ParseRequest, line_runs};
+use crate::state::syntax::{ParseRequest, decorated_runs};
 use crate::state::wrap::wraps_by_default;
 use crate::syntax_colors::SyntaxColors;
 use telaio_ui::PaletteExt;
@@ -184,6 +185,9 @@ actions!(
         UnfoldAll,
     ]
 );
+
+/// How far below the pointer the hover tooltip starts.
+const HOVER_OFFSET_Y: f32 = 20.0;
 
 /// Side of the chevron that folds a block, centered in the gutter's right padding.
 const FOLD_ICON_SIZE: f32 = 12.0;
@@ -419,7 +423,45 @@ pub struct EditorView {
     /// The buffer version of the last [`EditorEvent::Changed`], or of the last
     /// [`Self::set_text`]: a newer version means the user changed the text since.
     notified_version: u64,
+    /// The app's styles over ranges of the text ([`Self::set_decorations`]), sorted.
+    decorations: Vec<Decoration>,
+    /// What the pointer shows a tooltip for ([`Self::set_hover`]).
+    hover_provider: Option<HoverProvider>,
+    /// The tooltip on screen: the range it explains, its text and where it shows.
+    hover: Option<(Range<usize>, SharedString, Point<Pixels>)>,
 }
+
+/// A style the app lays over a range of the text, on top of the syntax colors: Postino's
+/// `{{variables}}`, in its accent color or with a red wavy underline.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Decoration {
+    /// Byte offsets in the document.
+    pub range: Range<usize>,
+    pub color: Option<Hsla>,
+    pub background: Option<Hsla>,
+    /// A wavy underline in this color.
+    pub wavy_underline: Option<Hsla>,
+}
+
+/// The decorations of `decorations` (sorted) over `segment`, a byte range of the document, as
+/// ranges relative to its start with their index. A binary search, then only the ones it covers.
+fn decorations_in(decorations: &[Decoration], segment: Range<usize>) -> Vec<(Range<usize>, usize)> {
+    let first = decorations.partition_point(|decoration| decoration.range.end <= segment.start);
+    decorations[first..]
+        .iter()
+        .enumerate()
+        .take_while(|(_, decoration)| decoration.range.start < segment.end)
+        .map(|(index, decoration)| {
+            let start = decoration.range.start.max(segment.start) - segment.start;
+            let end = decoration.range.end.min(segment.end) - segment.start;
+            (start..end, first + index)
+        })
+        .collect()
+}
+
+/// Answers what the pointer is over: for a byte offset of the text, the range a tooltip explains
+/// and its text, or `None` for no tooltip. See [`EditorView::set_hover`].
+pub type HoverProvider = Rc<dyn Fn(usize, &App) -> Option<(Range<usize>, SharedString)>>;
 
 /// What an editor tells the app, through `cx.subscribe`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -477,6 +519,9 @@ impl EditorView {
         let notified_version = state.buffer.version();
         Self {
             notified_version,
+            decorations: Vec::new(),
+            hover_provider: None,
+            hover: None,
             state,
             focus_handle: cx.focus_handle(),
             painted: Vec::new(),
@@ -522,6 +567,20 @@ impl EditorView {
         cx.notify();
     }
 
+    /// Replaces the whole text as one edit the user can undo, keeping the cursor on its line
+    /// where it still exists: an app's "Format". Sends no [`EditorEvent::Changed`], as the app
+    /// made the change. Nothing happens when the text is read only.
+    pub fn replace_text(&mut self, text: &str, cx: &mut Context<Self>) {
+        let cursor = self.state.cursor;
+        let len = self.state.buffer.len();
+        self.state
+            .replace(0..len, text, telaio_text::EditKind::Other);
+        self.state.set_cursor(cursor, false);
+        self.notified_version = self.state.buffer.version();
+        self.painted.clear();
+        cx.notify();
+    }
+
     /// Highlights the text as `language` from now on.
     pub fn set_language(&mut self, language: telaio_syntax::Language, cx: &mut Context<Self>) {
         self.state.syntax.set_language(language);
@@ -551,6 +610,50 @@ impl EditorView {
 
     pub fn focus_handle(&self) -> &FocusHandle {
         &self.focus_handle
+    }
+
+    /// Styles ranges of the text over its syntax colors, in place of the ones set before. The
+    /// ranges are byte offsets in the current text and must not overlap. The app sets them again
+    /// when the text changes (on [`EditorEvent::Changed`] and after [`Self::set_text`]); until
+    /// then they stay where they were.
+    pub fn set_decorations(&mut self, mut decorations: Vec<Decoration>, cx: &mut Context<Self>) {
+        decorations.sort_by_key(|decoration| decoration.range.start);
+        if self.decorations != decorations {
+            self.decorations = decorations;
+            cx.notify();
+        }
+    }
+
+    /// Shows a tooltip while the pointer is over the text that `provider` explains: it gets the
+    /// byte offset under the pointer and returns the range it explains and the tooltip's text.
+    /// Called only when the pointer moves over the text, so it must be cheap.
+    pub fn set_hover(
+        &mut self,
+        provider: impl Fn(usize, &App) -> Option<(Range<usize>, SharedString)> + 'static,
+    ) {
+        self.hover_provider = Some(Rc::new(provider));
+    }
+
+    /// Updates the tooltip for the pointer at `offset` (`None`: not over the text). Repaints only
+    /// when the tooltip changes.
+    fn update_hover(
+        &mut self,
+        offset: Option<usize>,
+        position: Point<Pixels>,
+        cx: &mut App,
+    ) -> bool {
+        if let (Some((range, _, _)), Some(offset)) = (&self.hover, offset)
+            && range.contains(&offset)
+        {
+            return false;
+        }
+        let found = match (&self.hover_provider, offset) {
+            (Some(provider), Some(offset)) => provider(offset, cx),
+            _ => None,
+        };
+        let changed = self.hover.is_some() || found.is_some();
+        self.hover = found.map(|(range, text)| (range, text, position));
+        changed
     }
 
     /// Puts the cursor at the start of `line` (0 based, clamped to the text), scrolls to it and
@@ -760,7 +863,17 @@ impl Focusable for EditorView {
 }
 
 impl Render for EditorView {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // The app's tooltip for the text under the pointer, below it as gpui's tooltips are.
+        let tooltip = self.hover.as_ref().map(|(_, text, position)| {
+            deferred(
+                anchored()
+                    .position(*position + point(px(0.0), px(HOVER_OFFSET_Y)))
+                    .snap_to_window_with_margin(px(8.0))
+                    .child(Tooltip::new(text.clone()).build(window, cx)),
+            )
+            .with_priority(1)
+        });
         let editor = div()
             .id("editor")
             .key_context(KEY_CONTEXT)
@@ -976,6 +1089,7 @@ impl Render for EditorView {
             let entries = entries.section(wrap_entries(wrap));
             entries.render(menu.action_context(focus), window, cx)
         });
+        let editor = editor.children(tooltip);
         self.with_find_bar(editor, cx)
     }
 }
@@ -1475,17 +1589,33 @@ impl Element for EditorElement {
                     line,
                     start_column..start_column + line_text.len(),
                 );
-                let runs: Vec<TextRun> = line_runs(&line_text, &spans)
+                let segment_start = state.buffer.line_to_byte(line) + start_column;
+                let decorated = decorations_in(
+                    &editor.decorations,
+                    segment_start..segment_start + line_text.len(),
+                );
+                let runs: Vec<TextRun> = decorated_runs(&line_text, &spans, &decorated)
                     .into_iter()
-                    .map(|(len, highlight)| TextRun {
-                        len,
-                        font: font.clone(),
-                        color: highlight
-                            .and_then(|highlight| colors.get(highlight))
-                            .unwrap_or(text_color),
-                        background_color: None,
-                        underline: None,
-                        strikethrough: None,
+                    .map(|(len, highlight, decoration)| {
+                        let decoration = decoration.map(|index| &editor.decorations[index]);
+                        TextRun {
+                            len,
+                            font: font.clone(),
+                            color: decoration
+                                .and_then(|decoration| decoration.color)
+                                .or_else(|| highlight.and_then(|highlight| colors.get(highlight)))
+                                .unwrap_or(text_color),
+                            background_color: decoration
+                                .and_then(|decoration| decoration.background),
+                            underline: decoration
+                                .and_then(|decoration| decoration.wavy_underline)
+                                .map(|color| UnderlineStyle {
+                                    thickness: px(1.0),
+                                    color: Some(color),
+                                    wavy: true,
+                                }),
+                            strikethrough: None,
+                        }
                     })
                     .collect();
                 let shaped = text_system.shape_line(display.into(), font_size, &runs, None);
@@ -2120,6 +2250,8 @@ impl EditorElement {
                 let before = (editor.state.scroll_x, editor.state.scroll_y);
                 editor.state.scroll_by(-dx, -dy);
                 if before != (editor.state.scroll_x, editor.state.scroll_y) {
+                    // The text moved from under the tooltip.
+                    editor.hover = None;
                     cx.notify();
                 }
             });
@@ -2178,6 +2310,7 @@ impl EditorElement {
             if !phase.bubble() || event.button != MouseButton::Left || !hitbox.is_hovered(window) {
                 return;
             }
+            editor.update(cx, |editor, _| editor.hover = None);
             if let Some(minimap) = minimap
                 && minimap.area.contains(&event.position)
             {
@@ -2312,6 +2445,21 @@ impl EditorElement {
                     }
                     return;
                 }
+                if event.pressed_button.is_none()
+                    && (editor.hover_provider.is_some() || editor.hover.is_some())
+                {
+                    let offset = (text.contains(&event.position) && !over_gutter).then(|| {
+                        let local = point(
+                            event.position.x - text.left(),
+                            event.position.y - text.top(),
+                        );
+                        let position = editor.position_at(local);
+                        editor.state.buffer.position_to_offset(position)
+                    });
+                    if editor.update_hover(offset, event.position, cx) {
+                        cx.notify();
+                    }
+                }
                 if let Some(grab) = editor.minimap_grab {
                     if event.pressed_button == Some(MouseButton::Left) {
                         let slider_top = f64::from(event.position.y - grab.top) - grab.grab;
@@ -2434,7 +2582,27 @@ fn range_rects(
 
 #[cfg(test)]
 mod tests {
-    use super::wrap_entries;
+    use super::{Decoration, decorations_in, wrap_entries};
+
+    fn decoration(range: std::ops::Range<usize>) -> Decoration {
+        Decoration {
+            range,
+            color: None,
+            background: None,
+            wavy_underline: None,
+        }
+    }
+
+    #[test]
+    fn decorations_are_cut_to_the_segment_and_made_relative() {
+        let decorations = [decoration(2..5), decoration(8..14), decoration(20..22)];
+        // A segment from 10 to 21: the end of the second one and the start of the third.
+        assert_eq!(
+            decorations_in(&decorations, 10..21),
+            vec![(0..4, 1), (10..11, 2)]
+        );
+        assert_eq!(decorations_in(&decorations, 5..8), vec![]);
+    }
     use telaio_ui::components::MenuEntry;
 
     #[test]

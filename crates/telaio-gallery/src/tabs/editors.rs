@@ -7,7 +7,13 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
-use telaio_editor::{EditorDisplay, EditorState as TelaioEditorState, EditorView, Language};
+use std::cell::RefCell;
+use std::ops::Range;
+use std::rc::Rc;
+
+use telaio_editor::{
+    Decoration, EditorDisplay, EditorState as TelaioEditorState, EditorView, Language,
+};
 use telaio_ui::components::{CodeEditor, MenuEntries, TextArea};
 
 use super::label;
@@ -48,6 +54,20 @@ const READONLY_SAMPLE: &str = "{\n  \"status\": \"ok\",\n  \"items\": [1, 2, 3]\
 /// submenu.
 const BODY_SAMPLE: &str = "{\n  \"customer\": \"{{customerId}}\",\n  \"items\": [\n    { \"sku\": \"A-100\", \"qty\": 2 },\n    { \"sku\": \"B-220\", \"qty\": 1 }\n  ],\n  \"notes\": \"leave at the door\"\n}\n";
 
+/// The byte ranges of the `{{ }}` markers of `text`.
+fn marker_ranges(text: &str) -> Vec<Range<usize>> {
+    let mut ranges = Vec::new();
+    let mut from = 0;
+    while let Some(start) = text[from..].find("{{").map(|index| from + index) {
+        let Some(end) = text[start..].find("}}").map(|index| start + index + 2) else {
+            break;
+        };
+        ranges.push(start..end);
+        from = end;
+    }
+    ranges
+}
+
 /// A post-response script for the telaio editor demos.
 const SCRIPT_SAMPLE: &str = "const body = response.json();\ntest(\"returns the order\", () => {\n  expect(body.id).toBeDefined();\n});\nvars.set(\"orderId\", body.id);\n";
 
@@ -61,6 +81,8 @@ pub(crate) struct EditorsDemo {
     readonly_code: Entity<EditorState>,
     /// telaio's editor: an editable body, a script and a read only response.
     body: Entity<EditorView>,
+    /// The `{{ }}` markers of `body`, decorated and explained by its tooltip.
+    body_markers: Rc<RefCell<Vec<Range<usize>>>>,
     script: Entity<EditorView>,
     response: Entity<EditorView>,
 }
@@ -95,6 +117,8 @@ impl EditorsDemo {
             .collect();
         let readonly_code = cx.new(|cx| EditorState::new(window, cx).language("json"));
         readonly_code.update(cx, |state, cx| state.set_value(READONLY_SAMPLE, window, cx));
+        let body_markers: Rc<RefCell<Vec<Range<usize>>>> = Rc::default();
+        let hover_markers = body_markers.clone();
         let body = cx.new(|cx| {
             let mut view = EditorView::new(
                 TelaioEditorState::with_text(BODY_SAMPLE, Language::Json),
@@ -123,6 +147,16 @@ impl EditorsDemo {
                             .handler("{{token}}", |_, _| log::info!("token")),
                     ),
                 )
+            });
+            // A tooltip over the `{{ }}` markers, as Postino shows a variable's value.
+            let markers = hover_markers.clone();
+            view.set_hover(move |offset, _| {
+                let markers = markers.borrow();
+                let range = markers.iter().find(|range| range.contains(&offset))?;
+                Some((
+                    range.clone(),
+                    "customerId = c_8121\nEnvironment: dev".into(),
+                ))
             });
             view
         });
@@ -160,6 +194,7 @@ impl EditorsDemo {
             code,
             readonly_code,
             body,
+            body_markers,
             script,
             response,
         }
@@ -183,6 +218,21 @@ impl Gallery {
     fn render_telaio_editors(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let palette = cx.palette();
         let demo = &self.editors;
+        // The body's markers in the accent color, as Postino draws a defined variable. The sample
+        // is small, so finding them on every frame costs nothing.
+        let markers = marker_ranges(&demo.body.read(cx).text());
+        let decorations = markers
+            .iter()
+            .map(|range| Decoration {
+                range: range.clone(),
+                color: Some(palette.accent_text),
+                background: Some(palette.accent_subtle),
+                wavy_underline: None,
+            })
+            .collect();
+        demo.body
+            .update(cx, |view, cx| view.set_decorations(decorations, cx));
+        *demo.body_markers.borrow_mut() = markers;
         let item = |caption: &'static str, editor: &Entity<EditorView>| {
             v_flex().gap_1().child(label(caption, &palette)).child(
                 div()
@@ -197,7 +247,7 @@ impl Gallery {
         v_flex()
             .gap_3()
             .child(item(
-                "Request body: Format, Find and an Insert submenu",
+                "Request body: decorated variables with a tooltip, Format, Find and an Insert submenu",
                 &demo.body,
             ))
             .child(item("Script: Duplicate line and Delete line", &demo.script))

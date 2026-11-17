@@ -21,8 +21,8 @@ pub use state::gutter;
 pub use syntax_colors::SyntaxColors;
 pub use telaio_syntax::Language;
 pub use views::editor::{
-    EditorDisplay, EditorEvent, EditorMenu, EditorView, KEY_CONTEXT, bind_keys, editor_actions,
-    fold_entries, line_entries, wrap_entries,
+    Decoration, EditorDisplay, EditorEvent, EditorMenu, EditorView, HoverProvider, KEY_CONTEXT,
+    bind_keys, editor_actions, fold_entries, line_entries, wrap_entries,
 };
 
 /// Registers the key bindings of the editor, its find bar and its Go to line dialog. Call once at

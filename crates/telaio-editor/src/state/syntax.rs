@@ -289,6 +289,46 @@ fn clip(spans: Vec<HighlightSpan>, window: std::ops::Range<usize>) -> Vec<Highli
         .collect()
 }
 
+/// [`line_runs`] with the app's decorations over it: `decorations` are `(range, index)` over
+/// `text`, sorted and not overlapping, and each run carries the index of the one it is in.
+pub fn decorated_runs(
+    text: &str,
+    spans: &[HighlightSpan],
+    decorations: &[(std::ops::Range<usize>, usize)],
+) -> Vec<(usize, Option<Highlight>, Option<usize>)> {
+    let mut runs: Vec<(usize, Option<Highlight>, Option<usize>)> = Vec::new();
+    let mut spans = spans.iter().peekable();
+    let mut decorations = decorations.iter().peekable();
+    let mut display = 0;
+    for (index, ch) in text.char_indices() {
+        while spans.next_if(|span| span.range.end <= index).is_some() {}
+        while decorations
+            .next_if(|(range, _)| range.end <= index)
+            .is_some()
+        {}
+        let highlight = spans
+            .peek()
+            .filter(|span| span.range.start <= index)
+            .map(|span| span.highlight);
+        let decoration = decorations
+            .peek()
+            .filter(|(range, _)| range.start <= index)
+            .map(|(_, decoration)| *decoration);
+        let next = advance(display, ch);
+        let width = if ch == '\t' {
+            next - display
+        } else {
+            ch.len_utf8()
+        };
+        display = next;
+        match runs.last_mut() {
+            Some(last) if last.1 == highlight && last.2 == decoration => last.0 += width,
+            _ => runs.push((width, highlight, decoration)),
+        }
+    }
+    runs
+}
+
 /// The runs of a painted line: `(length, class)` over its text with tabs expanded (what the
 /// element shapes), from `spans` over `text` before expansion. Neighbours of the same class are
 /// merged; `None` is plain text. Linear in the length of the line.
@@ -327,6 +367,22 @@ mod tests {
 
     fn span(range: std::ops::Range<usize>, highlight: Highlight) -> HighlightSpan {
         HighlightSpan { range, highlight }
+    }
+
+    #[test]
+    fn decorations_split_the_runs_they_cover() {
+        let text = "a {{x}} b";
+        let spans = [span(0..1, Highlight::Keyword)];
+        let runs = decorated_runs(text, &spans, &[(2..7, 0)]);
+        assert_eq!(
+            runs,
+            vec![
+                (1, Some(Highlight::Keyword), None),
+                (1, None, None),
+                (5, None, Some(0)),
+                (2, None, None),
+            ]
+        );
     }
 
     #[test]
