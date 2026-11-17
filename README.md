@@ -311,12 +311,12 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6" }
-telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6" }
-telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6" }
-telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.6", features = ["javascript"] }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7" }
+telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7" }
+telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.23.7", features = ["javascript"] }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
