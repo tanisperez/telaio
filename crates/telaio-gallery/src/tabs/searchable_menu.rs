@@ -11,6 +11,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
+use telaio_ui::components::OpenOnClickExt as _;
 use telaio_ui::components::{
     MenuAction, MenuGroup, MenuRow, SearchableMenu, SearchableMenuEvent, SearchableMenuState,
     SubmenuEntry, SubmenuItem,
@@ -182,7 +183,8 @@ impl Gallery {
                         Button::new("gallery-branch-trigger")
                             .outline()
                             .icon(IconName::GitBranch)
-                            .label(CURRENT),
+                            .label(CURRENT)
+                            .open_on_click(),
                     ),
                 ),
             )

@@ -7,6 +7,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
+use telaio_ui::components::OpenOnClickExt as _;
 use telaio_ui::components::{
     DangerButton, GhostButton, IconButton, PrimaryButton, SecondaryButton, menu_choice_item,
     menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width, select_label_row,
@@ -241,6 +242,7 @@ impl Gallery {
                         .w(px(160.0))
                         .text_color(palette.fg)
                         .child(select_label_row(div().child("Open menu"), &palette))
+                        .open_on_click()
                         .dropdown_menu(build),
                 )
                 .child(
@@ -278,6 +280,7 @@ impl Gallery {
                 div().child(format!("Compare with: {}", COMPARE_RUNS[picked].0)),
                 &palette,
             ))
+            .open_on_click()
             .dropdown_menu(move |menu, _, _| {
                 COMPARE_RUNS.iter().enumerate().fold(
                     rich_menu_width(menu, 240.0),
@@ -302,6 +305,7 @@ impl Gallery {
             .w(px(140.0))
             .text_color(palette.fg)
             .child(select_label_row(div().child("Export"), &palette))
+            .open_on_click()
             .dropdown_menu(move |menu, _, _| {
                 let record = |text: String| {
                     let weak = weak.clone();

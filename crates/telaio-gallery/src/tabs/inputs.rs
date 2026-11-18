@@ -11,6 +11,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::PaletteExt as _;
 
+use telaio_ui::components::OpenOnClickExt as _;
 use telaio_ui::components::{
     CheckState, HoverInput, NumberStepper, SegmentedItem, TriCheckbox, checkbox_halo,
     edit_menu_area, labelled_checkbox, labelled_radio, no_input_menu, radio_halo, select_label_row,
@@ -82,6 +83,7 @@ impl Gallery {
                     div().child(SELECT_PICKS[current]),
                     &palette,
                 ))
+                .open_on_click()
                 .dropdown_menu(move |mut menu, _, _| {
                     for (index, pick) in SELECT_PICKS.iter().enumerate() {
                         let weak = weak.clone();

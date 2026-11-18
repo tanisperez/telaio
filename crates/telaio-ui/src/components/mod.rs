@@ -21,6 +21,7 @@ pub mod key_cap;
 pub mod key_value_table;
 pub mod menu_entries;
 pub mod menu_rows;
+pub mod menu_trigger;
 pub mod modal;
 pub mod number_stepper;
 pub mod progress_bar;
@@ -67,6 +68,7 @@ pub use menu_entries::{MenuArea, MenuEntries, MenuEntry, MenuItem};
 pub use menu_rows::{
     menu_choice_item, menu_described_item, menu_shortcut_item, menu_toggle_item, rich_menu_width,
 };
+pub use menu_trigger::{MenuTrigger, OpenOnClickExt};
 pub use modal::{
     ConfirmDialog, MODAL_INNER_RADIUS, ModalPlacement, framed_dialog, modal_body, modal_footer,
     modal_header, modal_header_with_icon, modal_hints, open_confirm_dialog,

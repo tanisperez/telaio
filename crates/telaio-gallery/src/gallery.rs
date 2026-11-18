@@ -10,6 +10,7 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use telaio_ui::components::CheckState;
+use telaio_ui::components::OpenOnClickExt as _;
 use telaio_ui::components::{
     ScrollbarOverlay, SectionLabel, SegmentedControl, SegmentedItem, UnderlineTabItem,
     UnderlineTabs, select_label_row, select_trigger,
@@ -576,6 +577,7 @@ impl Gallery {
             .w(px(170.0))
             .text_color(palette.fg)
             .child(select_label_row(div().child(self.sample.label()), &palette))
+            .open_on_click()
             .dropdown_menu({
                 let weak = cx.weak_entity();
                 move |mut menu, _, _| {

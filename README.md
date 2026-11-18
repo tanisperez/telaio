@@ -54,7 +54,8 @@ Postino as the reference implementation.
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
   `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`,
   `modal_header_with_icon`, `modal_body`, `modal_footer`, `modal_hints`, `open_confirm_dialog`),
-  `KeyCap`, `SegmentedControl`, `select_trigger`, `StatusBadge`,
+  `KeyCap`, `SegmentedControl`, `select_trigger`, `MenuTrigger` (`open_on_click()` on a
+  `Button`, so its `dropdown_menu` or popover opens on release, not on press), `StatusBadge`,
   `ThemeCard`, `HoverInput`, `text_field`, `TextArea` (multi line plain text),
   `CodeEditor` (gpui-component's `Editor` in the app's box), `InlineMessage`, `Card`,
   `ScrollbarOverlay`, `ProgressBar`, `NumberStepper`, `SearchableSelect` (a select with an

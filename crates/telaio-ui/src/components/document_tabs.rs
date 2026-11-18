@@ -34,7 +34,7 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
-use super::IconButton;
+use super::{IconButton, OpenOnClickExt as _};
 use crate::PaletteExt;
 use crate::metrics::{
     DOCUMENT_TAB_CLOSE_SHIFT, DOCUMENT_TAB_DETAIL_TEXT_SIZE, DOCUMENT_TABS_CONTROLS_WIDTH,
@@ -581,6 +581,7 @@ impl RenderOnce for DocumentTabs {
             let list = IconButton::new("doc-tabs-list", IconName::ChevronDown)
                 .tooltip(t!("telaio.tabs.list"))
                 .into_button(cx)
+                .open_on_click()
                 .dropdown_menu(move |menu, _, _| {
                     let mut menu = menu.scrollable(true).max_h(px(LIST_MENU_MAX_HEIGHT));
                     for (label, selected, handler) in entries.clone() {
