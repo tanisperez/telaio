@@ -78,65 +78,95 @@ impl Repo {
         source: &DiffSource,
         context: &str,
     ) -> Result<String, GitError> {
-        if self.is_untracked(path, source)? {
-            let args = [
+        // The diff first: for a tracked file in a repository with commits, the usual case, it is
+        // the only command (#285 in Postino). Every command costs a process start, and about
+        // 10 ms more through WSL.
+        let tracked = |revs: &[String]| {
+            let mut args = vec![
                 "diff",
-                "--no-index",
                 "--no-color",
                 "--no-ext-diff",
                 context,
-                "--src-prefix=a/",
-                "--dst-prefix=b/",
-                "--",
-                "/dev/null",
-                path,
+                "--histogram",
             ];
-            // Exit code 1 only says that the files differ.
-            return text(self.run_with(&args, None, &[1])?);
+            args.extend(revs.iter().map(String::as_str));
+            args.push("--");
+            args.push(path);
+            self.run(&args)
+        };
+        let against_head = match source {
+            DiffSource::HeadToWorkTree => Some(Vec::new()),
+            DiffSource::HeadToIndex => Some(vec!["--cached".to_string()]),
+            DiffSource::IndexToWorkTree | DiffSource::Commit(_) => None,
+        };
+        let patch = match against_head {
+            Some(mut revs) => {
+                revs.push("HEAD".to_string());
+                match tracked(&revs) {
+                    Ok(patch) => patch,
+                    // No commits yet: HEAD is the empty tree.
+                    Err(GitError::Failed { .. }) if !self.has_head()? => {
+                        if self.is_untracked(path, source)? {
+                            return self.untracked_diff(path, context);
+                        }
+                        revs.pop();
+                        revs.push(self.empty_tree()?);
+                        tracked(&revs)?
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+            None => tracked(&self.revisions(source)?)?,
+        };
+        // A file git does not know prints no difference.
+        if patch.is_empty() && self.is_untracked(path, source)? {
+            return self.untracked_diff(path, context);
         }
-        let revs = self.revisions(source)?;
-        let mut args = vec![
+        text(patch)
+    }
+
+    /// The "new file" patch of `path` against `/dev/null`, for a file the index does not have.
+    fn untracked_diff(&self, path: &str, context: &str) -> Result<String, GitError> {
+        let args = [
             "diff",
+            "--no-index",
             "--no-color",
             "--no-ext-diff",
             context,
-            "--histogram",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
+            "--",
+            "/dev/null",
+            path,
         ];
-        args.extend(revs.iter().map(String::as_str));
-        args.push("--");
-        args.push(path);
-        text(self.run(&args)?)
+        // Exit code 1 only says that the files differ.
+        text(self.run_with(&args, None, &[1])?)
     }
 
     /// The content of `path` in `version`, `None` when the file does not exist there (including
     /// `HEAD` on a repository without commits). Invalid UTF-8 is replaced.
+    ///
+    /// One `git cat-file --batch`, which answers `missing` for an object that does not exist,
+    /// instead of a check and a `git show` (#285 in Postino).
     pub fn file_at(&self, path: &str, version: &FileVersion) -> Result<Option<String>, GitError> {
-        let (exists, spec) = match version {
-            FileVersion::Index => {
-                let listed = self.run(&["ls-files", "--stage", "-z", "--", path])?;
-                (!listed.is_empty(), format!(":0:{path}"))
-            }
-            FileVersion::Head | FileVersion::Commit(_) => {
-                let rev = match version {
-                    FileVersion::Commit(rev) => {
-                        check_revision(rev)?;
-                        rev.as_str()
-                    }
-                    _ => {
-                        if !self.has_head()? {
-                            return Ok(None);
-                        }
-                        "HEAD"
-                    }
-                };
-                let listed = self.run(&["ls-tree", "-z", rev, "--", path])?;
-                (!listed.is_empty(), format!("{rev}:{path}"))
+        let spec = match version {
+            FileVersion::Index => format!(":0:{path}"),
+            FileVersion::Head => format!("HEAD:{path}"),
+            FileVersion::Commit(rev) => {
+                check_revision(rev)?;
+                format!("{rev}:{path}")
             }
         };
-        if !exists {
+        // The batch reads one name per line.
+        if spec.contains('\n') {
             return Ok(None);
         }
-        text(self.run(&["show", &spec])?).map(Some)
+        let output = self.run_with(
+            &["cat-file", "--batch"],
+            Some(format!("{spec}\n").as_bytes()),
+            &[],
+        )?;
+        parse_batch_blob(&output)
     }
 
     /// Lines added and removed per file, for the summary line of a diff. Limited to the
@@ -249,6 +279,31 @@ pub(crate) fn check_revision(rev: &str) -> Result<(), GitError> {
         return Err(GitError::Parse(format!("invalid revision {rev:?}")));
     }
     Ok(())
+}
+
+/// The content of the one object `git cat-file --batch` printed: `<id> <type> <size>`, a new
+/// line, the content and a new line; or `<name> missing` (or `ambiguous`). `None` for a missing
+/// object and for anything but a blob (a folder).
+fn parse_batch_blob(output: &[u8]) -> Result<Option<String>, GitError> {
+    let malformed = || GitError::Parse("unexpected git cat-file output".to_string());
+    let end = output
+        .iter()
+        .position(|b| *b == b'\n')
+        .ok_or_else(malformed)?;
+    let header = String::from_utf8_lossy(&output[..end]);
+    if header.ends_with(" missing") || header.ends_with(" ambiguous") {
+        return Ok(None);
+    }
+    let mut fields = header.split(' ');
+    let (Some(_id), Some(kind), Some(size)) = (fields.next(), fields.next(), fields.next()) else {
+        return Err(malformed());
+    };
+    if kind != "blob" {
+        return Ok(None);
+    }
+    let size: usize = size.parse().map_err(|_| malformed())?;
+    let content = output.get(end + 1..end + 1 + size).ok_or_else(malformed)?;
+    text(content.to_vec()).map(Some)
 }
 
 fn text(bytes: Vec<u8>) -> Result<String, GitError> {

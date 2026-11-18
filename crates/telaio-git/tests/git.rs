@@ -7,8 +7,8 @@ use std::path::Path;
 use std::process::Command;
 
 use telaio_git::{
-    ApplyTarget, Change, DiffSource, Executable, FileVersion, Git, Head, Repo, block_patch, detect,
-    hunk_patch, parse_file_diff,
+    ApplyTarget, Change, DiffSource, Executable, FileVersion, Git, Head, Repo, block_applies,
+    block_patch, detect, hunk_patch, parse_file_diff,
 };
 use tempfile::TempDir;
 
@@ -737,4 +737,106 @@ fn a_block_at_the_end_without_newline_applies() {
             .expect("diff"),
         ""
     );
+}
+
+/// `block_applies` against the index gives what `git apply --cached --check` says, for every
+/// block of `path` (HEAD to the work tree) in both directions. Returns how many it decided, and
+/// git's answers per block: (applies forward, applies in reverse).
+fn assert_block_applies_like_git(repo: &Repo, path: &str) -> (usize, Vec<(bool, bool)>) {
+    let patch = repo
+        .diff_full(path, &DiffSource::HeadToWorkTree)
+        .expect("diff");
+    let diff = parse_file_diff(&patch);
+    let index = repo
+        .file_at(path, &FileVersion::Index)
+        .expect("index")
+        .expect("in the index");
+    let mut decided = 0;
+    let mut answers = Vec::new();
+    for block in 0..diff.blocks.len() {
+        let hunk = block_patch(&patch, &diff, block).expect("block");
+        let mut answer = (false, false);
+        for reverse in [false, true] {
+            let git = repo
+                .can_apply(&hunk, ApplyTarget::Index, reverse)
+                .expect("check");
+            if reverse {
+                answer.1 = git;
+            } else {
+                answer.0 = git;
+            }
+            if let Some(ours) = block_applies(&patch, &diff, block, &index, reverse) {
+                assert_eq!(ours, git, "block {block}, reverse {reverse}:\n{hunk}");
+                decided += 1;
+            }
+        }
+        answers.push(answer);
+    }
+    (decided, answers)
+}
+
+#[test]
+fn block_applies_agrees_with_git_apply_check() {
+    let Some(git) = git() else { return };
+    let (dir, repo) = new_repo(&git);
+    let lines = |changed: &[usize], tail: &str| -> String {
+        (1..=30)
+            .map(|n| {
+                let text = if changed.contains(&n) {
+                    format!("x{n}")
+                } else if n % 7 == 0 {
+                    // Repeated lines, so a block's context also appears elsewhere.
+                    "same".to_string()
+                } else {
+                    format!("l{n}")
+                };
+                if n == 30 {
+                    format!("{text}{tail}")
+                } else {
+                    format!("{text}\n")
+                }
+            })
+            .collect()
+    };
+    // Changes at the first and the last line too; a file that ends without a new line.
+    write(&dir, "f.txt", &lines(&[], ""));
+    write(&dir, "crlf.txt", &lines(&[], "\n").replace('\n', "\r\n"));
+    commit_all(&git, &dir);
+
+    // Nothing staged: every block applies forward only.
+    write(&dir, "f.txt", &lines(&[1, 8, 15, 30], ""));
+    write(
+        &dir,
+        "crlf.txt",
+        &lines(&[2, 20], "\n").replace('\n', "\r\n"),
+    );
+    assert_eq!(assert_block_applies_like_git(&repo, "f.txt").0, 8);
+    assert_eq!(assert_block_applies_like_git(&repo, "crlf.txt").0, 4);
+
+    // Two blocks staged, then the work tree changes one of them again: staged, unstaged and
+    // mixed blocks in one file.
+    write(&dir, "f.txt", &lines(&[1, 15], ""));
+    raw(&git, dir.path(), &["add", "f.txt"]);
+    let mut work = lines(&[1, 8, 15, 30], "");
+    work = work.replace("x15\n", "y15\n");
+    write(&dir, "f.txt", &work);
+    let (decided, answers) = assert_block_applies_like_git(&repo, "f.txt");
+    assert_eq!(decided, 8);
+    assert!(
+        answers.contains(&(false, true)),
+        "a staged block: {answers:?}"
+    );
+    assert!(
+        answers.contains(&(true, false)),
+        "an unstaged block: {answers:?}"
+    );
+    assert!(
+        answers.contains(&(false, false)),
+        "a mixed block: {answers:?}"
+    );
+
+    // The last line gains a new line: the "no new line" marker on the removed side.
+    write(&dir, "f.txt", &lines(&[], "\n"));
+    raw(&git, dir.path(), &["reset", "-q"]);
+    assert_eq!(assert_block_applies_like_git(&repo, "f.txt").0, 2);
 }

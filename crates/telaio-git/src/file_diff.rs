@@ -326,29 +326,11 @@ fn push_merged(ranges: &mut Vec<Range<usize>>, range: Range<usize>) {
 /// side, ready for [`crate::Repo::apply`]. `diff` must come from `file_patch`. `None` for a
 /// binary file or a block that does not exist.
 pub fn block_patch(file_patch: &str, diff: &FileDiff, block: usize) -> Option<String> {
-    if diff.binary {
-        return None;
-    }
-    let change = diff.blocks.get(block)?;
+    let range = block_lines(diff, block)?;
+    let change = &diff.blocks[block];
     let first = change.first_line;
-    let last = first + change.removed + change.added;
-    let mut start = first;
-    while start > 0
-        && first - start < CONTEXT
-        && diff.lines[start - 1].kind == LineKind::Context
-        && adjacent(&diff.lines[start - 1], &diff.lines[start])
-    {
-        start -= 1;
-    }
-    let mut end = last;
-    while end < diff.lines.len()
-        && end - last < CONTEXT
-        && diff.lines[end].kind == LineKind::Context
-        && adjacent(&diff.lines[end - 1], &diff.lines[end])
-    {
-        end += 1;
-    }
-    let lines = &diff.lines[start..end];
+    let start = range.start;
+    let lines = &diff.lines[range];
     let old_count = lines.iter().filter(|l| l.kind != LineKind::Added).count();
     let new_count = lines.iter().filter(|l| l.kind != LineKind::Removed).count();
     let leading = first - start;
@@ -389,6 +371,89 @@ pub fn block_patch(file_patch: &str, diff: &FileDiff, block: usize) -> Option<St
         }
     }
     Some(out)
+}
+
+/// The rows of `diff` that [`block_patch`] puts in the hunk of block `block`: the block and up to
+/// three lines of context on each side. `None` for a binary file or a block that does not exist.
+fn block_lines(diff: &FileDiff, block: usize) -> Option<Range<usize>> {
+    if diff.binary {
+        return None;
+    }
+    let change = diff.blocks.get(block)?;
+    let first = change.first_line;
+    let last = first + change.removed + change.added;
+    let mut start = first;
+    while start > 0
+        && first - start < CONTEXT
+        && diff.lines[start - 1].kind == LineKind::Context
+        && adjacent(&diff.lines[start - 1], &diff.lines[start])
+    {
+        start -= 1;
+    }
+    let mut end = last;
+    while end < diff.lines.len()
+        && end - last < CONTEXT
+        && diff.lines[end].kind == LineKind::Context
+        && adjacent(&diff.lines[end - 1], &diff.lines[end])
+    {
+        end += 1;
+    }
+    Some(start..end)
+}
+
+/// Whether [`crate::Repo::can_apply`] would accept the [`block_patch`] of `block` on `text`,
+/// worked out without running git (#285 in Postino): `git apply --check` with its default of
+/// never ignoring context finds the lines the hunk expects (context and removed lines, or
+/// context and added ones with `reverse`) one after the other anywhere in the text, each with
+/// its line ending or without one at the end of the file. `text` is the file in the target, the
+/// index for `git apply --cached`, as git stores it.
+///
+/// `None` when it cannot tell and git should: anything but a plain change of an existing file
+/// (a new or deleted file, a rename, a mode change, a binary file) and a hunk that expects no
+/// lines at all.
+pub fn block_applies(
+    file_patch: &str,
+    diff: &FileDiff,
+    block: usize,
+    text: &str,
+    reverse: bool,
+) -> Option<bool> {
+    let plain_header = file_patch
+        .split_inclusive('\n')
+        .take_while(|line| !line.starts_with("@@ "))
+        .all(|line| {
+            ["diff --git ", "index ", "--- a/", "+++ b/"]
+                .iter()
+                .any(|prefix| line.starts_with(prefix))
+        });
+    if !plain_header {
+        return None;
+    }
+    let skipped = if reverse {
+        LineKind::Removed
+    } else {
+        LineKind::Added
+    };
+    let expected: Vec<String> = diff.lines[block_lines(diff, block)?]
+        .iter()
+        .filter(|line| line.kind != skipped)
+        .map(|line| {
+            if line.no_newline {
+                line.text.clone()
+            } else {
+                format!("{}\n", line.text)
+            }
+        })
+        .collect();
+    if expected.is_empty() {
+        return None;
+    }
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    Some(
+        lines
+            .windows(expected.len())
+            .any(|window| window.iter().zip(&expected).all(|(a, b)| *a == b)),
+    )
 }
 
 /// Whether `b` directly follows `a` in the file, so both can share a hunk.

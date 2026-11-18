@@ -33,7 +33,8 @@ pub use detect::{Executable, MIN_VERSION, Version, detect, detect_for};
 pub use diff::{ApplyTarget, DiffSource, FileVersion, NumStat, hunk_patch};
 pub use error::{DetectError, FailureKind, GitError};
 pub use file_diff::{
-    ChangeBlock, DiffLine, FileDiff, LineKind, SplitRow, block_patch, parse_file_diff,
+    ChangeBlock, DiffLine, FileDiff, LineKind, SplitRow, block_applies, block_patch,
+    parse_file_diff,
 };
 pub use graph::{GraphLayout, GraphLine, GraphRow, LinePart};
 pub use log::{CommitDetail, CommitFile, LogCommit, LogQuery, RefLabel, RefLabelKind};
