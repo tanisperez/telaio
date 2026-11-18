@@ -3,7 +3,8 @@
 //!
 //! - [`AppIdentity`]: the names, ids and version every piece below takes.
 //! - [`logging`]: the log file behind the `log` facade, with rotation and a panic hook.
-//! - [`cli`]: the version line, help header and footer, exit codes and Windows console attach.
+//! - [`cli`]: the version line, help header and footer, exit codes and detaching the window from
+//!   the terminal on Windows.
 //! - [`language`]: the four UI languages, OS language detection and the `auto` choice.
 //! - [`number`]: numbers written with the active language's separators.
 //! - [`paths`]: the app's config folder.

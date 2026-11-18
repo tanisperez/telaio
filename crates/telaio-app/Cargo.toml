@@ -20,10 +20,13 @@ sys-locale = { workspace = true }
 icu_decimal = { workspace = true }
 icu_locale_core = { workspace = true }
 
-# `AttachConsole`, so the output reaches the terminal from a GUI subsystem binary.
+# `detach_from_console`: the console, the standard handles and the detached relaunch.
 # Already in the tree at this version (async-io, through gpui-base).
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+windows-sys = { version = "0.61", features = [
+    "Win32_Storage_FileSystem",
+    "Win32_System_Console",
+] }
 
 [dev-dependencies]
 tempfile = { workspace = true }

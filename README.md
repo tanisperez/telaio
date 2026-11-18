@@ -136,8 +136,11 @@ repository URL.
 - `logging`: the file logger behind `log` (per OS folder, 5 MB rotation, 10 files, a panic hook),
   `LogLevel`, the `<PREFIX>_LOG` override, and third party crates capped at Warn. The app's crates
   (target prefix = the identity's lowercase name), `gpui*` and `telaio*` log at the full level.
-- `cli`: the `<App> X.Y.Z` version line, the help header and footer, the exit codes and the
-  Windows console attach. Parsing stays in each app, which adds its own commands.
+- `cli`: the `<App> X.Y.Z` version line, the help header and footer, the exit codes and
+  `detach_from_console`: on Windows the apps are console subsystem binaries (shells wait for
+  them, pipes and exit codes work) with `consoleAllocationPolicy` `detached` in their manifest,
+  and the window relaunches itself detached from the terminal. Parsing stays in each app, which
+  adds its own commands.
 - `language`: `Language` (en, es, gl, it), `LanguageChoice` (auto or one of them), OS language
   detection with `sys-locale`, `resolve` and `apply`. The app's translations stay in the app.
 - `number`: integers and decimals written with ICU's separators for the active language.
