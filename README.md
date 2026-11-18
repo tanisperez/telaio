@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/tanisperez/telaio)](https://github.com/tanisperez/telaio/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/tanisperez/telaio/ci.yml?branch=main&label=CI)](https://github.com/tanisperez/telaio/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/tanisperez/telaio)](LICENSE)
-[![gpui-kit](https://img.shields.io/badge/gpui--kit-0.9.1-blue)](https://crates.io/crates/gpui-kit/0.9.1)
+[![gpui-kit](https://img.shields.io/badge/gpui--kit-0.10.0-blue)](https://crates.io/crates/gpui-kit/0.10.0)
 [![Rust](https://img.shields.io/badge/rust-stable%20%C2%B7%20edition%202024-orange)](rust-toolchain.toml)
 
 telaio (Italian word for a frame, a chassis or a loom) is a rapid application development kit
@@ -315,12 +315,12 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0" }
-telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0" }
-telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0" }
-telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.27.0", features = ["javascript"] }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
+telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
+telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0", features = ["javascript"] }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same
