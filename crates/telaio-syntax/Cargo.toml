@@ -14,7 +14,7 @@ publish = false
 [features]
 default = []
 all-languages = [
-    "rust", "javascript", "typescript", "toml", "markdown", "html", "make", "bash", "python",
+    "rust", "javascript", "typescript", "toml", "markdown", "html", "xml", "make", "bash", "python",
     "powershell", "css", "yaml", "java", "kotlin", "sql", "dockerfile",
 ]
 rust = ["dep:tree-sitter-rust"]
@@ -23,6 +23,8 @@ typescript = ["javascript", "dep:tree-sitter-typescript"]
 toml = ["dep:tree-sitter-toml-ng"]
 markdown = ["dep:tree-sitter-md"]
 html = ["dep:tree-sitter-html"]
+# XML with its own grammar. Without it, but with `html`, XML uses the HTML grammar.
+xml = ["dep:tree-sitter-xml"]
 make = ["dep:tree-sitter-make"]
 bash = ["dep:tree-sitter-bash"]
 python = ["dep:tree-sitter-python"]
@@ -46,6 +48,7 @@ tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-toml-ng = { workspace = true, optional = true }
 tree-sitter-md = { workspace = true, optional = true }
 tree-sitter-html = { workspace = true, optional = true }
+tree-sitter-xml = { workspace = true, optional = true }
 tree-sitter-make = { workspace = true, optional = true }
 tree-sitter-bash = { workspace = true, optional = true }
 tree-sitter-python = { workspace = true, optional = true }

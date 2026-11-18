@@ -90,6 +90,20 @@ const HTML_EXTRA: &str = r#"
 (attribute_name) @attribute
 "#;
 
+#[cfg(feature = "xml")]
+// The bundled XML query paints attribute names as properties and the values of the XML
+// declaration as numbers or special strings. These keep XML as HTML looks: attribute names as
+// attributes and every value, quotes included, as a string.
+const XML_EXTRA: &str = r#"
+(Attribute (Name) @attribute)
+(PseudoAtt (Name) @attribute)
+["version" "encoding" "standalone"] @attribute
+(XMLDecl ["\"" "'"] @string)
+(VersionNum) @string
+(EncName) @string
+(XMLDecl ["yes" "no"] @string)
+"#;
+
 #[cfg(feature = "make")]
 // The bundled make query paints every recipe line as a string and uses captures telaio has no class
 // for (`@conditional`, `@include`, `@repeat`), so telaio uses its own: directives as keywords, rule
@@ -260,6 +274,8 @@ pub(crate) fn grammar(language: Language) -> Option<&'static Grammar> {
     static MARKDOWN: OnceLock<Option<Grammar>> = OnceLock::new();
     #[cfg(feature = "html")]
     static HTML: OnceLock<Option<Grammar>> = OnceLock::new();
+    #[cfg(feature = "xml")]
+    static XML: OnceLock<Option<Grammar>> = OnceLock::new();
     #[cfg(feature = "make")]
     static MAKE: OnceLock<Option<Grammar>> = OnceLock::new();
     #[cfg(feature = "bash")]
@@ -320,9 +336,21 @@ pub(crate) fn grammar(language: Language) -> Option<&'static Grammar> {
                 tree_sitter_md::HIGHLIGHT_QUERY_BLOCK
             ),
         ),
-        // XML has no grammar in the versions gpui-component pins, so it uses HTML's, as Postino.
         #[cfg(feature = "html")]
-        Language::Html | Language::Xml => (
+        Language::Html => (
+            &HTML,
+            tree_sitter_html::LANGUAGE,
+            format!("{}\n{HTML_EXTRA}", tree_sitter_html::HIGHLIGHTS_QUERY),
+        ),
+        #[cfg(feature = "xml")]
+        Language::Xml => (
+            &XML,
+            tree_sitter_xml::LANGUAGE_XML,
+            format!("{}\n{XML_EXTRA}", tree_sitter_xml::XML_HIGHLIGHT_QUERY),
+        ),
+        // Without the XML grammar, XML uses HTML's, which reads the XML declaration as an error.
+        #[cfg(all(feature = "html", not(feature = "xml")))]
+        Language::Xml => (
             &HTML,
             tree_sitter_html::LANGUAGE,
             format!("{}\n{HTML_EXTRA}", tree_sitter_html::HIGHLIGHTS_QUERY),

@@ -485,6 +485,24 @@ mod tests {
     }
 
     #[test]
+    fn xml_declaration_and_cdata_highlights() {
+        let src = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE note>\n<note a=\"1\"><![CDATA[x < y]]></note>\n";
+        has(Language::Xml, src, "xml", Keyword);
+        has(Language::Xml, src, "version", Attribute);
+        has(Language::Xml, src, "encoding", Attribute);
+        has(Language::Xml, src, "DOCTYPE", Keyword);
+        has(Language::Xml, src, "note", Tag);
+        has(Language::Xml, src, "a", Attribute);
+        has(Language::Xml, src, "\"1\"", String);
+        let got = spans(Language::Xml, src);
+        assert!(
+            got.iter()
+                .any(|(t, h)| t.contains("1.0") && t.starts_with('"') && *h == String),
+            "the version value, quotes included, as a string: {got:?}"
+        );
+    }
+
+    #[test]
     fn make_highlights() {
         let src = "# build\nCC := gcc\n.PHONY: all\nifdef DEBUG\nFLAGS = -g\nendif\nall: $(OBJS)\n\t$(CC) -o $@ $(wildcard *.c)\n";
         has(Language::Make, src, "# build", Comment);

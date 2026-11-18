@@ -237,7 +237,7 @@ let body = cx.new(|cx| {
 - **Gutter marks**: `EditorState::git_marks` takes the marks (added, modified, deleted lines) the
   app computes, from git or anything else.
 - **Languages**: `telaio-syntax` has every grammar but JSON behind a Cargo feature of its name
-  (`rust`, `javascript`, `typescript`, `html` for HTML and XML, `markdown`, `bash`, `python`,
+  (`rust`, `javascript`, `typescript`, `html` for HTML, `xml` for XML (with only `html`, XML uses the HTML grammar), `markdown`, `bash`, `python`,
   ...), so an app builds only the grammars it highlights; `all-languages` turns them all on and
   `markdown-preview` adds the Markdown preview parser. A language whose grammar is off shows as
   plain text.
@@ -315,12 +315,12 @@ repository, all at the same tag:
 
 ```toml
 [workspace.dependencies]
-telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
-telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
-telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
-telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
-telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0" }
-telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.28.0", features = ["javascript"] }
+telaio-ui = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0" }
+telaio-app = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0" }
+telaio-update = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0" }
+telaio-git = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0" }
+telaio-editor = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0" }
+telaio-syntax = { git = "https://github.com/tanisperez/telaio", tag = "v0.29.0", features = ["javascript"] }
 ```
 
 telaio pins `gpui-kit` to the exact version the apps use, and its other dependencies use the same

@@ -5,7 +5,7 @@ default-members = ["crates/*"]
 
 [workspace.package]
 edition = "2024"
-version = "0.28.0"
+version = "0.29.0"
 license = "Apache-2.0"
 authors = ["Estanislao Pérez Nartallo <tanisperez@gmail.com>"]
 repository = "https://github.com/tanisperez/telaio"
@@ -48,6 +48,9 @@ tree-sitter-json = "=0.24.8"
 tree-sitter-toml-ng = "=0.7.0"
 tree-sitter-md = "=0.5.1"
 tree-sitter-html = "=0.23.2"
+# XML has no grammar in gpui-component: telaio adds this one (MIT) for the XML declaration,
+# processing instructions and CDATA, which the HTML grammar reads as errors.
+tree-sitter-xml = "=0.7.0"
 # Not built by gpui-component by default, but the version it pins behind its `tree-sitter-make`
 # feature.
 tree-sitter-make = "=1.1.1"
