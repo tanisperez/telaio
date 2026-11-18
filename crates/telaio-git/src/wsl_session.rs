@@ -9,9 +9,13 @@
 //! A new session prints a greeting line before its first request: a session that does not (an
 //! unknown distribution, no `sh`) never takes a command.
 //!
-//! The loop is POSIX `sh` plus `head`, `wc`, `mktemp` and `wslpath`, all present in every WSL
-//! distribution. Each request is length prefixed, so arguments and input can hold any byte but
-//! NUL (which no command line can hold either):
+//! The loop runs under `bash` when the distribution has it, and under POSIX `sh` otherwise
+//! (Alpine). Every external program costs about 2.5 ms in WSL 2, so the loop starts as few as it
+//! can (#286 in Postino): under `bash`, `read -N` reads the directory and the arguments, and a
+//! command costs git plus one `stat` and one `cat`; under `sh` each argument also takes a
+//! `head`. Besides the shell it needs `head`, `stat`, `cat`, `mktemp` and `wslpath`, all present
+//! in every WSL distribution. Each request is length prefixed, so arguments and input can hold
+//! any byte but NUL (which no command line can hold either):
 //!
 //! ```text
 //! request:  "<dir length> <arg count> <stdin length>\n" <dir>
@@ -41,11 +45,18 @@ use crate::run::{Output, Runner};
 use crate::wsl;
 
 /// The shell loop each session runs, see the module docs.
-const LOOP: &str = r#"rm -f "$f"
+const LOOP: &str = r#"[ -n "$f" ] || f=$1
+if [ -z "$BASH_VERSION" ] && command -v bash >/dev/null 2>&1; then exec bash "$f" "$f"; fi
+rm -f "$f"
 t=$(mktemp -d) || exit 1
 trap 'rm -rf "$t"' EXIT
 echo telaio-git-session
-take() { v=$(head -c "$1"; printf x); v=${v%x}; }
+if [ -n "$BASH_VERSION" ]; then
+  LC_ALL=C
+  take() { v=; if [ "$1" -gt 0 ]; then IFS= read -r -N "$1" v; fi; }
+else
+  take() { v=$(head -c "$1"; printf x); v=${v%x}; }
+fi
 while IFS=' ' read -r dl n il; do
   take "$dl"; dir=$v
   set --
@@ -53,14 +64,15 @@ while IFS=' ' read -r dl n il; do
   while [ "$i" -lt "$n" ]; do
     IFS= read -r al; take "$al"; set -- "$@" "$v"; i=$((i + 1))
   done
-  head -c "$il" >"$t/in"
+  if [ "$il" -gt 0 ]; then head -c "$il" >"$t/in"; in=$t/in; else in=/dev/null; fi
   case $dir in
     '' | /*) ;;
     *) dir=$(wslpath -u "$dir" 2>/dev/null || printf '%s' "$dir") ;;
   esac
-  (if [ -n "$dir" ]; then cd "$dir" || exit 128; fi; exec "$@") <"$t/in" >"$t/out" 2>"$t/err"
+  (if [ -n "$dir" ]; then cd "$dir" || exit 128; fi; exec "$@") <"$in" >"$t/out" 2>"$t/err"
   c=$?
-  printf '%s %s %s\n' "$c" "$(wc -c <"$t/out")" "$(wc -c <"$t/err")"
+  set -- $(stat -c %s "$t/out" "$t/err")
+  printf '%s %s %s\n' "$c" "$1" "$2"
   cat "$t/out" "$t/err"
 done
 "#;
@@ -311,10 +323,19 @@ mod tests {
     /// `starts` and takes `delay` seconds to start, as the real one does.
     #[cfg(unix)]
     fn fake_wsl(dir: &Path, delay: &str) -> PathBuf {
+        fake_wsl_with_path(dir, delay, None)
+    }
+
+    /// [`fake_wsl`] whose distribution only has the programs of `path`, when given.
+    #[cfg(unix)]
+    fn fake_wsl_with_path(dir: &Path, delay: &str, path: Option<&Path>) -> PathBuf {
         use std::os::unix::fs::PermissionsExt;
+        let path = path
+            .map(|path| format!("PATH='{}'; export PATH\n", path.display()))
+            .unwrap_or_default();
         let script = format!(
             "#!/bin/sh\nsleep {delay}\necho >>'{}'\n[ \"$1\" = -d ] && [ \"$2\" = Test ] || exit 1\n\
-             shift 2\n[ \"$1\" = --exec ] || exit 93\nshift\nexec \"$@\"\n",
+             shift 2\n[ \"$1\" = --exec ] || exit 93\nshift\n{path}exec \"$@\"\n",
             dir.join("starts").display()
         );
         let path = dir.join("wsl.exe");
@@ -347,12 +368,70 @@ mod tests {
         }
     }
 
+    /// The program at `name` on the `PATH`, as `command -v` finds it.
+    #[cfg(target_os = "linux")]
+    fn which(name: &str) -> Option<PathBuf> {
+        std::env::split_paths(&std::env::var_os("PATH")?)
+            .map(|dir| dir.join(name))
+            .find(|path| path.is_file())
+    }
+
+    /// A folder whose `sh` is dash and that has no bash, with the programs the loop and the
+    /// tests use, for the `sh` loop. `None` without dash (Arch, where `sh` is bash; Ubuntu and
+    /// Debian have it).
+    #[cfg(target_os = "linux")]
+    fn programs_without_bash(dir: &Path) -> Option<PathBuf> {
+        let bin = dir.join("bin");
+        std::fs::create_dir(&bin).ok()?;
+        std::os::unix::fs::symlink(which("dash")?, bin.join("sh")).ok()?;
+        for tool in ["env", "head", "mktemp", "stat", "cat", "rm", "readlink"] {
+            std::os::unix::fs::symlink(which(tool)?, bin.join(tool)).ok()?;
+        }
+        Some(bin)
+    }
+
+    /// The shell that runs the session loop, the parent of the command it runs.
+    #[cfg(target_os = "linux")]
+    fn loop_shell(launcher: &Path) -> String {
+        let output = sh(launcher, None, "readlink /proc/$PPID/exe", &[], None);
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .trim_end()
+            .to_string()
+    }
+
     #[cfg(unix)]
     #[test]
     fn a_session_runs_any_bytes_and_starts_once() {
         let tools = tempfile::tempdir().unwrap();
         let launcher = fake_wsl(tools.path(), "0");
+        check_session(&launcher, tools.path());
+        #[cfg(target_os = "linux")]
+        assert!(
+            loop_shell(&launcher).ends_with("bash"),
+            "the loop runs under bash when there is one"
+        );
+    }
 
+    /// The `sh` loop of a distribution without bash, where dash is at hand to stand in.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn without_bash_the_sh_loop_runs_any_bytes_too() {
+        let tools = tempfile::tempdir().unwrap();
+        let Some(bin) = programs_without_bash(tools.path()) else {
+            eprintln!("skipped: no dash to run the sh loop with");
+            return;
+        };
+        let launcher = fake_wsl_with_path(tools.path(), "0", Some(&bin));
+        check_session(&launcher, tools.path());
+        assert!(loop_shell(&launcher).ends_with("dash"));
+    }
+
+    /// Bytes, codes, standard error and the working directory through one session of
+    /// `launcher`, whose starts are counted in `tools`.
+    #[cfg(unix)]
+    fn check_session(launcher: &Path, tools: &Path) {
+        let launcher = launcher.to_path_buf();
         // Arguments with spaces, new lines, a trailing new line and no text at all.
         let output = sh(
             &launcher,
@@ -391,7 +470,7 @@ mod tests {
         let output = sh(&launcher, Some(&dir.join("gone")), "pwd", &[], None);
         assert_eq!(output.code, Some(128));
 
-        assert_eq!(starts(tools.path()), 1, "one wsl.exe for every command");
+        assert_eq!(starts(tools), 1, "one wsl.exe for every command");
     }
 
     #[cfg(unix)]
