@@ -9,6 +9,7 @@
 
 use std::rc::Rc;
 
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -28,9 +29,14 @@ const SHADOW_COLOR: Hsla = Hsla {
     a: 0.12,
 };
 
+/// The size of an item's icon.
+const SEGMENTED_ICON_SIZE: f32 = 12.0;
+
 /// One item of a [`SegmentedControl`].
 pub struct SegmentedItem {
     label: SharedString,
+    icon: Option<Icon>,
+    icon_only: bool,
     selected: bool,
     on_click: Option<ItemHandler>,
 }
@@ -43,9 +49,24 @@ impl SegmentedItem {
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self {
             label: label.into(),
+            icon: None,
+            icon_only: false,
             selected: false,
             on_click: None,
         }
+    }
+
+    /// An icon before the label.
+    pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
+        self.icon = Some(icon.into());
+        self
+    }
+
+    /// Shows only the icon, for a narrow place, with the label as its tooltip. Without an icon
+    /// the label still shows.
+    pub fn icon_only(mut self, icon_only: bool) -> Self {
+        self.icon_only = icon_only;
+        self
     }
 
     /// Marks this item as the selected one.
@@ -101,10 +122,12 @@ impl RenderOnce for SegmentedControl {
             .children(self.items.into_iter().enumerate().map(|(index, item)| {
                 let selected = item.selected;
                 let handler = item.on_click;
+                let icon_only = item.icon_only && item.icon.is_some();
                 let mut cell = h_flex()
                     .id(("segmented-item", index))
                     .h(px(SEGMENTED_CONTROL_INNER_HEIGHT))
-                    .px(px(10.0))
+                    .px(px(if icon_only { 7.0 } else { 10.0 }))
+                    .gap(px(6.0))
                     .items_center()
                     .justify_center()
                     .rounded(px(RADIUS_SM - 1.0))
@@ -125,7 +148,17 @@ impl RenderOnce for SegmentedControl {
                         ])
                     })
                     .when(!selected, |cell| cell.text_color(palette.fg_muted))
-                    .child(item.label);
+                    .children(
+                        item.icon
+                            .map(|icon| icon.with_size(px(SEGMENTED_ICON_SIZE))),
+                    );
+                if icon_only {
+                    let label = item.label;
+                    cell = cell
+                        .tooltip(move |window, cx| Tooltip::new(label.clone()).build(window, cx));
+                } else {
+                    cell = cell.child(item.label);
+                }
                 if let Some(handler) = handler {
                     cell = cell.on_click(move |_, window, cx| handler(window, cx));
                 }

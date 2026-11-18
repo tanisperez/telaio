@@ -103,22 +103,40 @@ impl Gallery {
         )
     }
 
-    /// Segmented control: Pretty, Raw, Preview.
+    /// Segmented control: Pretty, Raw, Preview; then with icons, and with icons only (the label
+    /// as the tooltip), as a narrow header uses them.
     pub(crate) fn render_segmented(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        h_flex().child(segmented(
-            "gallery-segmented",
-            ["Pretty", "Raw", "Preview"]
-                .into_iter()
-                .enumerate()
-                .map(|(index, name)| {
-                    SegmentedItem::new(name)
-                        .selected(self.segment == index)
-                        .on_click(Self::act(cx, move |this, _, cx| {
-                            this.segment = index;
-                            this.record(format!("Segment {name}"), cx);
-                        }))
-                }),
-        ))
+        let names = ["Pretty", "Raw", "Preview"];
+        let icons = [
+            gpui_kit::assets::IconName::Braces,
+            gpui_kit::assets::IconName::FileText,
+            gpui_kit::assets::IconName::Eye,
+        ];
+        let row = |id: &'static str, icon: bool, icon_only: bool, cx: &mut Context<Self>| {
+            segmented(
+                id,
+                names
+                    .into_iter()
+                    .zip(icons)
+                    .enumerate()
+                    .map(|(index, (name, glyph))| {
+                        let item = SegmentedItem::new(name);
+                        let item = if icon { item.icon(glyph) } else { item };
+                        item.icon_only(icon_only)
+                            .selected(self.segment == index)
+                            .on_click(Self::act(cx, move |this, _, cx| {
+                                this.segment = index;
+                                this.record(format!("Segment {name}"), cx);
+                            }))
+                    }),
+            )
+        };
+        h_flex()
+            .gap_4()
+            .items_center()
+            .child(row("gallery-segmented", false, false, cx))
+            .child(row("gallery-segmented-icons", true, false, cx))
+            .child(row("gallery-segmented-icon-only", true, true, cx))
     }
 
     /// Controls: checkbox, radios, and switches inside their halo.
