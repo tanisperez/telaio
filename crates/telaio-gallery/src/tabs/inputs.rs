@@ -15,7 +15,7 @@ use telaio_ui::components::OpenOnClickExt as _;
 use telaio_ui::components::{
     CheckState, HoverInput, NumberStepper, SegmentedItem, TriCheckbox, checkbox_halo,
     edit_menu_area, labelled_checkbox, labelled_radio, no_input_menu, radio_halo, select_label_row,
-    select_trigger, switch_halo, text_field,
+    select_trigger, switch_halo, text_field, text_field_with_error,
 };
 
 use super::{label, on_off};
@@ -67,6 +67,39 @@ impl Gallery {
                         &palette,
                     ))
                     .child(hover),
+            )
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(label(
+                        "text_field_with_error, in error while empty",
+                        &palette,
+                    ))
+                    .child(text_field_with_error(
+                        &self.error_input,
+                        self.error_input
+                            .read(cx)
+                            .value()
+                            .is_empty()
+                            .then_some("The name cannot be empty."),
+                        cx,
+                    )),
+            )
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(label("HoverInput, disabled", &palette))
+                    .child(
+                        bare_input(&self.disabled_input, "gallery-disabled-input").disabled(true),
+                    ),
+            )
+            .child(
+                v_flex()
+                    .gap_1()
+                    .child(label("HoverInput, focus_halo(false)", &palette))
+                    .child(
+                        bare_input(&self.no_halo_input, "gallery-no-halo-input").focus_halo(false),
+                    ),
             )
     }
 
@@ -412,4 +445,18 @@ impl Gallery {
                     .unit("px"),
             ))
     }
+}
+
+/// A bare `HoverInput` of the control height for `state`.
+fn bare_input(
+    state: &Entity<gpui_kit::component::input::InputState>,
+    id: &'static str,
+) -> HoverInput {
+    HoverInput::new(
+        id,
+        state,
+        Input::new(state)
+            .context_menu(no_input_menu())
+            .h(px(telaio_ui::metrics::CONTROL_HEIGHT)),
+    )
 }

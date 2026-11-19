@@ -29,6 +29,8 @@ pub struct Tokens {
     pub border: &'static str,
     /// Border color for controls (inputs, buttons).
     pub border_strong: &'static str,
+    /// Border of an input under the pointer, a step above `border_strong`.
+    pub border_hover: &'static str,
     /// Primary text color.
     pub fg: &'static str,
     /// Secondary text, inactive tabs.
@@ -97,6 +99,7 @@ impl Tokens {
         overlay: "#ffffff",
         border: "#e3e5ea",
         border_strong: "#cdd0d8",
+        border_hover: "#b4b8c3",
         fg: "#1b1c22",
         fg_muted: "#5c606e",
         fg_subtle: "#8b8e9a",
@@ -147,6 +150,7 @@ impl Tokens {
         overlay: "#262830",
         border: "#2c2e36",
         border_strong: "#3b3e48",
+        border_hover: "#4a4d57",
         fg: "#e9eaee",
         fg_muted: "#a0a3ae",
         fg_subtle: "#6f7280",
@@ -192,6 +196,15 @@ impl Tokens {
     };
 }
 
+/// Alpha of [`Palette::focus_halo`] in the dark theme (the "Contrast" inputs, telaio#59).
+pub const FOCUS_HALO_ALPHA_DARK: f32 = 0.25;
+/// Alpha of [`Palette::focus_halo`] in the light theme.
+pub const FOCUS_HALO_ALPHA_LIGHT: f32 = 0.18;
+/// Alpha of [`Palette::error_halo`] in the dark theme.
+pub const ERROR_HALO_ALPHA_DARK: f32 = 0.18;
+/// Alpha of [`Palette::error_halo`] in the light theme.
+pub const ERROR_HALO_ALPHA_LIGHT: f32 = 0.14;
+
 /// One [`Hsla`] field per token, plus the values derived from them. Components read colors only
 /// from here, through [`PaletteExt::palette`], never from `cx.theme()` directly and never from a
 /// literal.
@@ -216,6 +229,14 @@ pub struct Palette {
     pub border: Hsla,
     /// Border color for controls (inputs, buttons).
     pub border_strong: Hsla,
+    /// Border of an input under the pointer.
+    pub border_hover: Hsla,
+    /// The halo around a focused input: `accent` at [`FOCUS_HALO_ALPHA_DARK`] or
+    /// [`FOCUS_HALO_ALPHA_LIGHT`].
+    pub focus_halo: Hsla,
+    /// The halo around an input in error: `danger` at [`ERROR_HALO_ALPHA_DARK`] or
+    /// [`ERROR_HALO_ALPHA_LIGHT`].
+    pub error_halo: Hsla,
     /// Primary text color.
     pub fg: Hsla,
     /// Secondary text, inactive tabs.
@@ -320,6 +341,17 @@ impl Palette {
             scrim: hex(tokens.scrim),
             border: hex(tokens.border),
             border_strong: hex(tokens.border_strong),
+            border_hover: hex(tokens.border_hover),
+            focus_halo: hex(tokens.accent).opacity(if dark {
+                FOCUS_HALO_ALPHA_DARK
+            } else {
+                FOCUS_HALO_ALPHA_LIGHT
+            }),
+            error_halo: hex(tokens.danger).opacity(if dark {
+                ERROR_HALO_ALPHA_DARK
+            } else {
+                ERROR_HALO_ALPHA_LIGHT
+            }),
             fg: hex(tokens.fg),
             fg_muted: hex(tokens.fg_muted),
             fg_subtle: hex(tokens.fg_subtle),

@@ -1,7 +1,8 @@
 //! [`Field`]: the text field of the find bar, Go to line and Find in files, from the 0.5.0
 //! search design. A `raised` box with a 1 px border, an optional leading icon, the input in mono
-//! and optional toggles inside on the right. Focused, the border turns `accent` with a 3 px ring
-//! of `accent` at 20%; hovered, `border_strong`.
+//! and optional elements inside on the right (a counter, toggles). It follows telaio-ui's
+//! "Contrast" inputs (`HoverInput`): `border_strong` at rest, `border_hover` under the pointer,
+//! `accent` with the focus halo when focused, `danger` with the error halo when invalid.
 //!
 //! The input is gpui-kit's, without its own box (`appearance(false)`), with the app's edit menu
 //! and a line height that is a whole number of device pixels (`input_line_height`), so the text
@@ -11,9 +12,9 @@ use gpui_kit::component::input::{Input, InputState};
 use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use telaio_ui::components::{edit_menu_area, input_line_height, no_input_menu};
+use telaio_ui::components::{edit_menu_area, input_halo, input_line_height, no_input_menu};
 
-use crate::metrics::{FIELD_RADIUS, FIELD_RING};
+use crate::metrics::FIELD_RADIUS;
 use telaio_ui::PaletteExt;
 
 /// Line height of the input inside a [`Field`].
@@ -27,6 +28,7 @@ pub struct Field {
     text_size: f32,
     icon: Option<Icon>,
     suffix: Vec<AnyElement>,
+    invalid: bool,
 }
 
 impl Field {
@@ -38,12 +40,19 @@ impl Field {
             text_size,
             icon: None,
             suffix: Vec::new(),
+            invalid: false,
         }
     }
 
     /// Puts `icon` before the text, in `fg_subtle`.
     pub fn icon(mut self, icon: impl Into<Icon>) -> Self {
         self.icon = Some(icon.into());
+        self
+    }
+
+    /// Shows the field in its error state, focused or not: a `danger` border and halo.
+    pub fn invalid(mut self, invalid: bool) -> Self {
+        self.invalid = invalid;
         self
     }
 
@@ -60,8 +69,7 @@ impl RenderOnce for Field {
         let focused = self.state.read(cx).focus_handle(cx).is_focused(window);
         let line_height = px(input_line_height(LINE_HEIGHT, window.scale_factor()));
         let mono = cx.theme().mono_font_family.clone();
-        let (border, border_strong, accent) =
-            (palette.border, palette.border_strong, palette.accent);
+        let border_hover = palette.border_hover;
         h_flex()
             .id(("field", self.state.entity_id()))
             .flex_1()
@@ -75,15 +83,18 @@ impl RenderOnce for Field {
             .bg(palette.raised)
             .border_1()
             .map(|field| {
-                if focused {
-                    field.border_color(accent).shadow(vec![
-                        BoxShadow::new(px(0.0), px(0.0), accent.opacity(0.2))
-                            .spread_radius(px(FIELD_RING)),
-                    ])
+                if self.invalid {
+                    field
+                        .border_color(palette.danger)
+                        .shadow(input_halo(palette.error_halo))
+                } else if focused {
+                    field
+                        .border_color(palette.accent)
+                        .shadow(input_halo(palette.focus_halo))
                 } else {
                     field
-                        .border_color(border)
-                        .hover(move |style| style.border_color(border_strong))
+                        .border_color(palette.border_strong)
+                        .hover(move |style| style.border_color(border_hover))
                 }
             })
             .when_some(self.icon, |field, icon| {

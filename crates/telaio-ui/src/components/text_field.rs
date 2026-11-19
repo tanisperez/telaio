@@ -6,11 +6,13 @@
 //! same one the URL bar and the environment rows use, gives the highlight room above and below.
 
 use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::component::v_flex;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::edit_menu::{edit_menu_area, no_input_menu};
 use super::hover_input::HoverInput;
+use crate::PaletteExt;
 use crate::metrics::INPUT_PADDING_X;
 
 /// How many pixels either side of the nominal line height [`input_line_height`] looks at.
@@ -25,23 +27,60 @@ const FIELD_LINE_HEIGHT: f32 = 22.0;
 /// that sit next to a field, such as a button, use it too so both line up.
 pub const FIELD_HEIGHT: f32 = 36.0;
 
+/// Space between a [`text_field_with_error`]'s box and its message.
+const ERROR_GAP: f32 = 5.0;
+/// Text size of a [`text_field_with_error`]'s message.
+const ERROR_TEXT_SIZE: f32 = 12.0;
+/// Line height of a [`text_field_with_error`]'s message: the default one leaves the message
+/// far from the box.
+const ERROR_LINE_HEIGHT: f32 = 16.0;
+
 /// Builds the field for `state`, with the app's edit menu. The height is set on a wrapper: the
 /// `Input` itself ignores a fixed height in a dialog's content.
 pub fn text_field(state: &Entity<InputState>, _cx: &App) -> Div {
-    div()
+    div().w_full().h(px(FIELD_HEIGHT)).child(TextFieldInput {
+        state: state.clone(),
+        invalid: false,
+    })
+}
+
+/// A [`text_field`] that shows `error`, when there is one, in the error state of the "Contrast"
+/// inputs: a `danger` border and halo, and the message in `danger` under the box.
+pub fn text_field_with_error(
+    state: &Entity<InputState>,
+    error: Option<impl Into<SharedString>>,
+    cx: &App,
+) -> Div {
+    let error = error.map(Into::into);
+    v_flex()
         .w_full()
-        .h(px(FIELD_HEIGHT))
-        .child(TextFieldInput(state.clone()))
+        .gap(px(ERROR_GAP))
+        .child(div().w_full().h(px(FIELD_HEIGHT)).child(TextFieldInput {
+            state: state.clone(),
+            invalid: error.is_some(),
+        }))
+        .when_some(error, |field, error| {
+            field.child(
+                div()
+                    .text_size(px(ERROR_TEXT_SIZE))
+                    .line_height(px(ERROR_LINE_HEIGHT))
+                    .text_color(cx.palette().danger)
+                    .child(error),
+            )
+        })
 }
 
 /// The input of a [`text_field`], built at render time because its line height depends on the
 /// window's scale factor (see [`input_line_height`]).
 #[derive(IntoElement)]
-struct TextFieldInput(Entity<InputState>);
+struct TextFieldInput {
+    state: Entity<InputState>,
+    invalid: bool,
+}
 
 impl RenderOnce for TextFieldInput {
     fn render(self, window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let state = self.0;
+        let state = self.state;
         let line_height = px(input_line_height(FIELD_LINE_HEIGHT, window.scale_factor()));
         edit_menu_area(&state).size_full().child(
             HoverInput::new(
@@ -54,6 +93,7 @@ impl RenderOnce for TextFieldInput {
                     .py_0()
                     .line_height(line_height),
             )
+            .invalid(self.invalid)
             .h_full(),
         )
     }

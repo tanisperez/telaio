@@ -274,6 +274,12 @@ pub struct Gallery {
     pub(crate) sort: Option<(SortColumn, SortOrder)>,
     pub(crate) text_input: Entity<InputState>,
     pub(crate) hover_input: Entity<InputState>,
+    /// A `text_field_with_error` that is in error while it is empty.
+    pub(crate) error_input: Entity<InputState>,
+    /// A disabled `HoverInput`.
+    pub(crate) disabled_input: Entity<InputState>,
+    /// A `HoverInput` without its focus halo.
+    pub(crate) no_halo_input: Entity<InputState>,
     /// Whether the data table demo is set in the monospace font.
     pub(crate) table_mono: bool,
     /// Whether the data table demo shows its header row.
@@ -344,6 +350,10 @@ impl Gallery {
 
         let text_input = cx.new(|cx| InputState::new(window, cx).placeholder("Request name"));
         let hover_input = cx.new(|cx| InputState::new(window, cx).placeholder("Hover me"));
+        let error_input = cx.new(|cx| InputState::new(window, cx).placeholder("Workspace name"));
+        let disabled_input = cx.new(|cx| InputState::new(window, cx).default_value("Not editable"));
+        let no_halo_input =
+            cx.new(|cx| InputState::new(window, cx).placeholder("Focus me, no halo"));
         let rows = [
             ("page", "1", true),
             ("limit", "50", false),
@@ -396,6 +406,9 @@ impl Gallery {
             sort: None,
             text_input,
             hover_input,
+            error_input,
+            disabled_input,
+            no_halo_input,
             table_mono: true,
             table_header: true,
             table_sort: None,

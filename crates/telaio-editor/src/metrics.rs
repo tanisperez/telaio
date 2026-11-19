@@ -28,9 +28,6 @@ pub const GOTO_BUTTON_HEIGHT: f32 = 28.0;
 /// Radius of the search fields (find bar, Go to line, Find in files).
 pub const FIELD_RADIUS: f32 = 7.0;
 
-/// Width of the focus ring around a search field.
-pub const FIELD_RING: f32 = 3.0;
-
 /// Width of the line number gutter beyond its digits: the left padding plus
 /// [`EDITOR_GUTTER_RIGHT`].
 pub const EDITOR_GUTTER_PADDING: f32 = 28.0;

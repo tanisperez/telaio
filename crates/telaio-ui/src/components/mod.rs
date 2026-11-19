@@ -59,7 +59,7 @@ pub use edit_menu::{
 };
 pub use editable_table::{EditableCell, EditableColumn, EditableRow, EditableTable};
 pub use empty_state::EmptyState;
-pub use hover_input::HoverInput;
+pub use hover_input::{HoverInput, input_halo};
 pub use icon_button::IconButton;
 pub use inline_message::{InlineMessage, InlineMessageKind};
 pub use key_cap::KeyCap;
@@ -100,7 +100,7 @@ pub use tab_menu::{
     open_unsaved_dialog, path_items, reveal_path, tab_close_items,
 };
 pub use text_area::TextArea;
-pub use text_field::{input_line_height, text_field};
+pub use text_field::{input_line_height, text_field, text_field_with_error};
 pub use theme_card::ThemeCard;
 pub use time_series_chart::{
     AxisSide, ChartAxis, ChartLabel, ChartSelection, ChartSeries, LabelPlacement, ReferenceLine,
