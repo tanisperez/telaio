@@ -6761,7 +6761,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-app"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "chrono",
  "dirs 7.0.0",
@@ -6780,7 +6780,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-editor"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "fastrand",
  "gpui-kit",
@@ -6794,7 +6794,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-gallery"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "gpui-kit",
  "log",
@@ -6806,7 +6806,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-git"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "dunce",
  "log",
@@ -6817,7 +6817,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-syntax"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "pretty_assertions",
  "pulldown-cmark",
@@ -6846,7 +6846,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-text"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "fastrand",
  "pretty_assertions",
@@ -6857,7 +6857,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-ui"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "gpui-kit",
  "gpui-pre",
@@ -6868,7 +6868,7 @@ dependencies = [
 
 [[package]]
 name = "telaio-update"
-version = "0.31.0"
+version = "0.31.1"
 dependencies = [
  "dirs 7.0.0",
  "log",
