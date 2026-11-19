@@ -2317,6 +2317,10 @@ impl EditorElement {
             if !phase.bubble() || !wheel_hitbox.should_handle_scroll(window) {
                 return;
             }
+            // Ctrl (Cmd on macOS) and the wheel is the app's zoom: let it go up (ted #111).
+            if event.modifiers.secondary(cx) {
+                return;
+            }
             let delta = event.delta.pixel_delta(line_height);
             let (mut dx, dy) = (f32::from(delta.x), f32::from(delta.y));
             // Shift turns a plain wheel into horizontal scrolling.
