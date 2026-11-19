@@ -63,7 +63,7 @@ pub const ICON_BUTTON_HEADER: f32 = 22.0;
 /// Horizontal padding of a single-line input's text, 1 px less than gpui-component's default 10.
 pub const INPUT_PADDING_X: f32 = 9.0;
 /// Width of the halo around a focused or invalid input, painted outside its border (telaio#59).
-pub const INPUT_HALO: f32 = 3.0;
+pub const INPUT_HALO: f32 = 2.0;
 /// Padding around a checkbox's 16 px box, the halo it shows on hover (22 px in all).
 pub const CHECKBOX_HALO_PADDING: f32 = 3.0;
 

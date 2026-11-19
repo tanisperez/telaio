@@ -5,8 +5,8 @@
 //! |----------|-----------|-----------------|---------------------------------|
 //! | Rest     | `raised`  | `border_strong` | none                            |
 //! | Hover    | `raised`  | `border_hover`  | none                            |
-//! | Focus    | `raised`  | `accent`        | 3 px of [`Palette::focus_halo`] |
-//! | Error    | `raised`  | `danger`        | 3 px of [`Palette::error_halo`] |
+//! | Focus    | `raised`  | `accent`        | 2 px of [`Palette::focus_halo`] |
+//! | Error    | `raised`  | `danger`        | 2 px of [`Palette::error_halo`] |
 //! | Disabled | `surface` | `border`        | none                            |
 //!
 //! The halo is painted outside the box, so a scroll area that clips its children cuts it: an
@@ -62,7 +62,7 @@ impl HoverInput {
         }
     }
 
-    /// Whether the focused or invalid input draws its 3 px halo, `true` by default. Turn it off
+    /// Whether the focused or invalid input draws its 2 px halo, `true` by default. Turn it off
     /// where a scroll area would clip it, such as a row of a table: the border alone shows the
     /// state then.
     pub fn focus_halo(mut self, halo: bool) -> Self {
