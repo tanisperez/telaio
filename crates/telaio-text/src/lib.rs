@@ -7,6 +7,7 @@
 
 mod buffer;
 mod cleanup;
+mod convert;
 mod detect;
 mod history;
 mod search;
@@ -14,6 +15,7 @@ mod words;
 
 pub use buffer::{Buffer, LineEdit, Position, TextChange};
 pub use cleanup::cleanup_edits;
+pub use convert::{indent_edits, line_ending_edits, map_offset};
 pub use detect::{Indent, LineEnding, SAMPLE_LEN, detect_indent, detect_line_ending};
 pub use history::{Edit, EditKind, History, Selection};
 pub use ropey::{Rope, RopeSlice};

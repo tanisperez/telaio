@@ -162,6 +162,17 @@ impl Buffer {
         self.indent
     }
 
+    /// Uses `ending` for new lines from now on (after converting the text, or to override what
+    /// was detected).
+    pub fn set_line_ending(&mut self, ending: LineEnding) {
+        self.line_ending = ending;
+    }
+
+    /// Uses `indent` for new indentation from now on, `None` to fall back to the settings.
+    pub fn set_indent(&mut self, indent: Option<Indent>) {
+        self.indent = indent;
+    }
+
     /// Length of the text in bytes.
     pub fn len(&self) -> usize {
         self.rope.len()

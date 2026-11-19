@@ -15,8 +15,8 @@ use std::time::SystemTime;
 use std::sync::Arc;
 
 use telaio_text::{
-    Buffer, Edit, EditKind, History, Indent, Position, Rope, SearchQuery, Selection, next_word_end,
-    previous_word_start,
+    Buffer, Edit, EditKind, History, Indent, LineEnding, Position, Rope, SearchQuery, Selection,
+    indent_edits, line_ending_edits, map_offset, next_word_end, previous_word_start,
 };
 
 use telaio_syntax::Comment;
@@ -1685,6 +1685,57 @@ impl EditorState {
             let range = other.min(selection.head)..other.max(selection.head);
             (!range.is_empty()).then(|| (range, String::new()))
         });
+    }
+
+    /// Rewrites every line break as `ending`, as one undo step, and uses it for new lines
+    /// (ted #118). Undo puts the line breaks back but keeps `ending` for new lines.
+    pub fn convert_line_endings(&mut self, ending: LineEnding) {
+        if self.read_only {
+            return;
+        }
+        let edits = line_ending_edits(&self.buffer, ending);
+        self.apply_conversion(edits);
+        self.buffer.set_line_ending(ending);
+    }
+
+    /// Indents with `indent` from now on, without touching the text (ted #119).
+    pub fn set_indent_style(&mut self, indent: Indent) {
+        self.buffer.set_indent(Some(indent));
+    }
+
+    /// Rewrites the indentation of every line in `indent`, as one undo step, and indents with it
+    /// from now on (ted #119). The levels are read with the document's current indentation.
+    pub fn convert_indentation(&mut self, indent: Indent) {
+        if self.read_only {
+            return;
+        }
+        let edits = indent_edits(&self.buffer, self.buffer.indent(), indent, tab_size());
+        self.apply_conversion(edits);
+        self.buffer.set_indent(Some(indent));
+    }
+
+    /// Applies the edits of a whole document conversion as one step, keeping every cursor where
+    /// it was in the text.
+    fn apply_conversion(&mut self, edits: Vec<Edit>) {
+        if edits.is_empty() {
+            return;
+        }
+        let before = self.selections();
+        let after: Vec<Selection> = before
+            .iter()
+            .map(|selection| Selection {
+                anchor: map_offset(&edits, selection.anchor),
+                head: map_offset(&edits, selection.head),
+            })
+            .collect();
+        self.history.edit_many(
+            &mut self.buffer,
+            edits,
+            EditKind::Other,
+            before,
+            after.clone(),
+        );
+        self.set_selections(&after);
     }
 
     /// The text of one indentation level: the document's own, spaces by default.
@@ -3611,5 +3662,29 @@ mod tests {
         state.delete_lines();
         assert_eq!(state.buffer.to_text(), "1\n4\n");
         assert_eq!(cursors(&state), vec![2, 4]);
+    }
+
+    #[test]
+    fn converts_line_endings_as_one_undo_step() {
+        let mut state = EditorState::new(Buffer::from_text("a\r\nbb\r\nc"));
+        state.set_cursor(Position::new(2, 1), false);
+        state.convert_line_endings(LineEnding::Lf);
+        assert_eq!(state.buffer.to_text(), "a\nbb\nc");
+        assert_eq!(state.buffer.line_ending(), LineEnding::Lf);
+        assert_eq!(state.cursor, Position::new(2, 1));
+        state.undo();
+        assert_eq!(state.buffer.to_text(), "a\r\nbb\r\nc");
+    }
+
+    #[test]
+    fn converts_indentation_and_keeps_the_cursor() {
+        let mut state = EditorState::new(Buffer::from_text("a {\n    b\n        c\n}\n"));
+        state.set_cursor(Position::new(2, 9), false);
+        state.convert_indentation(Indent::Tabs);
+        assert_eq!(state.buffer.to_text(), "a {\n\tb\n\t\tc\n}\n");
+        assert_eq!(state.buffer.indent(), Some(Indent::Tabs));
+        assert_eq!(state.cursor, Position::new(2, 3));
+        state.undo();
+        assert_eq!(state.buffer.to_text(), "a {\n    b\n        c\n}\n");
     }
 }

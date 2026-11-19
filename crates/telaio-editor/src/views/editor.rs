@@ -615,6 +615,31 @@ impl EditorView {
     }
 
     /// Highlights the text as `language` from now on.
+    /// Rewrites every line break as `ending`, as one undo step (ted #118).
+    pub fn convert_line_endings(
+        &mut self,
+        ending: telaio_text::LineEnding,
+        cx: &mut Context<Self>,
+    ) {
+        self.state.convert_line_endings(ending);
+        self.emit_if_changed(cx);
+        cx.notify();
+    }
+
+    /// Rewrites the indentation of every line in `indent`, as one undo step, and indents with it
+    /// from now on (ted #119).
+    pub fn convert_indentation(&mut self, indent: telaio_text::Indent, cx: &mut Context<Self>) {
+        self.state.convert_indentation(indent);
+        self.emit_if_changed(cx);
+        cx.notify();
+    }
+
+    /// Indents with `indent` from now on, without touching the text (ted #119).
+    pub fn set_indent_style(&mut self, indent: telaio_text::Indent, cx: &mut Context<Self>) {
+        self.state.set_indent_style(indent);
+        cx.notify();
+    }
+
     pub fn set_language(&mut self, language: telaio_syntax::Language, cx: &mut Context<Self>) {
         self.state.syntax.set_language(language);
         cx.notify();
