@@ -71,7 +71,8 @@ pub use menu_rows::{
 pub use menu_trigger::{MenuTrigger, OpenOnClickExt};
 pub use modal::{
     ConfirmDialog, MODAL_INNER_RADIUS, ModalPlacement, framed_dialog, modal_body, modal_footer,
-    modal_header, modal_header_with_icon, modal_hints, open_confirm_dialog,
+    modal_header, modal_header_with_icon, modal_header_without_close, modal_hints,
+    open_confirm_dialog,
 };
 pub use number_stepper::NumberStepper;
 pub use progress_bar::ProgressBar;

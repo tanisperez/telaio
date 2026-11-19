@@ -16,7 +16,9 @@
 use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::dialog::Dialog;
+use gpui_kit::component::dialog::{Confirm, Dialog};
+use gpui_kit::component::kbd::Kbd;
+use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Icon, WindowExt as _, h_flex, v_flex, window_paddings};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -29,7 +31,6 @@ use crate::metrics::{
 };
 
 use super::buttons::{DangerButton, PrimaryButton, SecondaryButton};
-use super::icon_button::IconButton;
 use super::key_cap::KeyCap;
 
 /// Room kept around the card for its shadow (offset y 8, blur 24): the shadow fades out about
@@ -207,9 +208,10 @@ const MODAL_HINTS_PADDING: f32 = 14.0;
 
 /// A modal's header strip: `title` at the left and a close button at the right that closes the
 /// dialog. No bottom border: the body starts right under it. The frame removes gpui-component's
-/// own close button.
-pub fn modal_header(title: impl Into<SharedString>, cx: &App) -> Div {
-    header(None, title.into(), cx)
+/// own close button. `_cx` is not read since the close button became a component of its own
+/// (telaio#58); the parameter stays so callers do not change.
+pub fn modal_header(title: impl Into<SharedString>, _cx: &App) -> Div {
+    header(None, title.into())
 }
 
 /// A [`modal_header`] with `icon` in `color` before the title: `accent_text` for most modals,
@@ -218,23 +220,41 @@ pub fn modal_header_with_icon(
     icon: IconName,
     color: Hsla,
     title: impl Into<SharedString>,
-    cx: &App,
+    _cx: &App,
 ) -> Div {
-    header(Some((icon, color)), title.into(), cx)
+    header(Some((icon, color)), title.into())
+}
+
+/// A [`modal_header`] without the close button, for a modal that cannot be closed while it
+/// runs, such as an export in progress: only its own buttons end it. `icon` is the optional
+/// icon and color of [`modal_header_with_icon`].
+pub fn modal_header_without_close(
+    icon: Option<(IconName, Hsla)>,
+    title: impl Into<SharedString>,
+    _cx: &App,
+) -> Div {
+    title_row(icon, title.into())
 }
 
 /// The header of [`modal_header`] and [`modal_header_with_icon`].
-fn header(icon: Option<(IconName, Hsla)>, title: SharedString, cx: &App) -> Div {
-    let palette = cx.palette();
+fn header(icon: Option<(IconName, Hsla)>, title: SharedString) -> Div {
+    title_row(icon, title).child(ModalCloseButton)
+}
+
+/// A header's icon and title. The row is at least [`MODAL_HEADER_HEIGHT`] tall and grows when a
+/// long title wraps, so the title never pushes the close button out of the card (telaio#43).
+fn title_row(icon: Option<(IconName, Hsla)>, title: SharedString) -> Div {
     h_flex()
-        .h(px(MODAL_HEADER_HEIGHT))
+        .min_h(px(MODAL_HEADER_HEIGHT))
         .flex_none()
         .items_center()
         .gap(px(MODAL_HEADER_GAP))
         .px(px(MODAL_PADDING))
+        .py(px(MODAL_HEADER_WRAP_PADDING))
         .when_some(icon, |row, (icon, color)| {
             row.child(
                 Icon::new(icon)
+                    .flex_none()
                     .size(px(MODAL_HEADER_ICON))
                     .text_color(color),
             )
@@ -243,25 +263,126 @@ fn header(icon: Option<(IconName, Hsla)>, title: SharedString, cx: &App) -> Div 
             div()
                 .flex_1()
                 .min_w_0()
-                .truncate()
                 .text_size(px(MODAL_TITLE_SIZE))
                 .font_weight(FontWeight::SEMIBOLD)
                 .child(title),
         )
-        .child(
-            // The close button sits on a faint fill of its own, so it reads as a button at rest.
-            div()
-                .flex_none()
-                .rounded(px(RADIUS_SM))
-                .bg(palette.hover)
-                .child(
-                    IconButton::new("modal-close", IconName::Close)
-                        .tooltip(t!("telaio.close"))
-                        .on_click(move |_, window, cx| {
-                            window.close_dialog(cx);
-                        }),
-                ),
-        )
+}
+
+/// Room above and below a header's title, so a title that wraps to several lines does not
+/// touch the card's edge. A one line title keeps the header at [`MODAL_HEADER_HEIGHT`].
+const MODAL_HEADER_WRAP_PADDING: f32 = 10.0;
+/// Click area of a modal's close button: wider than the drawn box, so a click near the
+/// corner still lands.
+const CLOSE_HIT_SIZE: f32 = 28.0;
+/// Drawn box of a modal's close button, the fill on hover and on press.
+const CLOSE_BOX_SIZE: f32 = 24.0;
+/// Size of the X of a modal's close button.
+const CLOSE_ICON_SIZE: f32 = 14.0;
+/// Stroke of the X, in the 24 unit grid of the Lucide icons. gpui-kit's `Close` icon has a 2
+/// stroke, which looks heavy at 14 px, so the X is drawn here.
+const CLOSE_ICON_STROKE: f32 = 1.75;
+/// Width of the keyboard focus ring around the close button, and its gap to the button.
+const CLOSE_FOCUS_RING: f32 = 2.0;
+/// Group name the close button's hit area gives its drawn box, for the hover and pressed fills.
+const CLOSE_GROUP: &str = "telaio-modal-close";
+
+/// The close button of a modal's header, the "Ghost" style: no fill at rest and the X in
+/// `fg_subtle`; on hover the `hover` fill and the X in `fg`, on press the `pressed` fill. The
+/// tooltip shows Esc, which closes the dialog too, and keyboard focus draws an `accent` ring.
+#[derive(IntoElement)]
+struct ModalCloseButton;
+
+impl RenderOnce for ModalCloseButton {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let palette = cx.palette();
+        let focus = window
+            .use_keyed_state("modal-close-focus", cx, |_, cx| cx.focus_handle())
+            .read(cx)
+            .clone();
+        let focused = focus.is_focused(window);
+        let label: SharedString = t!("telaio.close").into();
+        let tooltip = label.clone();
+        let (rest, hover) = (palette.fg_subtle, palette.fg);
+        let ring_offset = -(CLOSE_FOCUS_RING * 2.0);
+
+        gpui_kit::base::Button::new("modal-close")
+            .track_focus(&focus)
+            .accessibility_label(label)
+            .group(CLOSE_GROUP)
+            .flex_none()
+            .size(px(CLOSE_HIT_SIZE))
+            .cursor_pointer()
+            .tooltip(move |window, cx| {
+                Tooltip::new(tooltip.clone())
+                    .key_binding(Keystroke::parse("escape").ok().map(Kbd::new))
+                    .build(window, cx)
+            })
+            .on_click(|_, window, cx| window.close_dialog(cx))
+            // Enter is bound to the dialog's `Confirm`, which would run the confirm button while
+            // the focus is on the X. The action reaches the focused X first, so it closes.
+            .on_action(|_: &Confirm, window, cx| window.close_dialog(cx))
+            .child(
+                div()
+                    .id("modal-close-box")
+                    .relative()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .size(px(CLOSE_BOX_SIZE))
+                    .rounded(px(RADIUS_SM))
+                    .group_hover(CLOSE_GROUP, |style| style.bg(palette.hover))
+                    .group_active(CLOSE_GROUP, |style| style.bg(palette.pressed))
+                    .child(close_glyph(rest, hover))
+                    .when(focused, |button| {
+                        button.child(
+                            div()
+                                .absolute()
+                                .top(px(ring_offset))
+                                .left(px(ring_offset))
+                                .size(px(CLOSE_BOX_SIZE - ring_offset * 2.0))
+                                .rounded(px(RADIUS_SM - ring_offset))
+                                .border(px(CLOSE_FOCUS_RING))
+                                .border_color(palette.accent),
+                        )
+                    }),
+            )
+    }
+}
+
+/// The X of the close button, in `rest` color, or `hover` while the pointer is over the
+/// button's click area. The window repaints on that change because the box has hover styles.
+fn close_glyph(rest: Hsla, hover: Hsla) -> impl IntoElement {
+    canvas(
+        |_, _, _| (),
+        move |bounds, _, window, _| {
+            let hit_area = Bounds::centered_at(
+                bounds.center(),
+                size(px(CLOSE_HIT_SIZE), px(CLOSE_HIT_SIZE)),
+            );
+            let color = if hit_area.contains(&window.mouse_position()) {
+                hover
+            } else {
+                rest
+            };
+            // The Lucide X: from 6 to 18 in a 24 unit grid, with round caps. gpui's stroke has
+            // butt caps, so each line is half a stroke longer at both ends instead.
+            let unit = CLOSE_ICON_SIZE / 24.0;
+            let stroke = CLOSE_ICON_STROKE * unit;
+            let (near, far) = (6.0 * unit - stroke / 2.0, 18.0 * unit + stroke / 2.0);
+            let at = |x: f32, y: f32| bounds.origin + point(px(x), px(y));
+            let mut path = PathBuilder::stroke(px(stroke));
+            path.move_to(at(far, near));
+            path.line_to(at(near, far));
+            path.move_to(at(near, near));
+            path.line_to(at(far, far));
+            if let Ok(path) = path.build() {
+                window.paint_path(path, color);
+            }
+        },
+    )
+    .flex_none()
+    .size(px(CLOSE_ICON_SIZE))
 }
 
 /// A modal's body: a column padded at the sides and the bottom, for the content between the
@@ -394,7 +515,7 @@ fn render_confirm(confirm: &ConfirmDialog, cx: &App) -> AnyElement {
         (None, false) => None,
     };
     v_flex()
-        .child(header(icon, confirm.title.clone(), cx))
+        .child(header(icon, confirm.title.clone()))
         .child(
             modal_body().child(
                 div()

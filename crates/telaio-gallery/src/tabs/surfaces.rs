@@ -9,7 +9,8 @@ use telaio_ui::components::modal::ConfirmDialog;
 use telaio_ui::components::{
     Card, DangerButton, GhostButton, IconButton, MODIFIER_KEY, ModalPlacement, PrimaryButton,
     SecondaryButton, SectionLabel, Shortcut, ShortcutGroup, ThemeCard, framed_dialog, modal_body,
-    modal_footer, modal_header_with_icon, open_confirm_dialog, open_shortcuts_dialog, open_tooltip,
+    modal_footer, modal_header_with_icon, modal_header_without_close, open_confirm_dialog,
+    open_shortcuts_dialog, open_tooltip,
 };
 use telaio_ui::metrics::MODAL_WIDTH_DEFAULT;
 use telaio_ui::{PaletteExt, ThemeChoice};
@@ -24,16 +25,19 @@ struct ModalSpec {
     width: f32,
     height: Option<f32>,
     placement: ModalPlacement,
+    closable: bool,
 }
 
-/// One modal per placement, plus a fixed height one whose body scrolls.
-const MODALS: [ModalSpec; 4] = [
+/// One modal per placement, a fixed height one whose body scrolls, one whose long title wraps
+/// and one without the close button.
+const MODALS: [ModalSpec; 6] = [
     ModalSpec {
         label: "Centered",
         title: "Centered modal",
         width: MODAL_WIDTH_DEFAULT,
         height: None,
         placement: ModalPlacement::Centered,
+        closable: true,
     },
     ModalSpec {
         label: "Top, default",
@@ -41,6 +45,7 @@ const MODALS: [ModalSpec; 4] = [
         width: MODAL_WIDTH_DEFAULT,
         height: None,
         placement: ModalPlacement::DEFAULT,
+        closable: true,
     },
     ModalSpec {
         label: "Top, 30% (min 80)",
@@ -51,6 +56,7 @@ const MODALS: [ModalSpec; 4] = [
             fraction: 0.3,
             min: 80.0,
         },
+        closable: true,
     },
     ModalSpec {
         label: "Fixed height, scrolling",
@@ -58,6 +64,23 @@ const MODALS: [ModalSpec; 4] = [
         width: 520.0,
         height: Some(380.0),
         placement: ModalPlacement::Centered,
+        closable: true,
+    },
+    ModalSpec {
+        label: "Long title",
+        title: "Delete Build caches and Go modules permanently, with every file inside them?",
+        width: 420.0,
+        height: None,
+        placement: ModalPlacement::Centered,
+        closable: true,
+    },
+    ModalSpec {
+        label: "No close button",
+        title: "Exporting, only Cancel ends it",
+        width: MODAL_WIDTH_DEFAULT,
+        height: None,
+        placement: ModalPlacement::Centered,
+        closable: false,
     },
 ];
 
@@ -179,12 +202,15 @@ impl Gallery {
                     v_flex()
                         .flex_1()
                         .min_h_0()
-                        .child(modal_header_with_icon(
-                            gpui_kit::assets::IconName::AppWindow,
-                            cx.palette().accent_text,
-                            spec.title,
-                            cx,
-                        ))
+                        .child({
+                            let icon = gpui_kit::assets::IconName::AppWindow;
+                            let color = cx.palette().accent_text;
+                            if spec.closable {
+                                modal_header_with_icon(icon, color, spec.title, cx)
+                            } else {
+                                modal_header_without_close(Some((icon, color)), spec.title, cx)
+                            }
+                        })
                         .child(
                             div()
                                 .id("modal-scroll")

@@ -53,7 +53,8 @@ Postino as the reference implementation.
   (a PDF export).
 - **Components**: `PrimaryButton`, `SecondaryButton`, `GhostButton`, `DangerButton`,
   `NeutralButtonExt`, `IconButton`, modals (`framed_dialog`, `modal_header`,
-  `modal_header_with_icon`, `modal_body`, `modal_footer`, `modal_hints`, `open_confirm_dialog`),
+  `modal_header_with_icon`, `modal_header_without_close`, `modal_body`, `modal_footer`,
+  `modal_hints`, `open_confirm_dialog`),
   `KeyCap`, `SegmentedControl`, `select_trigger`, `MenuTrigger` (`open_on_click()` on a
   `Button`, so its `dropdown_menu` or popover opens on release, not on press), `StatusBadge`,
   `ThemeCard`, `HoverInput`, `text_field`, `TextArea` (multi line plain text),
