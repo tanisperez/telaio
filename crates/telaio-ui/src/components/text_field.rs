@@ -89,7 +89,10 @@ impl RenderOnce for TextFieldInput {
                 Input::new(&state)
                     .context_menu(no_input_menu())
                     .px(px(INPUT_PADDING_X))
-                    .h_full()
+                    // `Styled`'s, not `Input::h_full`: that one only sizes a multi-line input,
+                    // so a single-line field kept the height of its size, about 26 px inside
+                    // the 36 px box (telaio#42).
+                    .map(Styled::h_full)
                     .py_0()
                     .line_height(line_height),
             )
