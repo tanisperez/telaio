@@ -237,7 +237,14 @@ pub fn modal_header_without_close(
 
 /// The header of [`modal_header`] and [`modal_header_with_icon`].
 fn header(icon: Option<(IconName, Hsla)>, title: SharedString) -> Div {
-    title_row(icon, title).child(CloseButton::new("modal-close").closes_dialog())
+    title_row(icon, title).child(
+        // Closer to the card's corner than the padding would put it: the X's box (24 px, in a
+        // 28 px click area) sat 20 px from the edge and looked adrift.
+        div()
+            .flex_none()
+            .mr(px(-MODAL_CLOSE_SHIFT))
+            .child(CloseButton::new("modal-close").closes_dialog()),
+    )
 }
 
 /// A header's icon and title. The row is at least [`MODAL_HEADER_HEIGHT`] tall and grows when a
@@ -268,6 +275,8 @@ fn title_row(icon: Option<(IconName, Hsla)>, title: SharedString) -> Div {
         )
 }
 
+/// How far right of the header's padding the close button goes.
+const MODAL_CLOSE_SHIFT: f32 = 8.0;
 /// Room above and below a header's title, so a title that wraps to several lines does not
 /// touch the card's edge. A one line title keeps the header at [`MODAL_HEADER_HEIGHT`].
 const MODAL_HEADER_WRAP_PADDING: f32 = 10.0;

@@ -157,7 +157,24 @@ impl RenderOnce for TriCheckbox {
             accent.opacity(0.5)
         };
         let radius = cx.theme().radius.min(px(4.));
-        let input_background = cx.theme().input_background();
+        // An unchecked box is opaque `raised`, like the inputs, and its border turns
+        // `border_hover` under the pointer: gpui-component's translucent input background took the
+        // halo's fill under it, and the box was lost in a gray square (Postino's Git panel).
+        let box_fill = palette.raised;
+        let hovered = window.use_keyed_state((self.id.clone(), "hovered"), cx, |_, _| false);
+        let box_border = if *hovered.read(cx) {
+            palette.border_hover
+        } else {
+            unchecked_border
+        };
+        let track_hover = move |is_hovered: &bool, _: &mut Window, cx: &mut App| {
+            hovered.update(cx, |hovered, cx| {
+                if *hovered != *is_hovered {
+                    *hovered = *is_hovered;
+                    cx.notify();
+                }
+            });
+        };
         let accent_fill = cx.theme().tokens.primary;
 
         let indicator = CheckboxIndicator::new()
@@ -169,8 +186,8 @@ impl RenderOnce for TriCheckbox {
             .border_1()
             .rounded(radius)
             .when(state == CheckState::Unchecked, |this| {
-                this.bg(input_background)
-                    .when(!disabled, |this| this.border_color(unchecked_border))
+                this.bg(box_fill)
+                    .when(!disabled, |this| this.border_color(box_border))
             })
             .styles(|styles| {
                 let filled =
@@ -204,6 +221,9 @@ impl RenderOnce for TriCheckbox {
             .p(px(CHECKBOX_HALO_PADDING))
             .m(px(-CHECKBOX_HALO_PADDING))
             .rounded(px(RADIUS_SM))
+            .when(self.label.is_none(), |this| {
+                this.on_hover(track_hover.clone())
+            })
             .when(!disabled, |this| {
                 this.cursor_pointer()
                     .when(self.label.is_some(), |this| {
@@ -238,6 +258,7 @@ impl RenderOnce for TriCheckbox {
         h_flex()
             .id(SharedString::from(format!("{}-row", self.id)))
             .group(group)
+            .on_hover(track_hover)
             .gap_2()
             .items_center()
             .child(boxed)
