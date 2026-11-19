@@ -184,8 +184,10 @@ impl EditorView {
 
     /// `Ctrl+Space`: opens the menu with everything offered at the cursor.
     pub(crate) fn show_completion(&mut self, cx: &mut Context<Self>) {
+        // Without completion the key does nothing, but it is still taken: let through, the
+        // platform's text input typed it as a space (ted #109).
         if self.completion_provider.is_none() || self.state.read_only {
-            return cx.propagate();
+            return;
         }
         self.completion = None;
         self.refresh_completion(true, cx);
