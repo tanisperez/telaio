@@ -25,7 +25,14 @@ impl Gallery {
             .gap_6()
             .child(section("Underline tabs", self.render_underline_tabs(cx)))
             .child(section("Document tabs", self.render_document_tabs(cx)))
-            .child(section("Tree row", self.render_tree_rows(cx)))
+            .child(section("Tree row", self.render_tree_rows(None, cx)))
+            .child(section(
+                "Tree row, neutral selection (unfocused, focused)",
+                h_flex()
+                    .gap_4()
+                    .child(self.render_tree_rows(Some(false), cx))
+                    .child(self.render_tree_rows(Some(true), cx)),
+            ))
             .child(section(
                 "Tree row with a checkbox, a detail, a hover action and a suffix",
                 self.render_checked_tree_rows(cx),
@@ -195,7 +202,17 @@ impl Gallery {
 
     /// Tree rows: a small tree whose folders really expand and collapse, with a leading element
     /// on requests, a play button shown on hover, and a selected row.
-    pub(crate) fn render_tree_rows(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    /// With `neutral`, the selection of [`TreeRow::neutral_selection`], focused or not.
+    pub(crate) fn render_tree_rows(
+        &self,
+        neutral: Option<bool>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let prefix = match neutral {
+            None => "gallery-tree-row",
+            Some(false) => "gallery-tree-row-neutral",
+            Some(true) => "gallery-tree-row-focused",
+        };
         let palette = cx.palette();
         let rows = visible_nodes(&self.tree).into_iter().map(|index| {
             let node = &self.tree[index];
@@ -215,14 +232,16 @@ impl Gallery {
                             .child(if index % 2 == 0 { "GET" } else { "POST" }),
                     )
                     .trailing(
-                        IconButton::new(("gallery-tree-play", index), IconName::Play).on_click(
-                            Self::click(cx, move |this, _, cx| {
-                                // Keep the row's own click from selecting it.
-                                cx.stop_propagation();
-                                let label = this.tree[index].label;
-                                this.record(format!("Tree row: play {label}"), cx);
-                            }),
-                        ),
+                        IconButton::new(
+                            (SharedString::from(format!("{prefix}-play")), index),
+                            IconName::Play,
+                        )
+                        .on_click(Self::click(cx, move |this, _, cx| {
+                            // Keep the row's own click from selecting it.
+                            cx.stop_propagation();
+                            let label = this.tree[index].label;
+                            this.record(format!("Tree row: play {label}"), cx);
+                        })),
                     );
             }
             row.on_click(Self::click(cx, move |this, _, cx| {

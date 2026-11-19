@@ -42,6 +42,7 @@ pub struct TreeRow {
     depth: usize,
     folder: Option<bool>,
     selected: bool,
+    neutral: Option<bool>,
     strikethrough: bool,
     leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
@@ -59,6 +60,7 @@ impl TreeRow {
             depth: 0,
             folder: None,
             selected: false,
+            neutral: None,
             strikethrough: false,
             leading: None,
             trailing: None,
@@ -89,6 +91,15 @@ impl TreeRow {
     /// Marks the row selected: `list_active` background and `accent_text` label.
     pub fn selected(mut self, selected: bool) -> Self {
         self.selected = selected;
+        self
+    }
+
+    /// Draws the selection in neutral colors instead: the `pressed` fill, kept under the pointer,
+    /// and the label in `fg`. With `focused` (the list has the keyboard focus) a 1 px inner ring
+    /// in `accent` shows where the keys act. For a file tree, where the indigo label read as a
+    /// link (ted #122).
+    pub fn neutral_selection(mut self, focused: bool) -> Self {
+        self.neutral = Some(focused);
         self
     }
 
@@ -150,7 +161,8 @@ impl RenderOnce for TreeRow {
                 chevron_slot.child(Icon::new(chevron).small().text_color(palette.fg_subtle));
         }
 
-        let label_color = if self.selected {
+        let neutral = self.neutral;
+        let label_color = if self.selected && neutral.is_none() {
             palette.accent_text
         } else if self.strikethrough {
             palette.fg_muted
@@ -168,8 +180,22 @@ impl RenderOnce for TreeRow {
             .pr(px(4.0))
             .rounded(px(RADIUS_SM))
             .cursor_pointer()
-            .when(self.selected, |this| this.bg(palette.list_active))
-            .hover(|style| style.bg(palette.hover))
+            .map(|this| match (self.selected, neutral) {
+                (false, _) => this.hover(|style| style.bg(palette.hover)),
+                (true, None) => this
+                    .bg(palette.list_active)
+                    .hover(|style| style.bg(palette.hover)),
+                (true, Some(focused)) => this.bg(palette.pressed).when(focused, |this| {
+                    this.border_color(palette.accent.opacity(0.6))
+                }),
+            })
+            // Every neutral row has the ring's room, so the text does not move when it shows.
+            .when(neutral.is_some(), |this| {
+                this.border_1()
+                    .when(!(self.selected && neutral == Some(true)), |this| {
+                        this.border_color(transparent_black())
+                    })
+            })
             .active(|style| style.bg(palette.pressed))
             .child(chevron_slot)
             .children(self.leading.map(|leading| {
