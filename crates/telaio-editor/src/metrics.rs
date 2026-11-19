@@ -1,17 +1,14 @@
 //! The editor's layout metrics: the gutter, the scrollbars, the find bar, the Go to line
 //! dialog and their fields.
 
-/// Width of the field of the find bar.
-pub const FIND_BAR_FIELD_WIDTH: f32 = 420.0;
+/// Width of the field of the find bar, its counter and toggles included.
+pub const FIND_BAR_FIELD_WIDTH: f32 = 440.0;
 
-/// Height of the fields of the find bar.
+/// Height of the fields and of the Replace buttons of the find bar.
 pub const FIND_BAR_FIELD_HEIGHT: f32 = 28.0;
 
-/// Size of the buttons of the find bar.
+/// Size of the icon buttons of the find bar (previous, next).
 pub const FIND_BAR_BUTTON: f32 = 26.0;
-
-/// Width of the match counter of the find bar (`120 of 4,500`).
-pub const FIND_COUNT_WIDTH: f32 = 64.0;
 
 /// Width of the Go to line dialog.
 pub const GOTO_WIDTH: f32 = 380.0;

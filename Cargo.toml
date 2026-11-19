@@ -81,6 +81,9 @@ pulldown-cmark = { version = "=0.13.0", default-features = false }
 tree-sitter-containerfile = "=0.9.2"
 # Find in file: a literal searched with the case rules of Unicode. The version gpui already builds.
 regex = "1.13"
+# The parser behind `regex`, for the reason and position of an invalid pattern. Same version
+# `regex` resolves, so nothing is duplicated.
+regex-syntax = "0.8"
 fastrand = "2"
 
 [workspace.lints.clippy]

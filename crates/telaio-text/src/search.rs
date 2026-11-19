@@ -39,6 +39,33 @@ pub enum QueryError {
     Invalid(String),
 }
 
+/// Why a regular expression is not valid, from the parser: what is wrong and where.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RegexError {
+    /// What is wrong, as the parser says it, in English (`unclosed group`).
+    pub reason: String,
+    /// Where, as a 1-based character position in the pattern.
+    pub position: usize,
+}
+
+/// Why `pattern` is not a valid regular expression, `None` when it is one. The reason comes from
+/// `regex`'s own parser, so it is in English; an app shows it inside a translated frame.
+pub fn regex_error(pattern: &str) -> Option<RegexError> {
+    let error = regex_syntax::Parser::new().parse(pattern).err()?;
+    let (reason, offset) = match &error {
+        regex_syntax::Error::Parse(error) => (error.kind().to_string(), error.span().start.offset),
+        regex_syntax::Error::Translate(error) => {
+            (error.kind().to_string(), error.span().start.offset)
+        }
+        other => (other.to_string(), 0),
+    };
+    let position = pattern
+        .get(..offset)
+        .map_or(0, |before| before.chars().count())
+        + 1;
+    Some(RegexError { reason, position })
+}
+
 /// A text to find, compiled once.
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
@@ -357,6 +384,15 @@ mod tests {
             SearchQuery::with_options("", SearchOptions::default()).err(),
             Some(QueryError::Empty)
         );
+    }
+
+    #[test]
+    fn an_invalid_regex_says_what_and_where() {
+        let error = regex_error("tok(en").unwrap();
+        assert_eq!(error.reason, "unclosed group");
+        assert_eq!(error.position, 4);
+        assert_eq!(regex_error("ñ[a").map(|error| error.position), Some(2));
+        assert_eq!(regex_error("to(k)en"), None);
     }
 
     #[test]

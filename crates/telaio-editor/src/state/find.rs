@@ -144,12 +144,20 @@ impl Find {
         }
     }
 
+    /// The whole text (or the selection searched) was searched for a query and nothing matched.
+    pub fn no_results(&self) -> bool {
+        self.query.is_some() && self.complete && self.count == 0
+    }
+
+    /// The search of the current generation went through the whole text.
+    pub fn is_complete(&self) -> bool {
+        self.complete
+    }
+
     /// The counter of the find bar: `3 of 120`, `120` while the current match is not among the
     /// kept ones, `No results`, or a count followed by `…` while the search runs.
     pub fn label(&self, current: Option<&Range<usize>>) -> String {
-        if self.invalid.is_some() {
-            return t!("telaio_editor.find.invalid").into_owned();
-        }
+        // An invalid pattern is explained under the field, not by the counter.
         if self.query.is_none() {
             return String::new();
         }
@@ -237,7 +245,7 @@ mod tests {
     }
 
     #[test]
-    fn an_invalid_pattern_says_so() {
+    fn an_invalid_pattern_leaves_the_counter_empty() {
         let mut find = Find {
             text: "(".to_string(),
             ..Find::default()
@@ -245,7 +253,25 @@ mod tests {
         find.options.regex = true;
         find.restart(1);
         assert!(find.query.is_none());
-        assert_eq!(find.label(None), "Invalid pattern");
+        assert!(find.invalid.is_some());
+        // The bar explains it under the field; the counter stays empty.
+        assert_eq!(find.label(None), "");
+        assert!(!find.no_results());
+    }
+
+    #[test]
+    fn no_results_only_once_the_whole_text_was_searched() {
+        let (none, _) = found("ab", "zz");
+        assert!(none.no_results());
+        let (some, _) = found("ab", "a");
+        assert!(!some.no_results());
+        let mut running = Find {
+            text: "zz".to_string(),
+            ..Find::default()
+        };
+        let generation = running.restart(1);
+        running.add(generation, Vec::new(), false);
+        assert!(!running.no_results());
     }
 
     #[test]

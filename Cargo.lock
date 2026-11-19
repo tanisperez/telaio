@@ -6851,6 +6851,7 @@ dependencies = [
  "fastrand",
  "pretty_assertions",
  "regex",
+ "regex-syntax",
  "ropey",
 ]
 

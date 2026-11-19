@@ -209,9 +209,12 @@ const MINIMAP_ALPHA: f32 = 0.6;
 /// it (very long lines) each line is queried on its own start.
 const MINIMAP_MAX_RANGE: usize = 256 * 1024;
 
-/// Alpha of the `warning` color behind the find bar's matches, and behind the selected one.
-const MATCH_ALPHA: f32 = 0.22;
-const CURRENT_MATCH_ALPHA: f32 = 0.5;
+/// Alpha of the `warning` color behind the find bar's matches, and behind the selected one,
+/// which also gets a 1 px `warning` outline so it is not lost when jumping with F3 (telaio#62).
+const MATCH_ALPHA: f32 = 0.14;
+const CURRENT_MATCH_ALPHA: f32 = 0.35;
+/// Corner radius of a find match's fill and outline.
+const MATCH_RADIUS: f32 = 3.0;
 
 /// The key context of the editor, for its bindings.
 pub const KEY_CONTEXT: &str = "Editor";
@@ -415,6 +418,12 @@ pub struct EditorView {
     pub(crate) find_jump: bool,
     /// Whether the find bar shows its replace row (`Ctrl+H`).
     pub(crate) replace_open: bool,
+    /// `F3` (`true`) or `Shift+F3` (`false`) pressed with the find bar closed, waiting for the
+    /// search of the last query to finish before it selects the match.
+    pub(crate) pending_step: Option<bool>,
+    /// Where `Alt+Up` and `Alt+Down` are in the session's find history: the replace field
+    /// (`true`) or the find field, and the entry shown.
+    pub(crate) history_pos: Option<(bool, usize)>,
     /// The replace field, made the first time the replace row opens.
     pub(crate) replace_input: Option<Entity<InputState>>,
     /// This editor's own display, over the app's global one ([`EditorDisplay`]).
@@ -557,6 +566,8 @@ impl EditorView {
             goto_input: None,
             find_jump: false,
             replace_open: false,
+            pending_step: None,
+            history_pos: None,
             replace_input: None,
             display: None,
             menu: None,
@@ -2138,13 +2149,21 @@ impl Element for EditorElement {
             }),
             |window| {
                 for rect in &layout.matches {
-                    window.paint_quad(fill(*rect, palette.warning.opacity(MATCH_ALPHA)));
+                    window.paint_quad(
+                        fill(*rect, palette.warning.opacity(MATCH_ALPHA))
+                            .corner_radii(px(MATCH_RADIUS)),
+                    );
                 }
                 for rect in &layout.selection {
                     window.paint_quad(fill(*rect, palette.accent_subtle));
                 }
                 for rect in &layout.current_match {
-                    window.paint_quad(fill(*rect, palette.warning.opacity(CURRENT_MATCH_ALPHA)));
+                    window.paint_quad(
+                        fill(*rect, palette.warning.opacity(CURRENT_MATCH_ALPHA))
+                            .corner_radii(px(MATCH_RADIUS))
+                            .border_widths(px(1.0))
+                            .border_color(palette.warning),
+                    );
                 }
                 for painted in &layout.painted {
                     let origin = point(layout.text.left() + painted.x, bounds.top() + painted.y);

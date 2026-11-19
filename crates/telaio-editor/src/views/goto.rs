@@ -10,7 +10,7 @@ use gpui_kit::component::*;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use rust_i18n::t;
-use telaio_ui::components::{IconButton, PrimaryButton, SecondaryButton};
+use telaio_ui::components::{CloseButton, PrimaryButton, SecondaryButton};
 
 use crate::metrics::{GOTO_BUTTON_HEIGHT, GOTO_FIELD_HEIGHT, GOTO_TOP, GOTO_WIDTH, RADIUS_DIALOG};
 use crate::state::goto::parse_target;
@@ -134,7 +134,7 @@ impl EditorView {
                             .child(t!("telaio_editor.goto.title")),
                     )
                     .child(
-                        IconButton::new("goto-close", IconName::X)
+                        CloseButton::new("goto-close")
                             .tooltip(t!("telaio_editor.find.close"))
                             .on_click(
                                 cx.listener(|this, _, window, cx| this.close_goto(window, cx)),

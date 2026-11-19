@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 ropey = { workspace = true }
 regex = { workspace = true }
+regex-syntax = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
