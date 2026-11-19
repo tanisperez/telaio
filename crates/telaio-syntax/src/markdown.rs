@@ -63,6 +63,9 @@ pub enum BlockKind {
     /// A fenced or indented code block, highlighted when its language is known.
     Code {
         language: Option<Language>,
+        /// The first word of the fence's info string, lowercased (`mermaid` for ```` ```mermaid ````),
+        /// empty for an indented block. Lets the app draw what is not a language (ted #113).
+        fence: String,
         text: String,
         spans: Vec<HighlightSpan>,
     },
@@ -219,9 +222,15 @@ impl Builder<'_> {
             },
             Tag::BlockQuote(kind) => BlockKind::Quote(self.blocks(Some(TagEnd::BlockQuote(kind)))),
             Tag::CodeBlock(kind) => {
-                let language = match &kind {
-                    CodeBlockKind::Fenced(info) => Language::from_fence(info),
-                    CodeBlockKind::Indented => None,
+                let (language, fence) = match &kind {
+                    CodeBlockKind::Fenced(info) => (
+                        Language::from_fence(info),
+                        info.split_whitespace()
+                            .next()
+                            .unwrap_or_default()
+                            .to_ascii_lowercase(),
+                    ),
+                    CodeBlockKind::Indented => (None, String::new()),
                 };
                 let mut code = String::new();
                 for (event, _) in self.events.by_ref() {
@@ -238,6 +247,7 @@ impl Builder<'_> {
                 BlockKind::Code {
                     spans: highlight_code(language, &code),
                     language,
+                    fence,
                     text: code,
                 }
             }
@@ -908,10 +918,24 @@ mod tests {
     }
 
     #[test]
+    fn a_fence_that_is_not_a_language_is_kept() {
+        let blocks = kinds("```Mermaid title\nflowchart LR; A-->B\n```\n");
+        let BlockKind::Code {
+            language, fence, ..
+        } = &blocks[0]
+        else {
+            panic!("code");
+        };
+        assert_eq!(*language, None);
+        assert_eq!(fence, "mermaid");
+    }
+
+    #[test]
     fn code_blocks_are_highlighted_by_their_fence() {
         let blocks = kinds("```rust\nfn main() {}\n```\n\n```\nplain\n```\n");
         let BlockKind::Code {
             language,
+            fence,
             text,
             spans,
         } = &blocks[0]
@@ -919,6 +943,7 @@ mod tests {
             panic!("code");
         };
         assert_eq!(*language, Some(Language::Rust));
+        assert_eq!(fence, "rust");
         assert_eq!(text, "fn main() {}");
         assert!(
             spans
