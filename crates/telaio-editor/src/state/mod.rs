@@ -4,6 +4,7 @@ pub mod editor;
 pub mod find;
 pub mod fold;
 pub mod goto;
+pub mod guides;
 pub mod gutter;
 pub mod minimap;
 pub mod syntax;

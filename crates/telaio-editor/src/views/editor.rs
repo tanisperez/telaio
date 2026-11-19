@@ -37,6 +37,7 @@ use crate::state::editor::{
 };
 use crate::state::find::Find;
 use crate::state::fold::{MAX_CLOSER_LEN, markdown_blocks};
+use crate::state::guides::{GUIDE_LOOKAROUND, guides, line_indent};
 use crate::state::gutter::MarkKind;
 use crate::state::minimap::{
     EditorMeasures, LINE_HEIGHT as MINIMAP_LINE, MAX_COLUMNS as MINIMAP_COLUMNS, MinimapLayout,
@@ -354,6 +355,11 @@ pub struct EditorDisplay {
     pub find: bool,
     /// The Go to line dialog (Ctrl+G).
     pub goto_line: bool,
+    /// A thin line at each indentation level of the visible lines, stronger for the cursor's
+    /// block, and a border at the right of the gutter (ted #114, #115).
+    pub indent_guides: bool,
+    /// The column of the right margin line, 0 for none (ted #116).
+    pub ruler: usize,
 }
 
 impl Default for EditorDisplay {
@@ -366,6 +372,8 @@ impl Default for EditorDisplay {
             folding: true,
             find: true,
             goto_line: true,
+            indent_guides: true,
+            ruler: 0,
         }
     }
 }
@@ -1387,6 +1395,12 @@ impl IntoElement for EditorElement {
 /// What prepaint measured and shaped for paint.
 pub struct EditorLayout {
     gutter: Bounds<Pixels>,
+    /// The border at the right of the gutter, with line numbers on.
+    gutter_border: Option<Bounds<Pixels>>,
+    /// The indent guides of the visible rows, `true` for the cursor's block.
+    guides: Vec<(Bounds<Pixels>, bool)>,
+    /// The right margin line.
+    ruler: Option<Bounds<Pixels>>,
     text: Bounds<Pixels>,
     scrollbar: Option<Scrollbar>,
     /// The horizontal scrollbar, over the bottom of the text, while lines are wider than it.
@@ -2084,6 +2098,66 @@ impl Element for EditorElement {
                 Scrollbar { track, thumb }
             });
 
+            // The indent guides of the first row of each visible line: the following rows of a
+            // wrapped line start at its left edge, where a guide would cross the text.
+            let mut guide_rects = Vec::new();
+            if display.indent_guides && !painted.is_empty() {
+                let tab = crate::state::editor::tab_size();
+                let unit = match state.buffer.indent() {
+                    Some(telaio_text::Indent::Spaces(count)) => usize::from(count),
+                    _ => tab,
+                };
+                let indent_of =
+                    |line: usize| line_indent(state.buffer.line(line).chars().take(1024), tab);
+                let mut lines: Vec<usize> = painted.iter().map(|row| row.line).collect();
+                lines.dedup();
+                let indents: Vec<Option<usize>> =
+                    lines.iter().map(|&line| indent_of(line)).collect();
+                let first = lines.first().copied().unwrap_or(0);
+                let last = lines.last().copied().unwrap_or(0);
+                let before = (first.saturating_sub(GUIDE_LOOKAROUND)..first)
+                    .rev()
+                    .find_map(indent_of);
+                let line_count = state.buffer.line_count();
+                let after =
+                    (last + 1..(last + 1 + GUIDE_LOOKAROUND).min(line_count)).find_map(indent_of);
+                let cursor = lines.iter().position(|&line| line == state.cursor.line);
+                let found = guides(&indents, before, after, unit, cursor);
+                let mut index = 0;
+                for row in painted.iter().filter(|row| row.first) {
+                    while lines.get(index).is_some_and(|&line| line != row.line) {
+                        index += 1;
+                    }
+                    let Some(columns) = found.columns.get(index) else {
+                        break;
+                    };
+                    for &column in columns {
+                        let x = (text_left - scroll_x + char_width * column as f32).round();
+                        if x < text_left {
+                            continue;
+                        }
+                        let active = found
+                            .active
+                            .as_ref()
+                            .is_some_and(|(at, range)| *at == column && range.contains(&index));
+                        guide_rects.push((
+                            Bounds::new(point(x, bounds.top() + row.y), size(px(1.0), line_height)),
+                            active,
+                        ));
+                    }
+                }
+            }
+            let ruler = (display.ruler > 0)
+                .then(|| (text_left - scroll_x + char_width * display.ruler as f32).round())
+                .filter(|x| *x >= text_left)
+                .map(|x| Bounds::new(point(x, bounds.top()), size(px(1.0), bounds.size.height)));
+            let gutter_border = (display.indent_guides && display.line_numbers).then(|| {
+                Bounds::new(
+                    point(gutter.right() - px(1.0), bounds.top()),
+                    size(px(1.0), bounds.size.height),
+                )
+            });
+
             log::trace!(
                 "editor prepaint: {} lines in {:?}",
                 painted.len(),
@@ -2091,6 +2165,9 @@ impl Element for EditorElement {
             );
             EditorLayout {
                 gutter,
+                gutter_border,
+                guides: guide_rects,
+                ruler,
                 text,
                 scrollbar,
                 hscrollbar,
@@ -2148,6 +2225,16 @@ impl Element for EditorElement {
                 bounds: layout.text,
             }),
             |window| {
+                for (rect, active) in &layout.guides {
+                    let color = match active {
+                        true => palette.border_strong,
+                        false => palette.border,
+                    };
+                    window.paint_quad(fill(*rect, color));
+                }
+                if let Some(ruler) = layout.ruler {
+                    window.paint_quad(fill(ruler, palette.border));
+                }
                 for rect in &layout.matches {
                     window.paint_quad(
                         fill(*rect, palette.warning.opacity(MATCH_ALPHA))
@@ -2199,6 +2286,9 @@ impl Element for EditorElement {
         // Line numbers, right aligned, never scrolled horizontally.
         let number_right = layout.gutter.right() - px(EDITOR_GUTTER_RIGHT);
         window.with_content_mask(Some(editor_mask), |window| {
+            if let Some(border) = layout.gutter_border {
+                window.paint_quad(fill(border, palette.border));
+            }
             for (rect, color) in &layout.git_marks {
                 window.paint_quad(fill(*rect, *color));
             }
