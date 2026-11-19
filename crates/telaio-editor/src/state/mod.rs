@@ -8,4 +8,5 @@ pub mod guides;
 pub mod gutter;
 pub mod minimap;
 pub mod syntax;
+pub mod tags;
 pub mod wrap;

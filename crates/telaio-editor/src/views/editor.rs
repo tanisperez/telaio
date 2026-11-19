@@ -44,6 +44,7 @@ use crate::state::minimap::{
     line_blocks,
 };
 use crate::state::syntax::{ParseRequest, decorated_runs};
+use crate::state::tags::tag_pair;
 use crate::state::wrap::wraps_by_default;
 use crate::syntax_colors::SyntaxColors;
 use telaio_ui::PaletteExt;
@@ -380,6 +381,10 @@ impl Default for EditorDisplay {
 
 impl Global for EditorDisplay {}
 
+/// The names of a tag and of its pair, under the text version and cursor offset they were found
+/// for.
+type TagCache = ((u64, usize), Vec<Range<usize>>);
+
 /// One editor: a document, its cursor and scroll, and the keyboard focus.
 pub struct EditorView {
     pub state: EditorState,
@@ -451,6 +456,9 @@ pub struct EditorView {
     pub(crate) completion_provider: Option<(CompletionProvider, CompletionTrigger)>,
     /// The open autocompletion menu.
     pub(crate) completion: Option<CompletionMenu>,
+    /// The names of the tag under the cursor and of its pair, under the text version and the
+    /// cursor offset they were found for (ted #112).
+    tag_cache: Option<TagCache>,
     /// The bottom left corner of the primary cursor in the window, as last painted: where the
     /// autocompletion menu opens.
     pub(crate) cursor_anchor: Option<Point<Pixels>>,
@@ -551,6 +559,7 @@ impl EditorView {
             hover: None,
             completion_provider: None,
             completion: None,
+            tag_cache: None,
             cursor_anchor: None,
             menu_offset: None,
             state,
@@ -1426,6 +1435,8 @@ pub struct EditorLayout {
     guides: Vec<(Bounds<Pixels>, bool)>,
     /// The right margin line.
     ruler: Option<Bounds<Pixels>>,
+    /// The name of the tag under the cursor and of its pair.
+    tag_pair: Vec<Bounds<Pixels>>,
     text: Bounds<Pixels>,
     scrollbar: Option<Scrollbar>,
     /// The horizontal scrollbar, over the bottom of the text, while lines are wider than it.
@@ -1798,6 +1809,26 @@ impl Element for EditorElement {
 
             // The selection, one rectangle per visible line it covers. A line whose break is
             // selected shows one more character's width.
+            // The tag under the cursor and its pair, in markup, found again only when the cursor
+            // or the text changes.
+            let markup = matches!(
+                state.syntax.language,
+                telaio_syntax::Language::Xml | telaio_syntax::Language::Html
+            );
+            let tag_ranges = if markup && others.is_empty() && state.selection().is_empty() {
+                let offset = state.buffer.position_to_offset(state.cursor);
+                let key = (state.buffer.version(), offset);
+                if editor.tag_cache.as_ref().map(|(cached, _)| *cached) != Some(key) {
+                    editor.tag_cache = Some((key, tag_pair(&state.buffer, offset)));
+                }
+                editor
+                    .tag_cache
+                    .as_ref()
+                    .map(|(_, ranges)| ranges.clone())
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
             let rects = |range: Range<usize>| {
                 let start = state.buffer.offset_to_position(range.start);
                 let end = state.buffer.offset_to_position(range.end);
@@ -1809,6 +1840,7 @@ impl Element for EditorElement {
                     )
                 })
             };
+            let tag_rects: Vec<Bounds<Pixels>> = tag_ranges.into_iter().flat_map(rects).collect();
             let selection = state.selection();
             let mut selection_rects = Vec::new();
             for caret in std::iter::once((state.cursor, state.anchor))
@@ -2193,6 +2225,7 @@ impl Element for EditorElement {
                 gutter_border,
                 guides: guide_rects,
                 ruler,
+                tag_pair: tag_rects,
                 text,
                 scrollbar,
                 hscrollbar,
@@ -2259,6 +2292,14 @@ impl Element for EditorElement {
                 }
                 if let Some(ruler) = layout.ruler {
                     window.paint_quad(fill(ruler, palette.border));
+                }
+                for rect in &layout.tag_pair {
+                    window.paint_quad(
+                        fill(*rect, palette.hover)
+                            .corner_radii(px(2.0))
+                            .border_widths(px(1.0))
+                            .border_color(palette.fg_subtle),
+                    );
                 }
                 for rect in &layout.matches {
                     window.paint_quad(
